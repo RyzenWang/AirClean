@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>AirClean.App</RootNamespace>
+    <AssemblyName>AirClean</AssemblyName>
+    <ApplicationIcon>Assets/airclean.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <Version>0.1.0</Version>
+    <AssemblyTitle>AirClean</AssemblyTitle>
+    <Product>AirClean</Product>
+    <Description>A feather-light, cross-platform disk cleaner built with .NET and Avalonia.</Description>
+    <Authors>AirClean contributors</Authors>
+    <Copyright>Copyright (c) AirClean contributors</Copyright>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>None</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AirClean.Core\AirClean.Core.csproj" />
+    <ProjectReference Include="..\AirClean.Platform\AirClean.Platform.csproj" />
+  </ItemGroup>
+
+  <Target Name="RemovePdbsFromPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <PublishPdbs Include="$(PublishDir)**\*.pdb" />
+    </ItemGroup>
+    <Delete Files="@(PublishPdbs)" />
+  </Target>
+</Project>

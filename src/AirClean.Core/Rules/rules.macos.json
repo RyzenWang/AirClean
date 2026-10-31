@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "platform": "macos",
+  "rules": [
+    {
+      "id": "mac.temp",
+      "category": "SystemTemp",
+      "safety": "Safe",
+      "roots": ["$TMPDIR"],
+      "maxDepth": 10,
+      "minAgeDays": 1,
+      "source": "用户临时目录；应用会自行重建"
+    },
+    {
+      "id": "mac.caches",
+      "category": "AppCache",
+      "safety": "Safe",
+      "roots": ["~/Library/Caches"],
+      "maxDepth": 6,
+      "minAgeDays": 2,
+      "exclude": ["com.apple.*"],
+      "source": "应用缓存；会在下次启动时重建"
+    },
+    {
+      "id": "mac.container-caches",
+      "category": "AppCache",
+      "safety": "Safe",
+      "roots": ["~/Library/Containers/*/Data/Library/Caches"],
+      "maxDepth": 6,
+      "minAgeDays": 3,
+      "source": "沙盒应用缓存；需要完全磁盘访问权限"
+    },
+    {
+      "id": "mac.logs",
+      "category": "LogsDiagnostics",
+      "safety": "Safe",
+      "roots": ["~/Library/Logs"],
+      "maxDepth": 8,
+      "minAgeDays": 3,
+      "source": "应用日志与诊断报告"
+    },
+    {
+      "id": "mac.trash",
+      "category": "Trash",
+      "safety": "Safe",
+      "action": "empty-trash",
+      "roots": [],
+      "source": "废纸篓；清空后立即释放空间"
+    },
+    {
+      "id": "mac.dev.xcode",
+      "category": "DeveloperCache",
+      "safety": "Caution",
+      "roots": [
+        "~/Library/Developer/Xcode/DerivedData",
+        "~/Library/Developer/CoreSimulator/Caches"
+      ],
+      "maxDepth": 6,
+      "minAgeDays": 3,
+      "source": "Xcode 构建产物；下次构建会重新生成"
+    },
+    {
+      "id": "mac.dev.node",
+      "category": "DeveloperCache",
+      "safety": "Caution",
+      "roots": ["~/.npm/_cacache"],
+      "maxDepth": 6,
+      "minAgeDays": 3,
+      "source": "npm 下载缓存"
+    }
+  ]
+}

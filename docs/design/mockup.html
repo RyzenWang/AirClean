@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>AirClean · 视觉方案</title>
+<style>
+  :root{
+    --bg:#F1EEE7; --toolbar:#F9F7F2; --sidebar:#EAE5DC; --surface:#FBFAF7; --surface-alt:#F6F2EB;
+    --hover:#EDE7DD; --pressed:#E3DCCF; --border:#DED7CB; --border-strong:#C7BEB0;
+    --text:#1D232C; --text2:#69645C; --text3:#9A9286;
+    --accent:#E3563B; --accent-hover:#C9482F; --accent-soft:#FBE4DD; --accent-text:#A93620;
+    --teal:#2E6F63; --teal-soft:#E2EFEB; --danger:#B23A2B; --danger-soft:#F8E2DD;
+    --amber:#B26B1F; --amber-soft:#F7ECDA;
+    --board:#E9E4DA;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--board)}
+  body{
+    width:1320px;
+    font-family:Inter,"Segoe UI","Microsoft YaHei UI","Noto Sans CJK SC",sans-serif;
+    color:var(--text); -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+  }
+  svg{display:block}
+  .ico{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .ico.sm{width:15px;height:15px}
+  .ico.xs{width:13px;height:13px}
+  .eyebrow{font-size:10px;font-weight:700;letter-spacing:1.3px;color:var(--text3);text-transform:uppercase}
+  .caption{font-size:11.5px;color:var(--text2)}
+  .tertiary{color:var(--text3)}
+
+  /* ---------- board ---------- */
+  .board-head{width:1240px;margin:44px auto 30px}
+  .board-head .eyebrow{color:#8C8474}
+  .board-head h1{font-size:30px;font-weight:600;letter-spacing:-.6px;margin-top:12px}
+  .board-head p{font-size:13.5px;color:#5F5A50;margin-top:9px}
+  .board{width:1240px;margin:0 auto;padding-bottom:44px}
+  .item{margin-top:34px}
+  .label{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+  .label .num{font-size:10px;font-weight:700;letter-spacing:1.2px;color:#8C8474}
+  .label .cn{font-size:12.5px;font-weight:600;color:#4A463E}
+  .label .en{font-size:10px;letter-spacing:1.1px;color:#9C9486}
+
+  /* ---------- window ---------- */
+  .screen{
+    width:1240px;height:860px;background:var(--bg);border-radius:13px;overflow:hidden;
+    display:flex;flex-direction:column;box-shadow:0 26px 60px rgba(29,35,44,.14),0 2px 0 rgba(255,255,255,.6) inset;
+  }
+  .topbar{
+    height:50px;flex:none;display:flex;align-items:center;padding:0 14px;gap:10px;
+    background:var(--toolbar);border-bottom:1px solid var(--border);
+  }
+  .brand{display:flex;align-items:center;gap:10px}
+  .logo{width:31px;height:31px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex:none}
+  .logo svg{width:18px;height:18px;stroke:#fff;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .name{font-size:15.5px;font-weight:700;letter-spacing:-.2px}
+  .vdiv{width:1px;height:19px;background:var(--border);margin:0 4px}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;
+    font:inherit;font-size:12.5px;font-weight:500;color:var(--text);border-radius:8px;height:34px;padding:0 12px;cursor:pointer;
+  }
+  .btn.soft{background:var(--accent-soft);color:var(--accent-text);font-weight:600;border-radius:9px;padding:0 13px}
+  .btn.primary{background:var(--accent);color:#fff;font-weight:600;border-radius:10px;height:42px;padding:0 18px;font-size:13px}
+  .btn.primary:hover{background:var(--accent-hover)}
+  .btn.ghost{border:1px solid var(--border);background:var(--surface);height:36px;padding:0 14px;border-radius:9px}
+  .btn.quiet{color:var(--text2);padding:0 10px}
+  .btn.danger{background:var(--danger-soft);color:var(--danger);font-weight:600;border-radius:9px;padding:0 14px;height:36px}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:3px}
+  .icon-btn{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text);border:0;background:transparent;cursor:pointer}
+  .icon-btn .ico{width:17px;height:17px}
+  .lang{font-size:12.5px;font-weight:600}
+
+  .body{flex:1;display:flex;min-height:0}
+  .statusbar{
+    height:30px;flex:none;background:var(--toolbar);border-top:1px solid var(--border);
+    display:flex;align-items:center;padding:0 14px;font-size:11px;color:var(--text2);gap:8px;
+  }
+  .statusbar .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .statusbar .sdiv{width:1px;height:12px;background:var(--border)}
+  .dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex:none}
+  .dot.teal{background:var(--teal)} .dot.coral{background:var(--accent)} .dot.amber{background:var(--amber)}
+
+  /* ---------- welcome ---------- */
+  .welcome{padding:0 46px;display:grid;grid-template-columns:1.15fr .85fr;max-width:1120px;margin:0 auto;align-items:center}
+  .kicker{display:flex;align-items:center;gap:8px;margin-bottom:17px}
+  .hero h1{font-size:35px;line-height:1.26;font-weight:600;letter-spacing:-.8px}
+  .lede{font-size:14px;line-height:22px;color:var(--text2);max-width:470px;margin-top:16px}
+  .actions{display:flex;align-items:stretch;gap:12px;margin-top:26px}
+  .kbd{min-height:40px;display:flex;align-items:center;gap:4px;padding:0 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:11.5px;font-weight:600;color:var(--text2)}
+  .meta{font-size:11.5px;color:var(--text2);margin-top:18px}
+  .recent{margin-top:32px}
+  .recent-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+  .link{font-size:11px;color:var(--text3)}
+  .recent-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px}
+  .recent-row + .recent-row{margin-top:2px}
+  .rtype{width:32px;height:32px;border-radius:7px;background:var(--surface-alt);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text2);flex:none}
+  .rtitle{font-size:12.5px;font-weight:600}
+  .rsub{font-size:11px;color:var(--text2);margin-top:2px}
+  .rtime{margin-left:auto;font-size:11px;color:var(--text3)}
+
+  .art{position:relative;width:370px;height:414px;margin:0 auto}
+  .art .glow{position:absolute;width:265px;height:265px;border-radius:50%;background:var(--accent-soft);right:4px;top:20px}
+  .sheet{position:absolute;background:#FCFAF6;border:1px solid #E1D9CD;border-radius:6px;box-shadow:0 14px 34px rgba(0,0,0,.15)}
+  .sheet.back{width:190px;height:254px;left:52px;top:92px;transform:rotate(-12deg);padding:26px 24px}
+  .sheet.back i{display:block;height:4px;border-radius:2px;background:#E6DFD4;margin-bottom:8px}
+  .sheet.back i:first-child{height:6px;width:44px;background:var(--accent);margin-bottom:12px}
+  .sheet.front{width:210px;height:278px;left:104px;top:64px;transform:rotate(-4deg);padding:22px 22px 18px;display:flex;flex-direction:column}
+  .sheet .tag{font-size:7.5px;font-weight:700;letter-spacing:1.2px;color:#A69D90}
+  .ring-wrap{position:relative;width:112px;height:112px;margin:14px auto 6px}
+  .ring-wrap .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  .ring-wrap b{font-size:19px;font-weight:700;letter-spacing:-.3px}
+  .ring-wrap b span{font-size:9.5px;font-weight:600;color:var(--text2);margin-left:2px}
+  .ring-wrap em{font-style:normal;font-size:8.5px;color:var(--text3)}
+  .legend{display:flex;flex-direction:column;gap:6px;margin-top:8px;font-size:8.5px;color:var(--text2)}
+  .legend div{display:flex;align-items:center;gap:6px}
+  .legend b{margin-left:auto;font-size:8.5px;color:var(--text);font-weight:600}
+  .legend .bar{width:8px;height:8px;border-radius:2px}
+  .sheet .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;font-size:7.5px;color:#A69D90}
+  .sheet .foot .mark{display:flex;align-items:center;gap:4px;color:#7A7368;font-weight:600}
+  .sheet .foot .mark span{width:13px;height:13px;border-radius:4px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+  .sheet .foot .mark svg{width:8px;height:8px;stroke:#fff;stroke-width:2.4;fill:none;stroke-linecap:round}
+
+  /* ---------- rail ---------- */
+  .rail{width:252px;flex:none;background:var(--sidebar);border-right:1px solid var(--border);padding:14px 12px 10px;display:flex;flex-direction:column}
+  .rail .eyebrow{margin:0 3px 8px}
+  .vol{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:11px 12px}
+  .vol-top{display:flex;align-items:center;gap:9px}
+  .vol-ic{width:30px;height:30px;border-radius:8px;background:var(--surface-alt);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text2)}
+  .vol-name{font-size:12.5px;font-weight:600}
+  .vol-sub{font-size:10.5px;color:var(--text2);margin-top:1px}
+  .vol-bar{height:4px;border-radius:2px;background:#E6DFD4;margin-top:10px;overflow:hidden;display:flex}
+  .vol-bar i{display:block;height:100%}
+  .rail .sec{margin-top:16px}
+  .rail-row{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border-radius:8px;font-size:12.5px;color:var(--text)}
+  .rail-row.active{background:var(--surface);border:1px solid var(--border);font-weight:600}
+  .rail-row .sz{margin-left:auto;font-size:10.5px;color:var(--text3)}
+  .rail-foot{margin-top:auto;display:flex;align-items:center;gap:8px;height:34px;padding:0 8px;font-size:12px;color:var(--text2);border-top:1px solid #DDD6C9;padding-top:10px}
+
+  /* ---------- results ---------- */
+  .main{flex:1;padding:24px 26px 20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+  .head{display:flex;align-items:flex-start;gap:16px}
+  .head h2{font-size:31px;font-weight:600;letter-spacing:-.7px;margin-top:6px}
+  .head h2 span{font-size:15px;font-weight:600;color:var(--text2);letter-spacing:0;margin-left:3px}
+  .head .sub{font-size:11.5px;color:var(--text2);margin-top:7px}
+  .head .acts{margin-left:auto;display:flex;align-items:center;gap:9px;padding-top:12px}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px}
+  .cap{padding:15px 18px 14px}
+  .cap-top{display:flex;align-items:baseline;justify-content:space-between}
+  .cap-top .t{font-size:12.5px;font-weight:600}
+  .cap-top .v{font-size:11px;color:var(--text2)}
+  .cap-top .v b{font-size:12.5px;color:var(--text);font-weight:600}
+  .stack{height:8px;border-radius:4px;background:#EDE7DD;margin-top:13px;display:flex;overflow:hidden}
+  .stack i{display:block;height:100%}
+  .legend-row{display:flex;gap:16px;margin-top:11px;font-size:10.5px;color:var(--text2);align-items:center}
+  .legend-row div{display:flex;align-items:center;gap:5px}
+  .legend-row .sq{width:7px;height:7px;border-radius:2px}
+
+  .cat-card{overflow:hidden;flex:1;display:flex;flex-direction:column}
+  .cat-head{height:39px;flex:none;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);gap:10px}
+  .cat-head .right{margin-left:auto;font-size:10.5px;color:var(--text3)}
+  .cat-rows{flex:1;display:flex;flex-direction:column}
+  .cat-row{display:grid;grid-template-columns:15px 34px 1fr 76px 92px 12px;gap:12px;align-items:center;flex:1;min-height:57px;max-height:78px;padding:0 16px;border-bottom:1px solid #ECE6DC}
+  .cat-row:last-child{border-bottom:0}
+  .cat-foot{flex:none;height:44px;display:flex;align-items:center;gap:8px;padding:0 16px;background:#F4F9F7;border-top:1px solid #DCEAE4;color:#2F5F55;font-size:10.5px}
+  .cat-foot .link{margin-left:auto;color:#2F5F55;font-weight:600;font-size:10.5px}
+  .cat-row.on{background:#FDFCFA}
+  .cb{width:15px;height:15px;border-radius:4.5px;border:1.4px solid var(--border-strong);display:flex;align-items:center;justify-content:center}
+  .cb.on{background:var(--accent);border-color:var(--accent)}
+  .cb svg{width:9px;height:9px;stroke:#fff;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .tile{width:34px;height:34px;border-radius:9px;background:var(--surface-alt);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text2)}
+  .cat-name{font-size:12.5px;font-weight:600}
+  .cat-name .perm{display:inline-block;margin-left:6px;padding:1px 5px;border-radius:4px;background:var(--caution-soft,#F7ECDA);color:#8A5A1C;font-size:9px;font-weight:700;letter-spacing:.2px;vertical-align:2px}
+  .cat-desc{font-size:10.5px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cat-size{text-align:right;font-size:13px;font-weight:600;letter-spacing:-.1px;white-space:nowrap}
+  .cat-size em{font-style:normal;font-size:10px;color:var(--text3);font-weight:500;margin-left:2px}
+  .cat-count{text-align:right;font-size:10.5px;color:var(--text3)}
+  .chev{color:#B5AC9D;font-size:15px;text-align:right}
+
+  .note{display:flex;align-items:center;gap:8px;background:var(--teal-soft);border:1px solid #CFE3DD;color:#245C52;border-radius:10px;padding:0 12px;height:38px;font-size:11px;flex:none}
+  .note .ico{width:14px;height:14px}
+
+  /* ---------- done ---------- */
+  .done{flex:1;padding:34px 40px;display:grid;grid-template-columns:1fr 300px;gap:36px;align-content:center}
+  .check-tile{width:42px;height:42px;border-radius:11px;background:var(--teal-soft);display:flex;align-items:center;justify-content:center;color:var(--teal);margin-bottom:16px}
+  .check-tile .ico{width:20px;height:20px;stroke-width:2}
+  .done h2{font-size:31px;font-weight:600;letter-spacing:-.7px}
+  .done h2 span{font-size:15px;color:var(--text2);font-weight:600;margin-left:3px;letter-spacing:0}
+  .done .sub{font-size:12.5px;color:var(--text2);margin-top:9px}
+  .done .acts{display:flex;gap:10px;margin-top:20px}
+  .brk{margin-top:30px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:6px 16px 10px}
+  .brk-title{padding:10px 0 4px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--text3)}
+  .brk-row{display:grid;grid-template-columns:1fr 120px 56px;gap:12px;align-items:center;height:34px;font-size:11.5px}
+  .mini{height:4px;border-radius:2px;background:#EDE7DD;overflow:hidden}
+  .mini i{display:block;height:100%;background:var(--accent);border-radius:2px}
+  .brk-row .amt{text-align:right;font-size:11.5px;font-weight:600}
+  .callout{margin-top:14px;display:flex;gap:9px;background:var(--amber-soft);border:1px solid #EBD9BC;border-radius:10px;padding:10px 12px;font-size:10.5px;color:#7A4D16;line-height:1.55}
+  .callout .ico{width:14px;height:14px;flex:none;margin-top:1px;color:var(--amber)}
+  .side{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 16px 8px;align-self:start}
+  .side .t{font-size:12.5px;font-weight:600}
+  .side .s{font-size:10.5px;color:var(--text2);margin-top:3px;margin-bottom:10px}
+  .skip{display:flex;align-items:center;gap:8px;height:30px;font-size:11px;color:var(--text2)}
+  .skip b{margin-left:auto;color:var(--text);font-size:11px;font-weight:600}
+  .side .foot{border-top:1px solid #ECE6DC;margin-top:10px;padding:10px 0;font-size:10px;color:var(--text3)}
+</style>
+</head>
+<body>
+
+<div class="board-head">
+  <div class="eyebrow">AIRCLEAN / VISUAL PROPOSAL</div>
+  <h1>轻盈，从磁盘开始。</h1>
+  <p>沿用 AirPDF 的纸感视觉语言：暖白底、珊瑚强调色、1.8px 细线图标、克制的信息密度。三张关键界面。</p>
+</div>
+
+<div class="board">
+
+  <!-- ================= 01 WELCOME ================= -->
+  <section class="item">
+    <div class="label"><span class="num">01</span><span class="cn">欢迎</span><span class="en">WELCOME / EMPTY STATE</span></div>
+    <div class="screen">
+      <div class="topbar">
+        <div class="brand">
+          <div class="logo">
+            <svg viewBox="0 0 24 24"><circle cx="9.2" cy="14.6" r="5.9"/><circle cx="9.2" cy="14.6" r=".95" fill="#fff" stroke="none"/><path d="M18.9 2.7l.78 2.32 2.32.78-2.32.78-.78 2.32-.78-2.32-2.32-.78 2.32-.78.78-2.32Z" fill="#fff" stroke="none"/></svg>
+          </div>
+          <div class="name">AirClean</div>
+          <div class="vdiv"></div>
+          <button class="btn soft">
+            <svg class="ico sm" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z"/></svg>
+            扫描
+          </button>
+        </div>
+        <div class="top-right">
+          <button class="icon-btn lang">中</button>
+          <button class="icon-btn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
+          <button class="icon-btn"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10.6 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
+        </div>
+      </div>
+
+      <div class="body welcome">
+        <div class="hero">
+          <div class="kicker"><span class="dot coral"></span><span class="eyebrow">轻盈磁盘清理</span></div>
+          <h1>你的磁盘，<br>轻一点。</h1>
+          <p class="lede">扫描、预览、清理，三步完成。不需要账号，不上传文件名，不安装驱动，也不会偷偷永久删除任何东西。</p>
+          <div class="actions">
+            <button class="btn primary">
+              <svg class="ico" style="width:17px;height:17px" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z"/></svg>
+              开始扫描
+            </button>
+            <div class="kbd"><span>Ctrl</span><span>R</span></div>
+          </div>
+          <div class="meta">本地运行 · 免费 · MIT 许可</div>
+
+          <div class="recent">
+            <div class="recent-head"><span class="eyebrow">最近清理</span><span class="link">查看全部</span></div>
+            <div class="recent-row">
+              <div class="rtype"><svg class="ico sm" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></div>
+              <div>
+                <div class="rtitle">12.4 GB · 5 个分类</div>
+                <div class="rsub">昨天 14:20 · 64,210 个文件已处理</div>
+              </div>
+              <div class="rtime">详情 ›</div>
+            </div>
+            <div class="recent-row">
+              <div class="rtype"><svg class="ico sm" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></div>
+              <div>
+                <div class="rtitle">3.2 GB · 2 个分类</div>
+                <div class="rsub">10 月 26 日 09:04 · 12,880 个文件</div>
+              </div>
+              <div class="rtime">详情 ›</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="art">
+          <div class="glow"></div>
+          <div class="sheet back">
+            <i></i><i style="width:118px"></i><i style="width:96px"></i><i style="width:110px"></i><i style="width:74px"></i>
+          </div>
+          <div class="sheet front">
+            <div class="tag">AIRCLEAN / 概览</div>
+            <div class="ring-wrap">
+              <svg width="112" height="112" viewBox="0 0 112 112">
+                <circle cx="56" cy="56" r="47" fill="none" stroke="#EDE7DD" stroke-width="7"/>
+                <circle cx="56" cy="56" r="47" fill="none" stroke="#E3563B" stroke-width="7" stroke-linecap="round"
+                        stroke-dasharray="246.6 295.3" transform="rotate(-90 56 56)"/>
+              </svg>
+              <div class="center"><b>428<span>GB</span></b><em>已用 / 512 GB</em></div>
+            </div>
+            <div class="legend">
+              <div><span class="bar" style="background:#A79E90"></span>系统<b>82 GB</b></div>
+              <div><span class="bar" style="background:#C7BEB0"></span>应用<b>121 GB</b></div>
+              <div><span class="bar" style="background:#DED7CB"></span>媒体<b>172 GB</b></div>
+              <div><span class="bar" style="background:#E3563B"></span>可清理<b>12.4 GB</b></div>
+            </div>
+            <div class="foot">
+              <span class="mark"><span><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z"/></svg></span>AirClean</span>
+              <span>2026</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="statusbar">
+        <span class="dot teal"></span>
+        <span>就绪 · 本地运行，不上传任何文件</span>
+        <div class="right"><span>Macintosh HD · 可用 84 GB</span><div class="sdiv"></div><span class="tertiary">AirClean 0.1</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 02 RESULTS ================= -->
+  <section class="item">
+    <div class="label"><span class="num">02</span><span class="cn">扫描结果</span><span class="en">RESULTS / MAIN WORKSPACE</span></div>
+    <div class="screen">
+      <div class="topbar">
+        <div class="brand">
+          <div class="logo">
+            <svg viewBox="0 0 24 24"><circle cx="9.2" cy="14.6" r="5.9"/><circle cx="9.2" cy="14.6" r=".95" fill="#fff" stroke="none"/><path d="M18.9 2.7l.78 2.32 2.32.78-2.32.78-.78 2.32-.78-2.32-2.32-.78 2.32-.78.78-2.32Z" fill="#fff" stroke="none"/></svg>
+          </div>
+          <div class="name">AirClean</div>
+          <div class="vdiv"></div>
+          <button class="btn soft">
+            <svg class="ico sm" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z"/></svg>
+            重新扫描
+          </button>
+        </div>
+        <div class="top-right">
+          <button class="icon-btn lang">中</button>
+          <button class="icon-btn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
+          <button class="icon-btn"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10.6 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
+        </div>
+      </div>
+
+      <div class="body">
+        <aside class="rail">
+          <div class="eyebrow">存储空间</div>
+          <div class="vol">
+            <div class="vol-top">
+              <div class="vol-ic"><svg class="ico sm" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M6 14h.01M10 12h8"/></svg></div>
+              <div><div class="vol-name">Macintosh HD</div><div class="vol-sub">512 GB · 可用 84 GB</div></div>
+            </div>
+            <div class="vol-bar"><i style="width:16%;background:#A79E90"></i><i style="width:23.6%;background:#C7BEB0"></i><i style="width:33.6%;background:#DED7CB"></i><i style="width:7.9%;background:#E8E2D7"></i><i style="width:2.4%;background:#E3563B"></i></div>
+          </div>
+
+          <div class="sec">
+            <div class="eyebrow">分类</div>
+            <div class="rail-row active"><span class="cb on" style="width:14px;height:14px;border-radius:4px"><svg viewBox="0 0 24 24" style="width:8px;height:8px;stroke:#fff;stroke-width:2.8;fill:none"><path d="M20 6L9 17l-5-5"/></svg></span>系统临时文件<span class="sz">4.2 GB</span></div>
+            <div class="rail-row"><span class="cb on" style="width:14px;height:14px;border-radius:4px"><svg viewBox="0 0 24 24" style="width:8px;height:8px;stroke:#fff;stroke-width:2.8;fill:none"><path d="M20 6L9 17l-5-5"/></svg></span>应用缓存<span class="sz">3.1 GB</span></div>
+            <div class="rail-row"><span class="cb on" style="width:14px;height:14px;border-radius:4px"><svg viewBox="0 0 24 24" style="width:8px;height:8px;stroke:#fff;stroke-width:2.8;fill:none"><path d="M20 6L9 17l-5-5"/></svg></span>日志与诊断<span class="sz">1.6 GB</span></div>
+            <div class="rail-row"><span class="cb on" style="width:14px;height:14px;border-radius:4px"><svg viewBox="0 0 24 24" style="width:8px;height:8px;stroke:#fff;stroke-width:2.8;fill:none"><path d="M20 6L9 17l-5-5"/></svg></span>废纸篓<span class="sz">2.4 GB</span></div>
+            <div class="rail-row"><span class="cb on" style="width:14px;height:14px;border-radius:4px"><svg viewBox="0 0 24 24" style="width:8px;height:8px;stroke:#fff;stroke-width:2.8;fill:none"><path d="M20 6L9 17l-5-5"/></svg></span>开发缓存<span class="sz">1.1 GB</span></div>
+          </div>
+
+          <div class="sec">
+            <div class="eyebrow">工具</div>
+            <div class="rail-row"><svg class="ico sm tertiary" viewBox="0 0 24 24"><path d="M4 6h10M4 12h16M4 18h7"/><path d="M17 3l3 3-3 3"/></svg>大文件<span class="sz">›</span></div>
+            <div class="rail-row"><svg class="ico sm tertiary" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>重复文件<span class="sz">›</span></div>
+            <div class="rail-row"><svg class="ico sm tertiary" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>扫描记录<span class="sz">›</span></div>
+          </div>
+
+          <div class="rail-foot">
+            <svg class="ico sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+            受保护项目不会被列出
+          </div>
+        </aside>
+
+        <main class="main">
+          <div class="head">
+            <div>
+              <div class="eyebrow">本次扫描 · 18 秒</div>
+              <h2>可清理 12.4 <span>GB</span></h2>
+              <div class="sub">5 个分类 · 64,210 个文件 · 其中 2.4 GB 来自废纸篓，将永久删除</div>
+            </div>
+            <div class="acts">
+              <button class="btn ghost"><svg class="ico sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>重新扫描</button>
+              <button class="btn primary">清理所选 12.4 GB</button>
+            </div>
+          </div>
+
+          <div class="card cap">
+            <div class="cap-top">
+              <div class="t">磁盘占用</div>
+              <div class="v"><b>428 GB</b> 已用 / 512 GB</div>
+            </div>
+            <div class="stack">
+              <i style="width:16%;background:#A79E90"></i>
+              <i style="width:23.6%;background:#C7BEB0"></i>
+              <i style="width:33.6%;background:#DED7CB"></i>
+              <i style="width:7.9%;background:#E8E2D7"></i>
+              <i style="width:2.4%;background:#E3563B"></i>
+            </div>
+            <div class="legend-row">
+              <div><span class="sq" style="background:#A79E90"></span>系统 82 GB</div>
+              <div><span class="sq" style="background:#C7BEB0"></span>应用 121 GB</div>
+              <div><span class="sq" style="background:#DED7CB"></span>媒体 172 GB</div>
+              <div><span class="sq" style="background:#E8E2D7"></span>其他 40.6 GB</div>
+              <div><span class="sq" style="background:#E3563B"></span>可清理 12.4 GB</div>
+              <div style="margin-left:auto;color:#9A9286">可用 84 GB</div>
+            </div>
+          </div>
+
+          <div class="card cat-card">
+            <div class="cat-head">
+              <span class="eyebrow">分类结果</span>
+              <span class="right">按体积排序</span>
+            </div>
+
+            <div class="cat-rows">
+            <div class="cat-row on">
+              <span class="cb on"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+              <div class="tile"><svg class="ico sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 8v4l3 2"/></svg></div>
+              <div><div class="cat-name">系统临时文件</div><div class="cat-desc">临时目录、更新缓存、崩溃转储与旧安装包</div></div>
+              <div class="cat-size">4.2<em>GB</em></div>
+              <div class="cat-count">1,842 个文件</div>
+              <div class="chev">›</div>
+            </div>
+
+            <div class="cat-row on">
+              <span class="cb on"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+              <div class="tile"><svg class="ico sm" viewBox="0 0 24 24"><path d="M12 2l9 5-9 5-9-5 9-5Z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg></div>
+              <div><div class="cat-name">应用缓存</div><div class="cat-desc">浏览器、聊天工具与应用沙盒中的可再生缓存</div></div>
+              <div class="cat-size">3.1<em>GB</em></div>
+              <div class="cat-count">18,204 个文件</div>
+              <div class="chev">›</div>
+            </div>
+
+            <div class="cat-row on">
+              <span class="cb on"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+              <div class="tile"><svg class="ico sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div>
+              <div><div class="cat-name">日志与诊断</div><div class="cat-desc">系统日志、崩溃报告与诊断归档</div></div>
+              <div class="cat-size">1.6<em>GB</em></div>
+              <div class="cat-count">642 个文件</div>
+              <div class="chev">›</div>
+            </div>
+
+            <div class="cat-row on">
+              <span class="cb on"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+              <div class="tile"><svg class="ico sm" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></div>
+              <div><div class="cat-name">废纸篓<span class="perm">永久</span></div><div class="cat-desc">清空后立即释放空间，无法恢复</div></div>
+              <div class="cat-size">2.4<em>GB</em></div>
+              <div class="cat-count">1,204 个文件</div>
+              <div class="chev">›</div>
+            </div>
+
+            <div class="cat-row on">
+              <span class="cb on"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+              <div class="tile"><svg class="ico sm" viewBox="0 0 24 24"><path d="M8 6l-5 6 5 6"/><path d="M16 6l5 6-5 6"/></svg></div>
+              <div><div class="cat-name">开发缓存</div><div class="cat-desc">包管理器、构建产物与模拟器缓存，可随时重建</div></div>
+              <div class="cat-size">1.1<em>GB</em></div>
+              <div class="cat-count">42,318 个文件</div>
+              <div class="chev">›</div>
+            </div>
+            </div>
+
+            <div class="cat-foot">
+              <svg class="ico" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9 12l2 2 4-4"/></svg>
+              1,062 个正在使用、刚被修改或权限不足的文件已自动跳过
+              <span class="link">查看原因 ›</span>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <div class="statusbar">
+        <span class="dot teal"></span>
+        <span>扫描完成 · 刚刚 · 未发现权限问题</span>
+        <div class="right"><span>已选择 5 / 5 个分类</span><div class="sdiv"></div><span class="tertiary">AirClean 0.1</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 03 DONE ================= -->
+  <section class="item">
+    <div class="label"><span class="num">03</span><span class="cn">清理完成</span><span class="en">COMPLETION / TRUST MOMENT</span></div>
+    <div class="screen">
+      <div class="topbar">
+        <div class="brand">
+          <div class="logo">
+            <svg viewBox="0 0 24 24"><circle cx="9.2" cy="14.6" r="5.9"/><circle cx="9.2" cy="14.6" r=".95" fill="#fff" stroke="none"/><path d="M18.9 2.7l.78 2.32 2.32.78-2.32.78-.78 2.32-.78-2.32-2.32-.78 2.32-.78.78-2.32Z" fill="#fff" stroke="none"/></svg>
+          </div>
+          <div class="name">AirClean</div>
+          <div class="vdiv"></div>
+          <button class="btn soft">
+            <svg class="ico sm" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z"/></svg>
+            重新扫描
+          </button>
+        </div>
+        <div class="top-right">
+          <button class="icon-btn lang">中</button>
+          <button class="icon-btn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
+          <button class="icon-btn"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10.6 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
+        </div>
+      </div>
+
+      <div class="body">
+        <aside class="rail">
+          <div class="eyebrow">存储空间</div>
+          <div class="vol">
+            <div class="vol-top">
+              <div class="vol-ic"><svg class="ico sm" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M6 14h.01M10 12h8"/></svg></div>
+              <div><div class="vol-name">Macintosh HD</div><div class="vol-sub">512 GB · 可用 96.4 GB</div></div>
+            </div>
+            <div class="vol-bar"><i style="width:16%;background:#A79E90"></i><i style="width:23.6%;background:#C7BEB0"></i><i style="width:33.6%;background:#DED7CB"></i><i style="width:5.5%;background:#E8E2D7"></i></div>
+          </div>
+
+          <div class="sec">
+            <div class="eyebrow">分类</div>
+            <div class="rail-row"><span class="cb on" style="width:14px;height:14px;border-radius:4px;opacity:.45"><svg viewBox="0 0 24 24" style="width:8px;height:8px;stroke:#fff;stroke-width:2.8;fill:none"><path d="M20 6L9 17l-5-5"/></svg></span>系统临时文件<span class="sz">0 B</span></div>
+            <div class="rail-row"><span class="cb on" style="width:14px;height:14px;border-radius:4px;opacity:.45"><svg viewBox="0 0 24 24" style="width:8px;height:8px;stroke:#fff;stroke-width:2.8;fill:none"><path d="M20 6L9 17l-5-5"/></svg></span>应用缓存<span class="sz">0 B</span></div>
+            <div class="rail-row"><span class="cb on" style="width:14px;height:14px;border-radius:4px;opacity:.45"><svg viewBox="0 0 24 24" style="width:8px;height:8px;stroke:#fff;stroke-width:2.8;fill:none"><path d="M20 6L9 17l-5-5"/></svg></span>日志与诊断<span class="sz">0 B</span></div>
+            <div class="rail-row"><span class="cb on" style="width:14px;height:14px;border-radius:4px;opacity:.45"><svg viewBox="0 0 24 24" style="width:8px;height:8px;stroke:#fff;stroke-width:2.8;fill:none"><path d="M20 6L9 17l-5-5"/></svg></span>废纸篓<span class="sz">0 B</span></div>
+            <div class="rail-row"><span class="cb on" style="width:14px;height:14px;border-radius:4px;opacity:.45"><svg viewBox="0 0 24 24" style="width:8px;height:8px;stroke:#fff;stroke-width:2.8;fill:none"><path d="M20 6L9 17l-5-5"/></svg></span>开发缓存<span class="sz">0 B</span></div>
+          </div>
+
+          <div class="rail-foot">
+            <svg class="ico sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+            受保护项目不会被列出
+          </div>
+        </aside>
+
+        <main class="done">
+          <div>
+            <div class="check-tile"><svg class="ico" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+            <h2>已清理 12.4 <span>GB</span></h2>
+            <div class="sub">10.0 GB 已移到废纸篓 · 2.4 GB 已永久删除</div>
+            <div class="acts">
+              <button class="btn primary">完成</button>
+              <button class="btn ghost">撤销（恢复 10.0 GB）</button>
+              <button class="btn danger">清空废纸篓…</button>
+            </div>
+
+            <div class="brk">
+              <div class="brk-title">清理明细</div>
+              <div class="brk-row"><span>系统临时文件 · 1,842 个文件</span><div class="mini"><i style="width:100%"></i></div><span class="amt">4.2 GB</span></div>
+              <div class="brk-row"><span>应用缓存 · 18,204 个文件</span><div class="mini"><i style="width:74%"></i></div><span class="amt">3.1 GB</span></div>
+              <div class="brk-row"><span>废纸篓（永久）· 1,204 个文件</span><div class="mini"><i style="width:57%"></i></div><span class="amt">2.4 GB</span></div>
+              <div class="brk-row"><span>日志与诊断 · 642 个文件</span><div class="mini"><i style="width:38%"></i></div><span class="amt">1.6 GB</span></div>
+              <div class="brk-row"><span>开发缓存 · 42,318 个文件</span><div class="mini"><i style="width:26%"></i></div><span class="amt">1.1 GB</span></div>
+            </div>
+
+            <div class="callout">
+              <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>
+              <div>10.0 GB 还在废纸篓里，清空后才会释放；这 10.0 GB 不会被永久删除。</div>
+            </div>
+          </div>
+
+          <div class="side">
+            <div class="t">已跳过 1,062 个文件</div>
+            <div class="s">这些文件没有被动过，也不会被重试。</div>
+            <div class="skip"><span class="dot amber"></span>正在被应用使用<b>812</b></div>
+            <div class="skip"><span class="dot amber"></span>权限不足<b>214</b></div>
+            <div class="skip"><span class="dot amber"></span>扫描后已被修改<b>36</b></div>
+            <div class="foot">跳过记录保存在本地，不包含文件内容。</div>
+          </div>
+        </main>
+      </div>
+
+      <div class="statusbar">
+        <span class="dot teal"></span>
+        <span>完成 · 2.4 GB 已释放，10.0 GB 在废纸篓中</span>
+        <div class="right"><span>清理用时 6 秒</span><div class="sdiv"></div><span class="tertiary">AirClean 0.1</span></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

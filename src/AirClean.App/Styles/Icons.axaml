@@ -1,0 +1,19 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Line icons adapted from Lucide (ISC License). -->
+  <StreamGeometry x:Key="IconSparkle">M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z</StreamGeometry>
+  <StreamGeometry x:Key="IconMoon">M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z</StreamGeometry>
+  <StreamGeometry x:Key="IconSun">M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41</StreamGeometry>
+  <StreamGeometry x:Key="IconSettings">M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10.6 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z</StreamGeometry>
+  <StreamGeometry x:Key="IconShieldCheck">M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z M9 12l2 2 4-4</StreamGeometry>
+  <StreamGeometry x:Key="IconChevronRight">M9 18l6-6-6-6</StreamGeometry>
+  <StreamGeometry x:Key="IconChevronDown">M6 9l6 6 6-6</StreamGeometry>
+  <StreamGeometry x:Key="IconChevronUp">M18 15l-6-6-6 6</StreamGeometry>
+  <StreamGeometry x:Key="IconCheck">M20 6L9 17l-5-5</StreamGeometry>
+  <StreamGeometry x:Key="IconMinus">M5 12h14</StreamGeometry>
+  <StreamGeometry x:Key="IconClose">M18 6L6 18M6 6l12 12</StreamGeometry>
+  <StreamGeometry x:Key="IconFolder">M4 20h16a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-7l-2-2H4a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1Z</StreamGeometry>
+  <StreamGeometry x:Key="IconReveal">M3 7a2 2 0 0 1 2-2h3.6l2 2H19a2 2 0 0 1 2 2v1M3 7v11a2 2 0 0 0 2 2h11.6a2 2 0 0 0 1.9-1.4l2.3-7.2a1 1 0 0 0-1-1.4H6.7a2 2 0 0 0-1.9 1.4L3 18</StreamGeometry>
+  <StreamGeometry x:Key="IconRefresh">M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6</StreamGeometry>
+  <StreamGeometry x:Key="IconDisk">M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z</StreamGeometry>
+</ResourceDictionary>

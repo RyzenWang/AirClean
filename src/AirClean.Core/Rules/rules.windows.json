@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "platform": "windows",
+  "rules": [
+    {
+      "id": "win.temp.user",
+      "category": "SystemTemp",
+      "safety": "Safe",
+      "roots": ["%TEMP%", "%LOCALAPPDATA%\\Temp"],
+      "maxDepth": 10,
+      "minAgeDays": 1,
+      "exclude": ["*.lock", "~*"],
+      "source": "用户临时目录；应用会自行重建"
+    },
+    {
+      "id": "win.cache.browsers",
+      "category": "AppCache",
+      "safety": "Safe",
+      "roots": [
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\*\\Cache",
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\*\\Code Cache",
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\*\\GPUCache",
+        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\*\\Cache",
+        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\*\\Code Cache",
+        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\*\\GPUCache",
+        "%LOCALAPPDATA%\\Mozilla\\Firefox\\Profiles\\*\\cache2"
+      ],
+      "maxDepth": 6,
+      "minAgeDays": 1,
+      "source": "浏览器缓存；会自行重建"
+    },
+    {
+      "id": "win.cache.uwp",
+      "category": "AppCache",
+      "safety": "Safe",
+      "roots": ["%LOCALAPPDATA%\\Packages\\*\\LocalCache", "%LOCALAPPDATA%\\Microsoft\\Windows\\INetCache"],
+      "maxDepth": 8,
+      "minAgeDays": 2,
+      "source": "应用本地缓存与网页缓存"
+    },
+    {
+      "id": "win.logs",
+      "category": "LogsDiagnostics",
+      "safety": "Safe",
+      "roots": ["%LOCALAPPDATA%\\CrashDumps", "%LOCALAPPDATA%\\Microsoft\\Windows\\WER"],
+      "maxDepth": 8,
+      "minAgeDays": 2,
+      "source": "崩溃转储与 Windows 错误报告"
+    },
+    {
+      "id": "win.trash",
+      "category": "Trash",
+      "safety": "Safe",
+      "action": "empty-trash",
+      "roots": [],
+      "source": "回收站；清空后立即释放空间"
+    },
+    {
+      "id": "win.dev.nuget",
+      "category": "DeveloperCache",
+      "safety": "Caution",
+      "roots": ["%LOCALAPPDATA%\\NuGet\\v3-cache"],
+      "maxDepth": 6,
+      "minAgeDays": 3,
+      "source": "NuGet 下载缓存；需要时重新下载"
+    },
+    {
+      "id": "win.dev.npm",
+      "category": "DeveloperCache",
+      "safety": "Caution",
+      "roots": ["%LOCALAPPDATA%\\npm-cache", "%APPDATA%\\npm-cache", "%LOCALAPPDATA%\\Yarn\\Cache"],
+      "maxDepth": 6,
+      "minAgeDays": 3,
+      "source": "Node 包管理器缓存"
+    },
+    {
+      "id": "win.dev.python",
+      "category": "DeveloperCache",
+      "safety": "Caution",
+      "roots": ["%LOCALAPPDATA%\\pip\\Cache"],
+      "maxDepth": 6,
+      "minAgeDays": 3,
+      "source": "pip 下载缓存"
+    },
+    {
+      "id": "win.dev.gradle",
+      "category": "DeveloperCache",
+      "safety": "Caution",
+      "roots": ["%USERPROFILE%\\.gradle\\caches", "%USERPROFILE%\\.cargo\\registry\\cache"],
+      "maxDepth": 6,
+      "minAgeDays": 7,
+      "source": "Gradle 与 Cargo 构建缓存；重新构建即可恢复"
+    }
+  ]
+}

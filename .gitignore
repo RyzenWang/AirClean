@@ -1,0 +1,22 @@
+## Build output
+bin/
+obj/
+artifacts/
+publish/
+releases/
+.vpk/
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Local logs and captures
+docs/design/_*.png
+*.log

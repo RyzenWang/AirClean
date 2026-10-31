@@ -1,0 +1,1070 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AirClean.App.ViewModels"
+        x:Class="AirClean.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="AirClean"
+        Icon="avares://AirClean/Assets/airclean.ico"
+        Width="1240"
+        Height="860"
+        MinWidth="920"
+        MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppBackgroundBrush}">
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+R" Command="{Binding ScanCommand}" />
+    <KeyBinding Gesture="Escape" Command="{Binding EscapeCommand}" />
+  </Window.KeyBindings>
+  <Grid>
+    <Grid RowDefinitions="Auto,*,Auto">
+      <!-- Top bar -->
+      <Border Grid.Row="0"
+              Background="{DynamicResource ToolbarBackgroundBrush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="0,0,0,1"
+              Padding="14,9">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <Border Width="31" Height="31" CornerRadius="8" Background="{DynamicResource AccentBrush}">
+              <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Canvas Width="24" Height="24">
+                  <Ellipse Canvas.Left="3.3" Canvas.Top="8.7" Width="11.8" Height="11.8"
+                           Stroke="White" StrokeThickness="1.9" />
+                  <Ellipse Canvas.Left="8.25" Canvas.Top="13.65" Width="1.9" Height="1.9" Fill="White" />
+                  <Path Data="M18.9,2.7 L19.68,5.02 L22,5.8 L19.68,6.58 L18.9,8.9 L18.12,6.58 L15.8,5.8 L18.12,5.02 Z"
+                        Fill="White" />
+                </Canvas>
+              </Viewbox>
+            </Border>
+            <TextBlock Text="AirClean"
+                       FontSize="15.5"
+                       FontWeight="Bold"
+                       VerticalAlignment="Center"
+                       LetterSpacing="-0.2" />
+            <Border Width="1" Height="19" Background="{DynamicResource BorderBrush}" Margin="4,0" VerticalAlignment="Center" />
+            <Button Classes="soft" Command="{Binding ScanCommand}" ToolTip.Tip="{DynamicResource L.ScanTooltip}">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <Path Classes="icon small"
+                      Data="{StaticResource IconSparkle}"
+                      Stroke="{DynamicResource AccentTextBrush}" />
+                <TextBlock Text="{DynamicResource L.Scan}" FontWeight="SemiBold" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+            <Button Classes="icon" Command="{Binding ToggleLanguageCommand}" ToolTip.Tip="{DynamicResource L.Language}">
+              <TextBlock Text="{Binding LanguageShortLabel}"
+                         FontSize="12.5"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
+            </Button>
+            <Button Classes="icon" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="{DynamicResource L.Appearance}">
+              <Panel>
+                <Path Classes="icon" Data="{StaticResource IconMoon}" IsVisible="{Binding IsLightTheme}" />
+                <Path Classes="icon" Data="{StaticResource IconSun}" IsVisible="{Binding IsDarkTheme}" />
+              </Panel>
+            </Button>
+            <Button x:Name="SettingsButton" Classes="icon" ToolTip.Tip="{DynamicResource L.Settings}">
+              <Button.Flyout>
+                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                  <MenuItem Header="{DynamicResource L.ThemeSystem}" Click="OnThemeSystem" />
+                  <MenuItem Header="{DynamicResource L.ThemeLight}" Click="OnThemeLight" />
+                  <MenuItem Header="{DynamicResource L.ThemeDark}" Click="OnThemeDark" />
+                  <Separator />
+                  <MenuItem Header="English" Click="OnLanguageEnglish" />
+                  <MenuItem Header="简体中文" Click="OnLanguageChinese" />
+                  <Separator />
+                  <MenuItem Header="{DynamicResource L.MoreSettingsLater}" IsEnabled="False" />
+                </MenuFlyout>
+              </Button.Flyout>
+              <Path Classes="icon" Data="{StaticResource IconSettings}" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Panel Grid.Row="1">
+        <!-- Welcome -->
+        <ScrollViewer IsVisible="{Binding IsWelcomeVisible}"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+          <Grid MaxWidth="1120"
+                MinHeight="560"
+                Margin="46,34"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                ColumnDefinitions="1.15*,0.85*">
+            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="0" Margin="0,0,36,0">
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,17">
+                <Border Width="6" Height="6" CornerRadius="3" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="{DynamicResource L.Tagline}" Classes="eyebrow" />
+              </StackPanel>
+
+              <TextBlock Text="{DynamicResource L.WelcomeTitle1}" Classes="h1" />
+              <TextBlock Text="{DynamicResource L.WelcomeTitle2}" Classes="h1" />
+
+              <TextBlock Text="{DynamicResource L.WelcomeSubtitle}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         FontSize="14"
+                         LineHeight="22"
+                         TextWrapping="Wrap"
+                         MaxWidth="490"
+                         Margin="0,16,0,26" />
+
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Classes="primary" Command="{Binding ScanCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Path Data="{StaticResource IconSparkle}"
+                          Stroke="White"
+                          StrokeThickness="1.8"
+                          StrokeLineCap="Round"
+                          StrokeJoin="Round"
+                          Stretch="Uniform"
+                          Width="17"
+                          Height="17"
+                          VerticalAlignment="Center" />
+                    <TextBlock Text="{DynamicResource L.StartScan}" FontWeight="SemiBold" />
+                  </StackPanel>
+                </Button>
+                <Border Classes="kbd" VerticalAlignment="Stretch">
+                  <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                    <TextBlock Text="Ctrl" Classes="caption" FontWeight="SemiBold" />
+                    <TextBlock Text="R" Classes="caption" FontWeight="SemiBold" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
+              <StackPanel Margin="0,22,0,0" Spacing="8">
+                <TextBlock Text="{DynamicResource L.ScanTarget}" Classes="eyebrow" />
+                <ItemsControl ItemsSource="{Binding Volumes}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:VolumeItemViewModel">
+                      <Button Classes="volchip"
+                              Classes.active="{Binding IsSelected}"
+                              Command="{Binding ChooseCommand}"
+                              Margin="0,0,8,8"
+                              IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CanSwitchVolume}">
+                        <StackPanel Spacing="1">
+                          <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding FreeText}"
+                                     FontSize="10"
+                                     Foreground="{DynamicResource TextTertiaryBrush}" />
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding WelcomeScanHint}"
+                           Classes="caption"
+                           FontSize="11"
+                           MaxWidth="470"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+
+              <TextBlock Text="{DynamicResource L.WelcomeMeta}"
+                         Classes="caption"
+                         Margin="1,14,0,0" />
+            </StackPanel>
+
+            <!-- Paper stack artwork -->
+            <Viewbox Grid.Column="1"
+                     Stretch="Uniform"
+                     MaxWidth="370"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center">
+              <Canvas Width="370" Height="414">
+                <Ellipse Canvas.Left="101"
+                         Canvas.Top="20"
+                         Width="265"
+                         Height="265"
+                         Fill="{DynamicResource AccentSoftBrush}" />
+
+                <Border Canvas.Left="52"
+                        Canvas.Top="92"
+                        Width="190"
+                        Height="254"
+                        Background="#FCFAF6"
+                        BorderBrush="#E1D9CD"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        BoxShadow="0 14 34 0 #26000000"
+                        RenderTransformOrigin="0.5,0.5">
+                  <Border.RenderTransform>
+                    <RotateTransform Angle="-12" />
+                  </Border.RenderTransform>
+                  <StackPanel Margin="24,26" Spacing="8">
+                    <Border Height="6" Width="44" CornerRadius="3" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left" />
+                    <Border Height="4" Width="118" CornerRadius="2" Background="#D9D2C7" HorizontalAlignment="Left" />
+                    <Border Height="4" Width="96" CornerRadius="2" Background="#E6DFD4" HorizontalAlignment="Left" />
+                    <Border Height="4" Width="110" CornerRadius="2" Background="#E6DFD4" HorizontalAlignment="Left" />
+                    <Border Height="4" Width="74" CornerRadius="2" Background="#E6DFD4" HorizontalAlignment="Left" />
+                  </StackPanel>
+                </Border>
+
+                <Border Canvas.Left="104"
+                        Canvas.Top="64"
+                        Width="210"
+                        Height="278"
+                        Background="#FCFAF6"
+                        BorderBrush="#E1D9CD"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        BoxShadow="0 14 34 0 #26000000"
+                        RenderTransformOrigin="0.5,0.5">
+                  <Border.RenderTransform>
+                    <RotateTransform Angle="-4" />
+                  </Border.RenderTransform>
+                  <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="22,20,22,16">
+                    <TextBlock Text="AIRCLEAN"
+                               FontSize="7.5"
+                               FontWeight="Bold"
+                               LetterSpacing="1.2"
+                               Foreground="#A69D90" />
+
+                    <Grid Grid.Row="1" Width="112" Height="112" Margin="0,10,0,0" HorizontalAlignment="Center">
+                      <Ellipse Width="94"
+                               Height="94"
+                               Stroke="#EDE7DD"
+                               StrokeThickness="7" />
+                      <Path x:Name="RingArc"
+                            Width="94"
+                            Height="94"
+                            Stroke="{DynamicResource AccentBrush}"
+                            StrokeThickness="7"
+                            StrokeLineCap="Round"
+                            Stretch="None"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                          <TextBlock Text="{Binding DiskNumber}"
+                                     FontSize="19"
+                                     FontWeight="Bold"
+                                     LetterSpacing="-0.3"
+                                     Foreground="#1D232C" />
+                          <TextBlock Text="{Binding DiskUnit}"
+                                     FontSize="9.5"
+                                     FontWeight="SemiBold"
+                                     Foreground="#69645C"
+                                     Margin="2,0,0,1"
+                                     VerticalAlignment="Bottom" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding DiskSubtitle}"
+                                   FontSize="8.5"
+                                   Foreground="#9A9286"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,1,0,0" />
+                      </StackPanel>
+                    </Grid>
+
+                    <StackPanel Grid.Row="2" Spacing="5" Margin="0,12,0,0">
+                      <Grid ColumnDefinitions="Auto,*,Auto" Height="14">
+                        <Border Width="8" Height="8" CornerRadius="2" Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{DynamicResource L.DiskUsed}" FontSize="8.5" Foreground="#69645C" Margin="6,0,0,0" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding DiskUsedValue}" FontSize="8.5" FontWeight="SemiBold" Foreground="#1D232C" VerticalAlignment="Center" />
+                      </Grid>
+                      <Grid ColumnDefinitions="Auto,*,Auto" Height="14">
+                        <Border Width="8" Height="8" CornerRadius="2" Background="#C7BEB0" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{DynamicResource L.DiskFree}" FontSize="8.5" Foreground="#69645C" Margin="6,0,0,0" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding DiskFreeValue}" FontSize="8.5" FontWeight="SemiBold" Foreground="#1D232C" VerticalAlignment="Center" />
+                      </Grid>
+                      <Grid ColumnDefinitions="Auto,*,Auto" Height="14">
+                        <Border Width="8" Height="8" CornerRadius="2" Background="#DED7CB" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{DynamicResource L.DiskTotal}" FontSize="8.5" Foreground="#69645C" Margin="6,0,0,0" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding DiskTotalValue}" FontSize="8.5" FontWeight="SemiBold" Foreground="#1D232C" VerticalAlignment="Center" />
+                      </Grid>
+                    </StackPanel>
+
+                    <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Border Width="13" Height="13" CornerRadius="4" Background="{DynamicResource AccentBrush}">
+                          <Path Data="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z"
+                                Fill="White"
+                                Width="8"
+                                Height="8"
+                                Stretch="Uniform"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="AirClean"
+                                   FontSize="7.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="#7A7368"
+                                   VerticalAlignment="Center" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="1"
+                                 Text="2026"
+                                 FontSize="7.5"
+                                 Foreground="#A69D90"
+                                 VerticalAlignment="Center" />
+                    </Grid>
+                  </Grid>
+                </Border>
+              </Canvas>
+            </Viewbox>
+          </Grid>
+        </ScrollViewer>
+
+        <!-- Scanning -->
+        <Grid IsVisible="{Binding IsScanningVisible}" Background="{DynamicResource AppBackgroundBrush}">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="0" Width="460">
+            <TextBlock Text="{Binding ScanTitleText}"
+                       Classes="eyebrow"
+                       HorizontalAlignment="Center" />
+
+            <TextBlock Text="{Binding ScanFoundText}"
+                       FontSize="48"
+                       FontWeight="SemiBold"
+                       LetterSpacing="-1.2"
+                       HorizontalAlignment="Center"
+                       Margin="0,14,0,0" />
+
+            <TextBlock Text="{DynamicResource L.ScanFound}"
+                       Classes="caption"
+                       HorizontalAlignment="Center"
+                       Margin="0,2,0,0" />
+
+            <ProgressBar IsIndeterminate="True"
+                         Height="3"
+                         Width="260"
+                         Margin="0,28,0,0"
+                         HorizontalAlignment="Center" />
+
+            <TextBlock Text="{Binding ScanFilesText}"
+                       Classes="caption"
+                       HorizontalAlignment="Center"
+                       Margin="0,18,0,0" />
+
+            <TextBlock Text="{Binding ScanTargetText}"
+                       Classes="caption tertiary"
+                       FontSize="10.5"
+                       HorizontalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       MaxWidth="440"
+                       Margin="0,4,0,0" />
+
+            <Button Classes="ghost"
+                    Content="{DynamicResource L.Cancel}"
+                    Command="{Binding CancelScanCommand}"
+                    HorizontalAlignment="Center"
+                    Margin="0,26,0,0" />
+          </StackPanel>
+        </Grid>
+
+        <!-- Results -->
+        <Grid IsVisible="{Binding IsResultsVisible}" ColumnDefinitions="252,*">
+          <Border Grid.Column="0"
+                  Background="{DynamicResource SidebarBackgroundBrush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="0,0,1,0">
+            <Grid RowDefinitions="Auto,*,Auto" Margin="14,14,12,12">
+              <StackPanel Spacing="10">
+                <TextBlock Text="{DynamicResource L.Storage}" Classes="eyebrow" />
+                <Border Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="11"
+                        Padding="11,10">
+                  <StackPanel Spacing="9">
+                    <ComboBox x:Name="VolumeBox"
+                              ItemsSource="{Binding Volumes}"
+                              SelectedItem="{Binding SelectedVolume, Mode=TwoWay}"
+                              IsEnabled="{Binding CanSwitchVolume}"
+                              SelectionChanged="OnVolumeChanged"
+                              HorizontalAlignment="Stretch"
+                              MinHeight="30"
+                              Padding="8,3"
+                              FontSize="11.5">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:VolumeItemViewModel">
+                          <TextBlock Text="{Binding Name}" FontSize="11.5" FontWeight="SemiBold" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <ProgressBar Classes="capacity"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding DiskUsedPercent}" />
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <TextBlock Text="{DynamicResource L.DiskFree}" FontSize="10.5" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Text="{Binding DiskFreeValue}" FontSize="10.5" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Text="·" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" />
+                      <TextBlock Text="{Binding DiskTotalValue}" FontSize="10.5" Foreground="{DynamicResource TextTertiaryBrush}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+
+                <StackPanel Spacing="3" Margin="0,4,0,0">
+                  <TextBlock Text="{DynamicResource L.ThisScan}" Classes="eyebrow" Margin="2,0,0,4" />
+                  <TextBlock Text="{Binding ScanFilesText}" Classes="caption" FontSize="10.5" />
+                  <TextBlock Text="{Binding ScanElapsedText}" Classes="caption" FontSize="10.5" />
+                </StackPanel>
+              </StackPanel>
+
+              <StackPanel Grid.Row="2" Spacing="8">
+                <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,4" />
+                <TextBlock Text="{DynamicResource L.ProtectedNote}"
+                           Classes="caption"
+                           FontSize="10"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <ScrollViewer Grid.Column="1"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto"
+                        Padding="0">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="26,22,26,24" RowSpacing="14">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel>
+                <TextBlock Text="{DynamicResource L.Reclaimable}" Classes="eyebrow" />
+                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+                  <TextBlock Text="{Binding ReclaimableNumber}"
+                             FontSize="31"
+                             FontWeight="SemiBold"
+                             LetterSpacing="-0.7" />
+                  <TextBlock Text="{Binding ReclaimableUnit}"
+                             FontSize="15"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextSecondaryBrush}"
+                             VerticalAlignment="Bottom"
+                             Margin="0,0,0,5" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,7,0,0">
+                  <TextBlock Text="{Binding FoundSummary}" Classes="caption" FontSize="11" />
+                  <TextBlock Text="·" Classes="caption" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" />
+                  <TextBlock Text="{Binding ScanElapsedText}" Classes="caption" FontSize="11" />
+                </StackPanel>
+              </StackPanel>
+
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9" VerticalAlignment="Top" Margin="0,10,0,0">
+                <Button Classes="ghost" Command="{Binding RescanCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <Path Classes="icon small" Data="{StaticResource IconRefresh}" />
+                    <TextBlock Text="{DynamicResource L.Rescan}" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="primary"
+                        Command="{Binding OpenConfirmCommand}"
+                        IsEnabled="{Binding CanClean}"
+                        Content="{Binding CleanButtonText}" />
+              </StackPanel>
+            </Grid>
+
+            <Border Grid.Row="1" Classes="card" Padding="16,13">
+              <StackPanel Spacing="9">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{DynamicResource L.DiskUsage}" FontSize="12.5" FontWeight="SemiBold" />
+                  <TextBlock Grid.Column="1" Text="{Binding DiskUsedSummary}" Classes="caption" FontSize="10.5" />
+                </Grid>
+                <ProgressBar Classes="capacity"
+                             Minimum="0"
+                             Maximum="100"
+                             Value="{Binding DiskUsedPercent}" />
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{Binding DiskFreeSummary}" Classes="caption" FontSize="10.5" />
+                  <TextBlock Grid.Column="1" Text="{Binding DiskTotalSummary}" Classes="caption tertiary" FontSize="10.5" />
+                </Grid>
+              </StackPanel>
+            </Border>
+
+            <Border Grid.Row="2" Classes="card" ClipToBounds="True">
+              <Grid RowDefinitions="Auto,Auto">
+                <Border Height="38"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="16,0">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{DynamicResource L.Categories}" Classes="eyebrow" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding SelectionSummary}"
+                               Classes="caption"
+                               FontSize="10.5"
+                               VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding Categories}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CategoryViewModel">
+                      <StackPanel IsVisible="{Binding IsApplicable}">
+                        <Border Classes="catrow" Classes.selected="{Binding HasSelection}">
+                          <Grid ColumnDefinitions="16,34,*,86,96,20" ColumnSpacing="10">
+                            <CheckBox Classes="check"
+                                      IsThreeState="True"
+                                      IsChecked="{Binding SelectionState, Mode=TwoWay}"
+                                      IsVisible="{Binding !SupportsItemSelection}"
+                                      VerticalAlignment="Center" />
+                            <Border Grid.Column="1"
+                                    Width="34"
+                                    Height="34"
+                                    CornerRadius="9"
+                                    Background="{DynamicResource SurfaceAltBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    VerticalAlignment="Center">
+                              <Path Data="{Binding Icon}"
+                                    Stroke="{DynamicResource TextSecondaryBrush}"
+                                    StrokeThickness="1.7"
+                                    StrokeLineCap="Round"
+                                    StrokeJoin="Round"
+                                    Width="16"
+                                    Height="16"
+                                    Stretch="Uniform"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                            </Border>
+                            <Button Grid.Column="2"
+                                    Classes="rowtoggle"
+                                    Command="{Binding ToggleExpandCommand}">
+                              <StackPanel VerticalAlignment="Center" Spacing="2">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                  <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" />
+                                  <Border IsVisible="{Binding IsPermanent}"
+                                          Background="{DynamicResource CautionSoftBrush}"
+                                          CornerRadius="4"
+                                          Padding="5,1"
+                                          VerticalAlignment="Center">
+                                    <TextBlock Text="{DynamicResource L.PermanentBadge}"
+                                               FontSize="9"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource CautionBrush}" />
+                                  </Border>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Description}"
+                                           FontSize="10.5"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextTrimming="CharacterEllipsis" />
+                              </StackPanel>
+                            </Button>
+                            <TextBlock Grid.Column="3"
+                                       Text="{Binding SizeText}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       IsVisible="{Binding !IsScanning}" />
+                            <TextBlock Grid.Column="4"
+                                       Text="{Binding CountText}"
+                                       FontSize="10.5"
+                                       Foreground="{DynamicResource TextTertiaryBrush}"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       IsVisible="{Binding !IsScanning}" />
+                            <TextBlock Grid.Column="3"
+                                       Grid.ColumnSpan="2"
+                                       Text="{DynamicResource L.Pending}"
+                                       FontSize="10.5"
+                                       Foreground="{DynamicResource TextTertiaryBrush}"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       IsVisible="{Binding IsScanning}" />
+                            <Button Grid.Column="5"
+                                    Classes="chev"
+                                    Command="{Binding ToggleExpandCommand}"
+                                    IsVisible="{Binding CanExpand}"
+                                    ToolTip.Tip="{DynamicResource L.ShowDetails}">
+                              <Panel>
+                                <Path Classes="icon small"
+                                      Data="{StaticResource IconChevronDown}"
+                                      IsVisible="{Binding !IsExpanded}" />
+                                <Path Classes="icon small"
+                                      Data="{StaticResource IconChevronUp}"
+                                      IsVisible="{Binding IsExpanded}" />
+                              </Panel>
+                            </Button>
+                          </Grid>
+                        </Border>
+
+                        <Border Classes="detailpanel" IsVisible="{Binding IsExpanded}">
+                          <StackPanel Spacing="6">
+                            <Grid ColumnDefinitions="*,Auto">
+                              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding DetailSummary}"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource TextTertiaryBrush}"
+                                           VerticalAlignment="Center" />
+                                <Border IsVisible="{Binding HasFilter}"
+                                        Background="{DynamicResource AccentSoftBrush}"
+                                        CornerRadius="4"
+                                        Padding="6,1"
+                                        VerticalAlignment="Center">
+                                  <StackPanel Orientation="Horizontal" Spacing="3">
+                                    <TextBlock Text="{Binding FilterText}"
+                                               FontSize="9.5"
+                                               Foreground="{DynamicResource AccentTextBrush}"
+                                               MaxWidth="220"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center" />
+                                    <Button Classes="mini"
+                                            Command="{Binding ClearFilterCommand}"
+                                            ToolTip.Tip="{DynamicResource L.ClearFilter}">
+                                      <Path Data="{StaticResource IconClose}"
+                                            Stroke="{DynamicResource AccentTextBrush}"
+                                            StrokeThickness="2"
+                                            StrokeLineCap="Round"
+                                            Width="8"
+                                            Height="8"
+                                            Stretch="Uniform" />
+                                    </Button>
+                                  </StackPanel>
+                                </Border>
+                                <TextBlock Text="{Binding SelectionNote}"
+                                           IsVisible="{Binding HasPartialSelection}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AccentTextBrush}"
+                                           VerticalAlignment="Center" />
+                              </StackPanel>
+
+                              <StackPanel Grid.Column="1"
+                                          Orientation="Horizontal"
+                                          Spacing="2"
+                                          IsVisible="{Binding !IsDuplicates}">
+                                <Button Classes="viewtab"
+                                        IsVisible="{Binding IsFileView}"
+                                        Command="{Binding ToggleVisibleSelectionCommand}"
+                                        Content="{Binding SelectAllLabel}"
+                                        Margin="0,0,6,0" />
+                                <Button Classes="viewtab"
+                                        Classes.active="{Binding IsFileView}"
+                                        Command="{Binding ShowFilesCommand}"
+                                        Content="{DynamicResource L.FilesTab}" />
+                                <Button Classes="viewtab"
+                                        Classes.active="{Binding IsDirectoryView}"
+                                        Command="{Binding ShowDirectoriesCommand}"
+                                        Content="{DynamicResource L.DirectoriesTab}" />
+                              </StackPanel>
+                            </Grid>
+
+                            <ScrollViewer MaxHeight="256"
+                                          IsVisible="{Binding IsDuplicates}"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto">
+                              <ItemsControl ItemsSource="{Binding DuplicateGroups}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:DuplicateGroupViewModel">
+                                    <Grid ColumnDefinitions="Auto,*,Auto"
+                                          Height="46"
+                                          ToolTip.Tip="{Binding KeepText}">
+                                      <CheckBox Classes="check"
+                                                IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,10,0" />
+                                      <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                        <TextBlock Text="{Binding Title}"
+                                                   FontSize="11.5"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding KeepText}"
+                                                   FontSize="9.5"
+                                                   Foreground="{DynamicResource TextTertiaryBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                      </StackPanel>
+                                      <TextBlock Grid.Column="2"
+                                                 Text="{Binding Summary}"
+                                                 FontSize="10"
+                                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                                 VerticalAlignment="Center"
+                                                 Margin="12,0,0,0" />
+                                    </Grid>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </ScrollViewer>
+
+                            <ScrollViewer MaxHeight="256"
+                                          IsVisible="{Binding IsFileView}"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto">
+                              <ItemsControl ItemsSource="{Binding VisibleDetails}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:ItemRowViewModel">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                                          Height="32"
+                                          ToolTip.Tip="{Binding FullPath}">
+                                      <CheckBox Classes="check"
+                                                IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,10,0" />
+                                      <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="11"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Directory}"
+                                                   FontSize="9.5"
+                                                   Foreground="{DynamicResource TextTertiaryBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                      </StackPanel>
+                                      <TextBlock Grid.Column="2"
+                                                 Text="{Binding SizeText}"
+                                                 FontSize="10.5"
+                                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                                 VerticalAlignment="Center"
+                                                 Margin="12,0,0,0" />
+                                      <Button Grid.Column="3"
+                                              Classes="mini"
+                                              Command="{Binding RevealCommand}"
+                                              IsVisible="{Binding IsRevealSupported}"
+                                              ToolTip.Tip="{DynamicResource L.RevealInFolder}"
+                                              Margin="6,0,0,0">
+                                        <Path Data="{StaticResource IconReveal}"
+                                              Stroke="{DynamicResource TextTertiaryBrush}"
+                                              StrokeThickness="1.6"
+                                              StrokeLineCap="Round"
+                                              StrokeJoin="Round"
+                                              Width="12"
+                                              Height="12"
+                                              Stretch="Uniform" />
+                                      </Button>
+                                    </Grid>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </ScrollViewer>
+
+                            <ScrollViewer MaxHeight="256"
+                                          IsVisible="{Binding IsDirectoryViewVisible}"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto">
+                              <ItemsControl ItemsSource="{Binding DirectoryGroups}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:DirectoryGroupViewModel">
+                                    <Grid ColumnDefinitions="Auto,*" Height="32">
+                                      <CheckBox Classes="check"
+                                                IsThreeState="True"
+                                                IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,8,0" />
+                                      <Button Grid.Column="1"
+                                              Classes="folderrow"
+                                              Command="{Binding SelectCommand}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8" Height="30">
+                                          <Path Data="{StaticResource IconFolder}"
+                                                Stroke="{DynamicResource TextTertiaryBrush}"
+                                                StrokeThickness="1.6"
+                                                StrokeLineCap="Round"
+                                                StrokeJoin="Round"
+                                                Width="14"
+                                                Height="14"
+                                                Stretch="Uniform"
+                                                VerticalAlignment="Center" />
+                                          <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Path}"
+                                                       FontSize="9.5"
+                                                       Foreground="{DynamicResource TextTertiaryBrush}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                          </StackPanel>
+                                          <TextBlock Grid.Column="2"
+                                                     Text="{Binding CountText}"
+                                                     FontSize="9.5"
+                                                     Foreground="{DynamicResource TextTertiaryBrush}"
+                                                     VerticalAlignment="Center" />
+                                          <TextBlock Grid.Column="3"
+                                                     Text="{Binding SizeText}"
+                                                     FontSize="10.5"
+                                                     Foreground="{DynamicResource TextSecondaryBrush}"
+                                                     VerticalAlignment="Center"
+                                                     MinWidth="54"
+                                                     TextAlignment="Right" />
+                                          <Path Grid.Column="4"
+                                                Data="{StaticResource IconChevronRight}"
+                                                Stroke="{DynamicResource TextTertiaryBrush}"
+                                                StrokeThickness="1.8"
+                                                StrokeLineCap="Round"
+                                                Width="11"
+                                                Height="11"
+                                                Stretch="Uniform"
+                                                VerticalAlignment="Center" />
+                                        </Grid>
+                                      </Button>
+                                    </Grid>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </ScrollViewer>
+                          </StackPanel>
+                        </Border>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Grid>
+            </Border>
+
+            <StackPanel Grid.Row="3" Spacing="6">
+              <TextBlock Text="{DynamicResource L.LimitedNote}"
+                         Classes="caption"
+                         FontSize="10.5"
+                         Foreground="{DynamicResource CautionBrush}"
+                         IsVisible="{Binding HasLimited}" />
+              <TextBlock Text="{Binding ScanScopeText}"
+                         Classes="caption"
+                         FontSize="10.5"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+          </ScrollViewer>
+        </Grid>
+
+        <!-- Completed -->
+        <ScrollViewer IsVisible="{Binding IsCompletedVisible}"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+          <Grid MaxWidth="760" Margin="46,36" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel Spacing="0" Width="620" HorizontalAlignment="Center">
+              <Border Width="42" Height="42" CornerRadius="11" Background="{DynamicResource SafeSoftBrush}" HorizontalAlignment="Left">
+                <Path Data="{StaticResource IconCheck}"
+                      Stroke="{DynamicResource SafeBrush}"
+                      StrokeThickness="2"
+                      Width="20"
+                      Height="20"
+                      Stretch="Uniform"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center" />
+              </Border>
+
+              <TextBlock Text="{Binding CompletedTitle}"
+                         FontSize="31"
+                         FontWeight="SemiBold"
+                         LetterSpacing="-0.7"
+                         Margin="0,16,0,0" />
+
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                <TextBlock Text="{Binding CompletedSubTrash}" Classes="caption" FontSize="12" />
+                <TextBlock Text="·" Classes="caption" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}" IsVisible="{Binding ShowSubSeparator}" />
+                <TextBlock Text="{Binding CompletedSubFreed}" Classes="caption" FontSize="12" />
+              </StackPanel>
+
+              <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,20,0,0">
+                <Button Classes="primary" Content="{DynamicResource L.Done}" Command="{Binding DoneCommand}" />
+                <Button Classes="ghost"
+                        Content="{DynamicResource L.OpenTrash}"
+                        Command="{Binding OpenTrashCommand}"
+                        IsVisible="{Binding CanOpenTrash}" />
+              </StackPanel>
+
+              <Border Classes="card" Padding="6,10,16,8" Margin="0,26,0,0">
+                <StackPanel>
+                  <TextBlock Text="{DynamicResource L.CleanupDetails}" Classes="eyebrow" Margin="10,6,0,6" />
+                  <ItemsControl ItemsSource="{Binding CompletionItems}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:CategoryViewModel">
+                        <Grid ColumnDefinitions="*,Auto" Height="30" Margin="10,0">
+                          <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="1"
+                                     Text="{Binding SizeText}"
+                                     FontSize="11.5"
+                                     FontWeight="SemiBold"
+                                     VerticalAlignment="Center" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+
+              <Border IsVisible="{Binding HasTrashNote}"
+                      Background="{DynamicResource CautionSoftBrush}"
+                      BorderBrush="#EBD9BC"
+                      BorderThickness="1"
+                      CornerRadius="10"
+                      Padding="12,10"
+                      Margin="0,14,0,0">
+                <TextBlock Text="{Binding CompletedNote}"
+                           FontSize="10.5"
+                           Foreground="{DynamicResource CautionBrush}"
+                           TextWrapping="Wrap" />
+              </Border>
+
+              <Border IsVisible="{Binding HasSkipped}"
+                      Background="{DynamicResource SurfaceBrush}"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      BorderThickness="1"
+                      CornerRadius="12"
+                      Padding="14,12"
+                      Margin="0,12,0,0">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="{Binding SkippedText}" FontSize="12" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding SkippedDetail}" Classes="caption" FontSize="10.5" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Grid>
+        </ScrollViewer>
+      </Panel>
+
+      <!-- Status bar -->
+      <Border Grid.Row="2"
+              Height="30"
+              Background="{DynamicResource StatusBackgroundBrush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="0,1,0,0"
+              Padding="14,0">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Ellipse Width="6" Height="6" Fill="{DynamicResource SafeBrush}" />
+            <TextBlock Text="{Binding StatusText}"
+                       Classes="caption"
+                       FontSize="11"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+          <TextBlock Grid.Column="1"
+                     Text="{Binding VersionText}"
+                     Classes="caption tertiary"
+                     FontSize="10.5"
+                     VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Confirm sheet -->
+    <Border IsVisible="{Binding IsConfirmVisible}"
+            Background="{DynamicResource OverlayScrimBrush}">
+      <Border Width="520"
+              Background="{DynamicResource SurfaceBrush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="1"
+              CornerRadius="16"
+              Padding="24,20"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              BoxShadow="0 24 60 0 #40000000">
+        <StackPanel Spacing="0">
+          <!-- Confirmation -->
+          <StackPanel IsVisible="{Binding !IsDeleting}" Spacing="0">
+            <TextBlock Text="{Binding ConfirmTitle}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+
+            <ItemsControl ItemsSource="{Binding ConfirmItems}" Margin="0,14,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CategoryViewModel">
+                  <Grid ColumnDefinitions="*,Auto" Height="26">
+                    <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding SizeText}"
+                               FontSize="11.5"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border IsVisible="{Binding HasConfirmTrashNote}"
+                    Background="{DynamicResource SafeSoftBrush}"
+                    CornerRadius="9"
+                    Padding="10,8"
+                    Margin="0,10,0,0">
+              <TextBlock Text="{Binding ConfirmTrashNote}"
+                         FontSize="10.5"
+                         Foreground="{DynamicResource SafeBrush}"
+                         TextWrapping="Wrap" />
+            </Border>
+
+            <Border IsVisible="{Binding HasConfirmPermanentNote}"
+                    Background="{DynamicResource CautionSoftBrush}"
+                    CornerRadius="9"
+                    Padding="10,8"
+                    Margin="0,8,0,0">
+              <TextBlock Text="{Binding ConfirmPermanentNote}"
+                         FontSize="10.5"
+                         Foreground="{DynamicResource CautionBrush}"
+                         TextWrapping="Wrap" />
+            </Border>
+
+            <CheckBox IsChecked="{Binding UsePermanent, Mode=TwoWay}"
+                      Content="{DynamicResource L.ConfirmPermanentOption}"
+                      FontSize="11.5"
+                      Margin="0,12,0,0" />
+
+            <Grid ColumnDefinitions="*,Auto" Margin="0,18,0,0">
+              <Button Classes="quiet"
+                      Content="{DynamicResource L.Cancel}"
+                      Command="{Binding CancelConfirmCommand}"
+                      HorizontalAlignment="Left" />
+              <Button Grid.Column="1"
+                      Classes="primary"
+                      Content="{DynamicResource L.ConfirmClean}"
+                      Command="{Binding ConfirmCleanCommand}"
+                      IsEnabled="{Binding CanConfirm}" />
+            </Grid>
+          </StackPanel>
+
+          <!-- Working -->
+          <StackPanel IsVisible="{Binding IsDeleting}" Spacing="0">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <Panel Width="18" Height="18">
+                <Ellipse Width="18"
+                         Height="18"
+                         Stroke="{DynamicResource AccentSoftBrush}"
+                         StrokeThickness="2.4" />
+                <Arc Classes="spin"
+                     Width="18"
+                     Height="18"
+                     StartAngle="-90"
+                     SweepAngle="100"
+                     Stroke="{DynamicResource AccentBrush}"
+                     StrokeThickness="2.4"
+                     StrokeLineCap="Round"
+                     RenderTransformOrigin="0.5,0.5">
+                  <Arc.RenderTransform>
+                    <RotateTransform />
+                  </Arc.RenderTransform>
+                </Arc>
+              </Panel>
+              <TextBlock Text="{DynamicResource L.CleaningTitle}"
+                         FontSize="17"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0">
+              <TextBlock Text="{Binding DeleteProgressText}"
+                         Classes="caption"
+                         FontSize="11"
+                         VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding CleanPercentText}"
+                         FontSize="11"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
+            </Grid>
+
+            <ProgressBar Minimum="0"
+                         Maximum="100"
+                         Value="{Binding CleanPercent}"
+                         Height="6"
+                         CornerRadius="3"
+                         Margin="0,8,0,0" />
+
+            <TextBlock Text="{Binding CleanCurrentFile}"
+                       Classes="caption tertiary"
+                       FontSize="10"
+                       TextTrimming="CharacterEllipsis"
+                       Margin="0,8,0,0"
+                       IsVisible="{Binding HasCleanCurrentFile}" />
+
+            <Button Classes="quiet"
+                    Content="{DynamicResource L.CleanCancel}"
+                    Command="{Binding CancelCleanCommand}"
+                    IsEnabled="{Binding CanCancelClean}"
+                    HorizontalAlignment="Left"
+                    Margin="0,16,0,0" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+  </Grid>
+</Window>

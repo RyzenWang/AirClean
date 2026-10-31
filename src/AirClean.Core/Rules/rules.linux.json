@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "platform": "linux",
+  "rules": [
+    {
+      "id": "linux.temp",
+      "category": "SystemTemp",
+      "safety": "Safe",
+      "roots": ["$TMPDIR", "/tmp"],
+      "maxDepth": 8,
+      "minAgeDays": 2,
+      "source": "临时目录；只清理两天以上未修改的文件"
+    },
+    {
+      "id": "linux.cache",
+      "category": "AppCache",
+      "safety": "Safe",
+      "roots": ["$XDG_CACHE_HOME", "~/.cache"],
+      "maxDepth": 6,
+      "minAgeDays": 2,
+      "source": "XDG 缓存目录"
+    },
+    {
+      "id": "linux.state",
+      "category": "LogsDiagnostics",
+      "safety": "Safe",
+      "roots": ["$XDG_STATE_HOME", "~/.local/state"],
+      "maxDepth": 6,
+      "minAgeDays": 7,
+      "source": "应用状态与日志"
+    },
+    {
+      "id": "linux.trash",
+      "category": "Trash",
+      "safety": "Safe",
+      "action": "empty-trash",
+      "roots": [],
+      "source": "回收站；清空后立即释放空间"
+    },
+    {
+      "id": "linux.dev",
+      "category": "DeveloperCache",
+      "safety": "Caution",
+      "roots": [
+        "~/.npm/_cacache",
+        "~/.gradle/caches",
+        "~/.cargo/registry/cache"
+      ],
+      "maxDepth": 6,
+      "minAgeDays": 5,
+      "source": "包管理器与构建缓存"
+    }
+  ]
+}
