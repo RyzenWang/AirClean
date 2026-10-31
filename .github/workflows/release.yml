@@ -40,7 +40,7 @@ jobs:
           $version = if ($env:GITHUB_REF_TYPE -eq "tag") {
             $env:GITHUB_REF_NAME.TrimStart("v")
           } else {
-            "0.0.0-dev"
+            "0.0.1-dev"
           }
           "value=$version" >> $env:GITHUB_OUTPUT
 
