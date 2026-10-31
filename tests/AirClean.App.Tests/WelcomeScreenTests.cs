@@ -1,4 +1,5 @@
 using System.Text;
+using System.Reflection;
 using AirClean.App.Services;
 using AirClean.App.ViewModels;
 using AirClean.App.Views;
@@ -206,6 +207,26 @@ public sealed class FlowTests
 
         window.InvalidateVisual();
         Save(window.CaptureRenderedFrame()!, "welcome-volumes-data.png");
+    }
+
+    [AvaloniaFact]
+    public void The_status_bar_reports_the_build_version()
+    {
+        var viewModel = CreateViewModel("en", null);
+        var window = Show(viewModel);
+
+        // The label must come from the assembly, so a release build reports its own tag.
+        var informational = typeof(MainWindowViewModel).Assembly
+            .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        var expected = informational is null
+            ? typeof(MainWindowViewModel).Assembly.GetName().Version!.ToString(3)
+            : informational.Split('+')[0];
+
+        Assert.Equal("AirClean " + expected, viewModel.VersionText);
+        Assert.Equal(expected, MainWindowViewModel.AppVersion);
+
+        window.Close();
     }
 
     [AvaloniaFact]

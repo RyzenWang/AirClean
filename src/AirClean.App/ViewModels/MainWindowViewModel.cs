@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Reflection;
 using AirClean.App.Services;
 using AirClean.Core.Deleting;
 using AirClean.Core.Formatting;
@@ -225,7 +226,25 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool IsDarkTheme => _theme.IsDark;
 
-    public string VersionText => "AirClean 0.1.0";
+    public string VersionText => "AirClean " + AppVersion;
+
+    /// <summary>The version stamped by the build, so a release build reports itself.</summary>
+    public static string AppVersion { get; } = ResolveVersion();
+
+    private static string ResolveVersion()
+    {
+        var informational = typeof(MainWindowViewModel).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+        if (!string.IsNullOrWhiteSpace(informational))
+        {
+            // SourceLink appends "+<commit>"; keep just the version.
+            var plus = informational.IndexOf('+');
+            return plus > 0 ? informational[..plus] : informational;
+        }
+
+        return typeof(MainWindowViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.0";
+    }
 
     // ---- updates ----
 
