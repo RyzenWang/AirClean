@@ -62,10 +62,11 @@ public sealed class FlowTests
 
         try
         {
-            var rules = Environment.GetEnvironmentVariable("AIRCLEAN_REAL_SCAN") == "1"
-                ? RuleSet.ForCurrentPlatform()
-                : LoadRules(root);
-            var viewModel = CreateViewModel("zh-CN", rules);
+            var real = Environment.GetEnvironmentVariable("AIRCLEAN_REAL_SCAN") == "1";
+            var rules = real ? RuleSet.ForCurrentPlatform() : LoadRules(root);
+            var viewModel = real
+                ? CreateViewModel("zh-CN", rules)
+                : CreateViewModel("zh-CN", rules, volumes: [FixtureVolume(root)], duplicateRoots: [root]);
             var window = Show(viewModel);
 
             viewModel.ScanCommand.Execute(null);
@@ -299,7 +300,11 @@ public sealed class FlowTests
 
         try
         {
-            var viewModel = CreateViewModel("zh-CN", null, duplicateRoots: [root]);
+            var viewModel = CreateViewModel(
+                "zh-CN",
+                null,
+                volumes: [FixtureVolume(root)],
+                duplicateRoots: [root]);
             var window = Show(viewModel);
 
             viewModel.ScanCommand.Execute(null);
@@ -408,6 +413,19 @@ public sealed class FlowTests
             volumes,
             duplicateRoots);
     }
+
+    /// <summary>
+    /// A stand-in for the system drive so tests never walk the real disk: same rules, same
+    /// category set, but every root is inside the fixture.
+    /// </summary>
+    private static VolumeInfo FixtureVolume(string root) => new(
+        Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar,
+        "Fixture",
+        "TEST",
+        1_000_000_000,
+        500_000_000,
+        IsSystem: true,
+        IsRemovable: false);
 
     private static string CreateFixture()
     {
