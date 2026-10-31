@@ -57,12 +57,30 @@ src/
   AirClean.Platform/      回收站与废纸篓适配（Shell / macOS / freedesktop）
   AirClean.App/           Avalonia 界面：欢迎、扫描、结果、确认、完成
 tests/
-  AirClean.Core.Tests/    33 个
-  AirClean.App.Tests/     3 个 Headless 渲染与流程测试
+  AirClean.Core.Tests/    42 个
+  AirClean.App.Tests/     14 个 Headless 渲染与流程测试
 docs/
   DESIGN.md               设计与技术方案
+  DISTRIBUTION.md         分发、签名与自动更新
   design/                 视觉稿
 ```
+
+## 安装与发布
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Tag 发布会用 [Velopack](https://velopack.io/) 生成：
+
+- Windows x64：`AirClean-win-Setup.exe` 安装器与便携 zip
+- macOS arm64 / x64：`AirClean-osx-*.pkg` 安装器与便携包
+- Linux x64：便携 `.tar.gz`
+
+安装版会检查 GitHub 上的稳定版本、后台下载并显示"重启以更新"；便携版与源码运行不自更新。
+签名与公证所需的 Secrets 见 [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md)。未配置签名时仍会
+产出未签名安装包，Windows SmartScreen 与 macOS Gatekeeper 会要求确认。
 
 ## 安全边界
 

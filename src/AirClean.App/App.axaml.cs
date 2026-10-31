@@ -12,6 +12,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 
 namespace AirClean.App;
 
@@ -73,6 +74,12 @@ public partial class App : Application
 
             window.Closing += (_, _) => PersistWindow(window);
             desktop.MainWindow = window;
+
+            // Installed builds check the release channel shortly after startup; source and
+            // portable runs are no-ops because Velopack reports them as not installed.
+            _ = Dispatcher.UIThread.InvokeAsync(
+                () => viewModel.CheckForUpdatesCommand.Execute(null),
+                DispatcherPriority.Background);
         }
 
         base.OnFrameworkInitializationCompleted();

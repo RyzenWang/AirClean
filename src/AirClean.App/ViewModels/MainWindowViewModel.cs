@@ -9,6 +9,7 @@ using AirClean.Core.Trash;
 using AirClean.Core.Volumes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Velopack;
 
 namespace AirClean.App.ViewModels;
 
@@ -31,6 +32,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly ITrashService _trash;
     private readonly long _largeFileThreshold;
     private readonly IReadOnlyList<string>? _duplicateRoots;
+
+    private readonly UpdateService _updates = new();
+    private UpdateInfo? _pendingUpdate;
 
     private CancellationTokenSource? _cts;
     private CancellationTokenSource? _cleanCts;
@@ -222,6 +226,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsDarkTheme => _theme.IsDark;
 
     public string VersionText => "AirClean 0.1.0";
+
+    // ---- updates ----
+
+    public string UpdateText { get; private set; } = string.Empty;
+
+    public bool HasUpdate => _pendingUpdate is not null;
+
+    public bool IsCheckingUpdate { get; private set; }
 
     public string StatusText => _statusRaw
         ?? (_statusKey is null
@@ -472,6 +484,58 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Stage = AppStage.Results;
         RecomputeSelection();
         RefreshTotals();
+    }
+
+    /// <summary>
+    /// Checks the GitHub release channel. Silent unless the app was installed with the
+    /// Setup or pkg; portable and source builds never self-update.
+    /// </summary>
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        if (IsCheckingUpdate || _pendingUpdate is not null || !_updates.IsInstalled)
+        {
+            return;
+        }
+
+        IsCheckingUpdate = true;
+        OnPropertyChanged(nameof(IsCheckingUpdate));
+
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            var update = await _updates.CheckForUpdatesAsync();
+            if (update is null)
+            {
+                return;
+            }
+
+            await _updates.DownloadAsync(update, _ => { }, CancellationToken.None);
+
+            _pendingUpdate = update;
+            UpdateText = _localization.Format("L.RestartToUpdateFormat", update.TargetFullRelease.Version);
+            OnPropertyChanged(nameof(UpdateText));
+            OnPropertyChanged(nameof(HasUpdate));
+        }
+        catch
+        {
+            // A failed check must never disturb reading or cleaning.
+        }
+        finally
+        {
+            IsCheckingUpdate = false;
+            OnPropertyChanged(nameof(IsCheckingUpdate));
+        }
+    }
+
+    [RelayCommand]
+    private void ApplyUpdate()
+    {
+        if (_pendingUpdate is { } update)
+        {
+            _updates.ApplyAndRestart(update);
+        }
     }
 
     [RelayCommand]

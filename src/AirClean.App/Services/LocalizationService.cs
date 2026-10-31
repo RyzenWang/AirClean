@@ -37,6 +37,8 @@ public sealed class LocalizationService
             ["L.ChineseSimplified"] = ("简体中文", "简体中文"),
             ["L.MoreSettingsLater"] = ("More settings in a later version", "更多设置将在后续版本提供"),
             ["L.Ready"] = ("Ready", "就绪"),
+            ["L.RestartToUpdateFormat"] = ("Restart to update {0}", "重启以更新 {0}"),
+            ["L.CheckForUpdates"] = ("Check for updates", "检查更新"),
             ["L.LocalOnly"] = ("runs locally, nothing uploaded", "本地运行，不上传任何文件"),
             ["L.ScanNotReady"] = (
                 "Scan engine lands in M1 — this build is the interface shell.",
