@@ -331,20 +331,26 @@ public static class AdminHelperHost
 
     private static void PruneEmptyDirectories(string root)
     {
-        IEnumerable<string> directories;
+        var directories = new List<string>();
+        var pending = new Stack<string>();
+        pending.Push(root);
 
-        try
+        while (pending.Count > 0)
         {
-            directories = Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories)
-                .OrderByDescending(path => path.Length)
-                .ToList();
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            return;
+            var directory = pending.Pop();
+
+            foreach (var entry in Enumerate(directory))
+            {
+                if (entry is DirectoryInfo child &&
+                    (entry.Attributes & FileAttributes.ReparsePoint) == 0)
+                {
+                    directories.Add(child.FullName);
+                    pending.Push(child.FullName);
+                }
+            }
         }
 
-        foreach (var directory in directories)
+        foreach (var directory in directories.OrderByDescending(path => path.Length))
         {
             try
             {

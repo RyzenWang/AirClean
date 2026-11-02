@@ -92,6 +92,32 @@ if (args.Contains("--admin-scan") || args.Contains("--admin-clean"))
     return 0;
 }
 
+if (args.Contains("--session"))
+{
+    if (helperPath is null)
+    {
+        Console.Error.WriteLine("--session requires --via-helper <AirClean.exe>.");
+        return 2;
+    }
+
+    using var client = new AdminHelperClient(helperPath) { Enabled = true };
+    var sessionWatch = Stopwatch.StartNew();
+    var admin = client.Scan(AdminRuleIds.WindowsUpdateCache, CancellationToken.None);
+    var mft = client.TryScan(volume, 1024 * 1024, progress: null, CancellationToken.None);
+    sessionWatch.Stop();
+
+    if (admin is null || mft is null)
+    {
+        Console.Error.WriteLine("The multi-command helper session failed.");
+        return 1;
+    }
+
+    Console.WriteLine(
+        $"Session: admin={admin.FileCount:N0} files, mft={mft.MatchedCount:N0} files, " +
+        $"{sessionWatch.Elapsed.TotalSeconds:F2}s");
+    return 0;
+}
+
 if (helperPath is not null)
 {
     var client = new AdminHelperClient(helperPath) { Enabled = true };

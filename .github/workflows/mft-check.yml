@@ -49,6 +49,12 @@ jobs:
           $app = (Resolve-Path "src/AirClean.App/bin/Release/net10.0/AirClean.exe").Path
           dotnet run --project tools/MftCheck/MftCheck.csproj -c Release -- --via-helper $app
 
+      - name: Run the multi-command helper session
+        shell: pwsh
+        run: |
+          $app = (Resolve-Path "src/AirClean.App/bin/Release/net10.0/AirClean.exe").Path
+          dotnet run --project tools/MftCheck/MftCheck.csproj -c Release -- --session --via-helper $app
+
       - name: Seed an administrator-cleanup test file
         shell: pwsh
         run: |

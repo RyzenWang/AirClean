@@ -68,9 +68,12 @@ AirClean 把清理拆成三步：**扫描、预览、清理**。没有账号，�
 - **NTFS MFT 快扫**：Windows + NTFS 且以管理员身份运行（或开启管理员加速）时，
   直接读取主文件表，不再逐目录遍历；普通权限会自动回退到整盘遍历。Windows runner
   上以 1.4 GB MFT / 136 万条记录实测约 9 秒（读取约 8 秒、解析 0.7 秒、建索引 0.2 秒）。
-- **管理员权限加速**：设置里开启后，大文件扫描会通过 UAC 启动一个只读的
+- **管理员权限加速**：设置里开启后，大文件扫描会通过 UAC 启动一个受控的
   `--admin-helper` 子进程，用命名管道回传 MFT 结果；取消 UAC 或没有权限时自动回退。
-  主进程始终不提权，helper 只接受卷根目录，不接受任意路径列表。
+  主进程始终不提权，helper 只接受卷根目录或固定规则 ID，不接受任意路径列表。
+- **系统更新缓存**：开启管理员权限后，扫描会显示 Windows Update 缓存；清理由 helper
+  永久删除，确认弹层会单独标明。当前覆盖 Windows；`/var/cache/apt` 与 `journald`
+  还需要 Linux 侧提权入口。
 - **可随时停止**：扫描中取消会立即停下并回到欢迎页，不触碰任何文件。
 
 ### 预览与挑选
@@ -145,7 +148,7 @@ dotnet build AirClean.sln -c Release
 dotnet test AirClean.sln -c Release
 ```
 
-49 个 Core 测试与 15 个 Avalonia Headless 测试，覆盖规则校验、路径守卫、扫描器、
+50 个 Core 测试与 15 个 Avalonia Headless 测试，覆盖规则校验、路径守卫、扫描器、
 MFT 记录解析、特权扫描回退、大文件扫描、重复文件分组、三态勾选与按条目过滤、目录聚合、删除与日志，
 以及“扫描 → 确认 → 完成”、“切换磁盘 → 勾选大文件”、“查找重复 → 勾选整组”三条链路。
 Headless 测试会把渲染截图写到 `%TEMP%/airclean-shots`。
@@ -208,10 +211,10 @@ src/
   AirClean.Platform/      回收站、废纸篓与管理员 helper
   AirClean.App/           Avalonia 界面：欢迎、扫描、结果、确认、完成
 tests/
-  AirClean.Core.Tests/    49 个
+  AirClean.Core.Tests/    50 个
   AirClean.App.Tests/     15 个 Headless 渲染与流程测试
 tools/
-  MftCheck/               以管理员身份实测 MFT 快扫与 helper 往返
+  MftCheck/               以管理员身份实测 MFT 快扫、helper 与系统清理
 docs/
   DESIGN.md               设计与技术方案
   DISTRIBUTION.md         分发、签名与自动更新
@@ -254,8 +257,8 @@ Tag 发布会用 [Velopack](https://velopack.io/) 生成：
 - 启动项、定时提醒、托盘、设置页（当前设置只有主题、语言与管理员加速开关）
 - 重复文件在系统盘只扫用户内容目录，数据盘扫整盘；没有增量索引，每次全量哈希，
   因此数据盘有 2 GB 哈希上限（达到上限会提示“比对已达到上限”）；硬链接未去重
-- 管理员权限项（Windows Update 缓存、`/var/cache/apt`、`journald`）；当前 helper
-  只用于只读 MFT 快扫，不执行系统级清理
+- 管理员权限项：Windows Update 缓存已接入 helper；`/var/cache/apt` 与 `journald`
+  还需要 Linux 侧提权入口
 - 大文件扫描在 NTFS 上会优先读取 MFT；该路径需要管理员权限（当前没有提权助手），
   普通权限会自动回退到整盘遍历，机械盘冷缓存下仍可能要几分钟（有进度和取消）
 - Windows 上真正的“撤销”（现在只提供打开回收站；macOS/Linux 移交到系统废纸篓）
@@ -279,7 +282,7 @@ Tag 发布会用 [Velopack](https://velopack.io/) 生成：
 | ✅ 已完成 | 基于 MFT 的秒级大文件扫描 | Windows runner 实测：1.4 GB MFT / 136 万条记录约 9 秒；需要管理员权限，普通权限回退整盘遍历。 |
 | 🚧 进行中 | 正式签名与公证 | 工作流和 Secrets 文档已就绪；缺真实证书，Windows 签名与 Apple 公证尚未实际跑通。 |
 | 🚧 进行中 | macOS / Linux 实机验证 | CI 已覆盖三平台构建与 Headless 测试；真机上的窗口、主题、回收站与文件管理器定位还没验收。 |
-| 🚧 进行中 | 管理员权限项 | 提权 helper 与 MFT 加速已就绪并通过往返验证；Windows Update / apt / journald 管理员清理规则还没接入。 |
+| 🚧 进行中 | 管理员权限项 | 提权 helper、MFT 加速与 Windows Update 缓存清理已通过往返验证；apt / journald 和更多系统规则还没接入。 |
 | ⬜ 未开始 | 真正的“撤销上一次清理” | 完成页目前只能打开回收站 / 废纸篓；需要记录清理批次并支持恢复。 |
 | ⬜ 未开始 | 托盘图标与后台常驻 | 关闭窗口后继续驻留、托盘菜单和快速扫描入口。 |
 | ⬜ 未开始 | 定时提醒 | 按天 / 周提醒可清理；默认关闭，不自动删除。 |
