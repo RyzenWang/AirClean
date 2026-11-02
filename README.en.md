@@ -300,21 +300,28 @@ JSONL journal with paths and sizes only.
 
 ## Roadmap
 
-- [x] Volume-aware scanning with streamed results
-- [x] Hand-picked large files
-- [x] Duplicate groups with explicit selection
-- [x] Tri-state selection, folder aggregation, per-item exclusion
-- [x] Cleanup progress, cancellation, Trash, and a local journal
-- [x] English / Simplified Chinese and light / dark themes
-- [x] Windows installer, macOS pkg, Linux portable build, and auto-update on
-  installed Windows / macOS builds
-- [ ] A real "undo the last cleanup"
-- [ ] Administrator-only categories
-- [ ] MFT-based large-file scanning
-- [ ] Tray, scheduled reminders, and a full settings page
-- [ ] Hardware verification on macOS and Linux
-- [ ] Production signing and notarization
-- [ ] Windows arm64 and linux-arm64 artifacts
+Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **8 done, 2 in progress, 8 not started**.
+
+| Status | Item | Notes |
+| --- | --- | --- |
+| ✅ Done | Volume-aware scanning with streamed results | One scan covers caches, large files, the Trash, and duplicates; categories appear as they finish. |
+| ✅ Done | Hand-picked large files | Top 200 files of at least 100 MB, nothing selected by default. |
+| ✅ Done | Duplicate groups with explicit selection | Size bucket → first 64 KB → SHA-256; one copy kept per group. |
+| ✅ Done | Tri-state selection, folder aggregation, per-item exclusion | Includes indeterminate categories and whole-folder selection. |
+| ✅ Done | Cleanup progress, cancellation, Trash, and a local journal | Cancellable progress, Trash by default, a JSONL journal per batch. |
+| ✅ Done | English / Simplified Chinese and light / dark themes | Live switching, including follow-system. |
+| ✅ Done | Windows installer, macOS pkg, Linux portable build | Velopack packaging is wired up. |
+| ✅ Done | Auto-update on installed Windows / macOS builds | Background check/download with a restart prompt. |
+| 🚧 In progress | Production signing and notarization | Workflow and secrets docs are ready; no real certificates yet, so Windows signing and Apple notarization have not been exercised. |
+| 🚧 In progress | macOS / Linux hardware validation | CI covers builds and headless tests on all three platforms; real-hardware checks for the UI, themes, Trash, and reveal are still missing. |
+| ⬜ Not started | A real "undo the last cleanup" | The completion page can only open the Recycle Bin / Trash; batch tracking and restore are missing. |
+| ⬜ Not started | Administrator-only categories | Needs a separate helper, UAC / sudo elevation, and Windows Update / apt / journald rules. |
+| ⬜ Not started | MFT-based large-file scanning | Large-file scanning still walks the whole volume; NTFS MFT / USN is next. |
+| ⬜ Not started | Tray icon and background mode | Keep running after the window closes, tray menu, and a quick-scan entry. |
+| ⬜ Not started | Scheduled reminders | Daily / weekly reminders, off by default, no automatic deletion. |
+| ⬜ Not started | Full settings page | The current flyout only has theme and language; scan scope, exclusions, delete mode, and updates are missing. |
+| ⬜ Not started | Windows arm64 artifacts | The release matrix only has `win-x64`. |
+| ⬜ Not started | linux-arm64 artifacts | The release matrix only has `linux-x64`. |
 
 ## Contributing
 
