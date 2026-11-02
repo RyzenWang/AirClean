@@ -1,0 +1,40 @@
+name: MFT check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  mft:
+    name: MFT scan on a Windows runner
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Verify elevation
+        shell: pwsh
+        run: |
+          $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+          $principal = [Security.Principal.WindowsPrincipal]$identity
+          if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+            throw "The Windows runner is not elevated; raw NTFS access cannot be tested."
+          }
+          Write-Host "Running elevated as $($identity.Name)"
+
+      - name: Run the MFT check
+        shell: pwsh
+        run: dotnet run --project tools/MftCheck/MftCheck.csproj -c Release
