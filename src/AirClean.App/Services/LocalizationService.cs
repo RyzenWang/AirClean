@@ -93,10 +93,10 @@ public sealed class LocalizationService
             ["L.CategoryAppCacheDesc"] = ("Browser and app caches that rebuild themselves", "浏览器与应用缓存，可自行重建"),
             ["L.CategoryLogs"] = ("Logs & diagnostics", "日志与诊断"),
             ["L.CategoryLogsDesc"] = ("Crash reports and diagnostic archives", "崩溃报告与诊断归档"),
-            ["L.CategorySystemUpdates"] = ("System update cache", "系统更新缓存"),
+            ["L.CategorySystemUpdates"] = ("Update & package cache", "系统更新与包缓存"),
             ["L.CategorySystemUpdatesDesc"] = (
-                "Downloaded Windows updates; needs administrator rights",
-                "已下载的 Windows 更新与安装包；需要管理员权限"),
+                "Downloaded updates and package archives; needs administrator rights",
+                "已下载的系统更新与软件包缓存；需要管理员权限"),
             ["L.CategoryTrash"] = ("Trash", "废纸篓"),
             ["L.CategoryTrashDesc"] = ("Emptied immediately, cannot be undone", "清空后立即释放空间，无法恢复"),
             ["L.CategoryDev"] = ("Developer caches", "开发缓存"),

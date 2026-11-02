@@ -78,10 +78,11 @@ public sealed class VolumeScanService(
             }
         }
 
-        if (request.IncludeCaches && request.Volume.IsSystem && _adminCleanup is not null)
+        if (request.IncludeCaches && request.Volume.IsSystem && _adminCleanup is not null &&
+            AdminRuleIds.SystemUpdatesForCurrentPlatform is { } adminRuleId)
         {
             var admin = await Task.Run(
-                () => _adminCleanup.Scan(AdminRuleIds.WindowsUpdateCache, cancellationToken),
+                () => _adminCleanup.Scan(adminRuleId, cancellationToken),
                 cancellationToken);
 
             if (admin is { FileCount: > 0 })

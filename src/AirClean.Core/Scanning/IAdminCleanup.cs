@@ -6,6 +6,14 @@ namespace AirClean.Core.Scanning;
 public static class AdminRuleIds
 {
     public const string WindowsUpdateCache = "win.update-cache";
+    public const string LinuxAptCache = "linux.apt-cache";
+
+    public static string? SystemUpdatesForCurrentPlatform =>
+        OperatingSystem.IsWindows()
+            ? WindowsUpdateCache
+            : OperatingSystem.IsLinux()
+                ? LinuxAptCache
+                : null;
 }
 
 /// <summary>

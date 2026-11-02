@@ -1,4 +1,5 @@
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -28,10 +29,9 @@ public static class AdminHelperHost
     public static bool IsHelperCommand(IReadOnlyList<string> args) =>
         args.Any(arg => string.Equals(arg, Switch, StringComparison.Ordinal));
 
-    [SupportedOSPlatform("windows")]
     public static int Run(string[] args)
     {
-        if (!OperatingSystem.IsWindows())
+        if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())
         {
             return 2;
         }
@@ -378,12 +378,21 @@ public static class AdminHelperHost
     private static void WriteError(StreamWriter writer, string message) =>
         Write(writer, new AdminEvent { Kind = "error", Message = message });
 
-    [SupportedOSPlatform("windows")]
     private static bool IsAdministrator()
     {
-        using var identity = WindowsIdentity.GetCurrent();
-        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+        if (OperatingSystem.IsWindows())
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+        }
+
+        return OperatingSystem.IsLinux() && GetEffectiveUserId() == 0;
     }
+
+    [DllImport("libc")]
+    private static extern uint geteuid();
+
+    private static uint GetEffectiveUserId() => geteuid();
 
     private static string? NormalizeVolumeRoot(string value)
     {

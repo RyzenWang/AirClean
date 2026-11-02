@@ -27,7 +27,7 @@ public sealed class AdminHelperClient(string? helperPath = null) : IAdminHelper,
     private bool _enabled;
     private bool _failed;
 
-    public bool IsAvailable => OperatingSystem.IsWindows();
+    public bool IsAvailable => OperatingSystem.IsWindows() || OperatingSystem.IsLinux();
 
     public bool Enabled
     {
@@ -242,13 +242,7 @@ public sealed class AdminHelperClient(string? helperPath = null) : IAdminHelper,
                 PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
             _pipe = pipe;
 
-            var process = Process.Start(new ProcessStartInfo
-            {
-                FileName = executable,
-                Arguments = arguments,
-                UseShellExecute = true,
-                Verb = "runas"
-            });
+            var process = StartHelper(executable, arguments);
             _process = process;
 
             if (process is null)
@@ -352,6 +346,27 @@ public sealed class AdminHelperClient(string? helperPath = null) : IAdminHelper,
         _pipe = null;
         _process = null;
         _token = null;
+    }
+
+    private static Process? StartHelper(string executable, string arguments)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return Process.Start(new ProcessStartInfo
+            {
+                FileName = executable,
+                Arguments = arguments,
+                UseShellExecute = true,
+                Verb = "runas"
+            });
+        }
+
+        return Process.Start(new ProcessStartInfo
+        {
+            FileName = "pkexec",
+            Arguments = $"\"{executable}\" {arguments}",
+            UseShellExecute = false
+        });
     }
 
     private static string? BuildArguments(string executable, string pipeName, string token)

@@ -9,7 +9,8 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        if (OperatingSystem.IsWindows() && AdminHelperHost.IsHelperCommand(args))
+        if ((OperatingSystem.IsWindows() || OperatingSystem.IsLinux()) &&
+            AdminHelperHost.IsHelperCommand(args))
         {
             Environment.ExitCode = AdminHelperHost.Run(args);
             return;

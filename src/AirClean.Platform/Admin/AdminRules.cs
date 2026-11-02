@@ -8,18 +8,24 @@ internal static class AdminRules
 {
     public static AdminRule? Find(string ruleId)
     {
-        if (!OperatingSystem.IsWindows() ||
-            !string.Equals(ruleId, AdminRuleIds.WindowsUpdateCache, StringComparison.Ordinal))
+        if (OperatingSystem.IsWindows() &&
+            string.Equals(ruleId, AdminRuleIds.WindowsUpdateCache, StringComparison.Ordinal))
         {
-            return null;
+            var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+
+            return string.IsNullOrWhiteSpace(windows)
+                ? null
+                : new AdminRule(
+                    AdminRuleIds.WindowsUpdateCache,
+                    Path.Combine(windows, "SoftwareDistribution", "Download"));
         }
 
-        var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (OperatingSystem.IsLinux() &&
+            string.Equals(ruleId, AdminRuleIds.LinuxAptCache, StringComparison.Ordinal))
+        {
+            return new AdminRule(AdminRuleIds.LinuxAptCache, "/var/cache/apt/archives");
+        }
 
-        return string.IsNullOrWhiteSpace(windows)
-            ? null
-            : new AdminRule(
-                AdminRuleIds.WindowsUpdateCache,
-                Path.Combine(windows, "SoftwareDistribution", "Download"));
+        return null;
     }
 }
