@@ -16,17 +16,23 @@ internal sealed class AdminRequest
     public string VolumeRoot { get; set; } = string.Empty;
 
     public long ThresholdBytes { get; set; }
+
+    public string? RuleId { get; set; }
 }
 
 internal sealed class AdminEvent
 {
     public string Kind { get; set; } = string.Empty;
 
+    public string? RuleId { get; set; }
+
     public long FilesSeen { get; set; }
 
     public long MatchedBytes { get; set; }
 
     public int MatchedCount { get; set; }
+
+    public int Skipped { get; set; }
 
     public string? Message { get; set; }
 

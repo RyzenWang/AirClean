@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AirClean.Core.Models;
+using AirClean.Core.Scanning;
 using AirClean.Core.Security;
 using AirClean.Core.Services;
 using AirClean.Core.Trash;
@@ -13,7 +14,10 @@ internal sealed record JournalEntry(string Path, long Size);
 /// under its rule root, still outside the protected list, unchanged since the scan and not
 /// a link. Anything that fails becomes a skip reason instead of an exception.
 /// </summary>
-public sealed class DeletionService(ITrashService trash, string? journalDirectory = null)
+public sealed class DeletionService(
+    ITrashService trash,
+    string? journalDirectory = null,
+    IAdminCleanup? adminCleanup = null)
 {
     private const int MaxJournalEntries = 20_000;
 
@@ -30,7 +34,9 @@ public sealed class DeletionService(ITrashService trash, string? journalDirector
         var skipped = new Dictionary<SkipReason, int>();
         var entries = new List<JournalEntry>();
         var directories = new List<(string Path, string Root)>();
-        var total = categories.Where(category => category.Category != CleanCategory.Trash).Sum(category => category.Items.Count);
+        var total = categories
+            .Where(category => category.Category != CleanCategory.Trash)
+            .Sum(category => category.AdminRuleId is not null ? category.FileCount : category.Items.Count);
         var done = 0;
 
         long deleted = 0;
@@ -49,6 +55,32 @@ public sealed class DeletionService(ITrashService trash, string? journalDirector
                 {
                     freedBytes += EmptyTrash(category.TrashRoot);
                     trashEmptied = true;
+                    continue;
+                }
+
+                if (category.AdminRuleId is { } adminRuleId)
+                {
+                    var adminReport = adminCleanup?.Clean(adminRuleId, progress, cancellationToken);
+
+                    if (adminReport is null)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            throw new OperationCanceledException(cancellationToken);
+                        }
+
+                        Count(skipped, SkipReason.Permission);
+                        continue;
+                    }
+
+                    freedBytes += adminReport.Bytes;
+                    deleted += adminReport.FileCount;
+
+                    if (adminReport.Skipped > 0)
+                    {
+                        skipped[SkipReason.Permission] = skipped.GetValueOrDefault(SkipReason.Permission) + adminReport.Skipped;
+                    }
+
                     continue;
                 }
 

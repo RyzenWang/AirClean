@@ -14,13 +14,16 @@ namespace AirClean.Platform.Admin;
 /// <summary>
 /// The elevated half of the administrator helper. AirClean re-launches itself with
 /// <c>--admin-helper</c> through ShellExecute's <c>runas</c> verb; this process connects
-/// back to a one-shot named pipe and performs a read-only MFT scan. It never accepts a
-/// path list or deletes anything.
+/// back to a one-shot named pipe and serves a small command loop. It accepts fixed rule
+/// IDs and drive roots only — never arbitrary paths — and never deletes outside the rules
+/// compiled into this assembly.
 /// </summary>
 public static class AdminHelperHost
 {
     public const string Switch = "--admin-helper";
     public const string ScanLargeFilesCommand = "scan-large-files";
+    public const string ScanAdminCommand = "scan-admin";
+    public const string CleanAdminCommand = "clean-admin";
 
     public static bool IsHelperCommand(IReadOnlyList<string> args) =>
         args.Any(arg => string.Equals(arg, Switch, StringComparison.Ordinal));
@@ -62,79 +65,44 @@ public static class AdminHelperHost
                 AutoFlush = true
             };
 
-            var requestLine = reader.ReadLine();
-
-            if (requestLine is null)
-            {
-                return 3;
-            }
-
-            var request = JsonSerializer.Deserialize<AdminRequest>(requestLine, AdminJson.Options);
-
-            if (request is null ||
-                !TokensEqual(token, request.Token) ||
-                !string.Equals(request.Command, ScanLargeFilesCommand, StringComparison.Ordinal))
-            {
-                WriteError(writer, "Invalid helper request.");
-                return 3;
-            }
-
             if (!IsAdministrator())
             {
                 WriteError(writer, "The helper is not running elevated.");
                 return 3;
             }
 
-            var root = NormalizeVolumeRoot(request.VolumeRoot);
-
-            if (root is null)
+            while (true)
             {
-                WriteError(writer, "The helper only scans a drive root.");
-                return 3;
-            }
+                var requestLine = reader.ReadLine();
 
-            var volume = new VolumeInfo(root, string.Empty, "NTFS", 0, 0, IsSystem: false, IsRemovable: false);
-
-            var progress = new InlineProgress<ScanProgress>(value => writer.WriteLine(JsonSerializer.Serialize(
-                new AdminEvent
+                if (requestLine is null)
                 {
-                    Kind = "progress",
-                    FilesSeen = value.FilesSeen,
-                    MatchedBytes = value.BytesFound,
-                    MatchedCount = (int)Math.Min(value.ItemsFound, int.MaxValue),
-                    Message = value.CurrentTarget
-                },
-                AdminJson.Options)));
+                    break;
+                }
 
-            var usedMft = MftLargeFileScanner.TryScan(
-                volume,
-                Math.Max(0, request.ThresholdBytes),
-                progress,
-                CancellationToken.None,
-                out var result);
+                var request = JsonSerializer.Deserialize<AdminRequest>(requestLine, AdminJson.Options);
 
-            if (!usedMft || result is null)
-            {
-                WriteError(writer, "The MFT fast path was unavailable.");
-                return 1;
-            }
-
-            writer.WriteLine(JsonSerializer.Serialize(
-                new AdminEvent
+                if (request is null ||
+                    !TokensEqual(token, request.Token) ||
+                    string.IsNullOrWhiteSpace(request.Command))
                 {
-                    Kind = "result",
-                    MatchedBytes = result.MatchedBytes,
-                    MatchedCount = result.MatchedCount,
-                    Items = result.Items
-                        .Select(item => new AdminFile
-                        {
-                            Path = item.Path,
-                            Size = item.Size,
-                            LastWriteUtc = item.LastWriteUtc
-                        })
-                        .ToList()
-                },
-                AdminJson.Options));
+                    WriteError(writer, "Invalid helper request.");
+                    break;
+                }
+
+                var handled = request.Command switch
+                {
+                    ScanLargeFilesCommand => ScanLargeFiles(writer, request),
+                    ScanAdminCommand => ScanAdmin(writer, request),
+                    CleanAdminCommand => CleanAdmin(writer, request),
+                    _ => Error(writer, "Unknown helper command.")
+                };
+
+                if (!handled)
+                {
+                    break;
+                }
+            }
 
             return 0;
         }
@@ -144,12 +112,265 @@ public static class AdminHelperHost
         }
     }
 
-    private static void WriteError(StreamWriter writer, string message)
+    private static bool ScanLargeFiles(StreamWriter writer, AdminRequest request)
     {
-        writer.WriteLine(JsonSerializer.Serialize(
-            new AdminEvent { Kind = "error", Message = message },
-            AdminJson.Options));
+        var root = NormalizeVolumeRoot(request.VolumeRoot);
+
+        if (root is null)
+        {
+            return Error(writer, "The helper only scans a drive root.");
+        }
+
+        var volume = new VolumeInfo(root, string.Empty, "NTFS", 0, 0, IsSystem: false, IsRemovable: false);
+
+        var progress = new InlineProgress<ScanProgress>(value => Write(
+            writer,
+            new AdminEvent
+            {
+                Kind = "progress",
+                FilesSeen = value.FilesSeen,
+                MatchedBytes = value.BytesFound,
+                MatchedCount = (int)Math.Min(value.ItemsFound, int.MaxValue),
+                Message = value.CurrentTarget
+            }));
+
+        var usedMft = MftLargeFileScanner.TryScan(
+            volume,
+            Math.Max(0, request.ThresholdBytes),
+            progress,
+            CancellationToken.None,
+            out var result);
+
+        if (!usedMft || result is null)
+        {
+            return Error(writer, "The MFT fast path was unavailable.");
+        }
+
+        Write(
+            writer,
+            new AdminEvent
+            {
+                Kind = "result",
+                MatchedBytes = result.MatchedBytes,
+                MatchedCount = result.MatchedCount,
+                Items = result.Items
+                    .Select(item => new AdminFile
+                    {
+                        Path = item.Path,
+                        Size = item.Size,
+                        LastWriteUtc = item.LastWriteUtc
+                    })
+                    .ToList()
+            });
+
+        return true;
     }
+
+    private static bool ScanAdmin(StreamWriter writer, AdminRequest request)
+    {
+        if (AdminRules.Find(request.RuleId ?? string.Empty) is not { } rule)
+        {
+            return Error(writer, "Unknown administrator rule.");
+        }
+
+        var (bytes, count) = Measure(rule.Root);
+
+        Write(
+            writer,
+            new AdminEvent
+            {
+                Kind = "admin-scan",
+                RuleId = rule.Id,
+                MatchedBytes = bytes,
+                MatchedCount = count
+            });
+
+        return true;
+    }
+
+    private static bool CleanAdmin(StreamWriter writer, AdminRequest request)
+    {
+        if (AdminRules.Find(request.RuleId ?? string.Empty) is not { } rule)
+        {
+            return Error(writer, "Unknown administrator rule.");
+        }
+
+        var files = EnumerateFiles(rule.Root).ToList();
+        var total = files.Count;
+        var done = 0;
+        var deleted = 0;
+        var skipped = 0;
+        long bytes = 0;
+
+        foreach (var file in files)
+        {
+            try
+            {
+                if ((file.Attributes & FileAttributes.ReadOnly) != 0)
+                {
+                    file.Attributes &= ~FileAttributes.ReadOnly;
+                }
+
+                var length = file.Length;
+                file.Delete();
+                bytes += length;
+                deleted++;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                skipped++;
+            }
+
+            done++;
+
+            if (done % 32 == 0 || done == total)
+            {
+                Write(
+                    writer,
+                    new AdminEvent
+                    {
+                        Kind = "progress",
+                        RuleId = rule.Id,
+                        FilesSeen = done,
+                        MatchedBytes = bytes,
+                        MatchedCount = total
+                    });
+            }
+        }
+
+        PruneEmptyDirectories(rule.Root);
+
+        Write(
+            writer,
+            new AdminEvent
+            {
+                Kind = "admin-clean",
+                RuleId = rule.Id,
+                MatchedBytes = bytes,
+                MatchedCount = deleted,
+                Skipped = skipped
+            });
+
+        return true;
+    }
+
+    private static (long Bytes, int Count) Measure(string root)
+    {
+        long bytes = 0;
+        var count = 0;
+
+        foreach (var file in EnumerateFiles(root))
+        {
+            try
+            {
+                bytes += file.Length;
+                count++;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // A file that disappears during the scan simply contributes nothing.
+            }
+        }
+
+        return (bytes, count);
+    }
+
+    private static IEnumerable<FileInfo> EnumerateFiles(string root)
+    {
+        if (!Directory.Exists(root))
+        {
+            yield break;
+        }
+
+        var pending = new Stack<string>();
+        pending.Push(root);
+
+        while (pending.Count > 0)
+        {
+            var directory = pending.Pop();
+            var entries = Enumerate(directory);
+
+            foreach (var entry in entries)
+            {
+                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    continue;
+                }
+
+                if (entry is DirectoryInfo child)
+                {
+                    pending.Push(child.FullName);
+                    continue;
+                }
+
+                if (entry is FileInfo file)
+                {
+                    yield return file;
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<FileSystemInfo> Enumerate(string directory)
+    {
+        try
+        {
+            return new DirectoryInfo(directory).EnumerateFileSystemInfos("*", new EnumerationOptions
+            {
+                IgnoreInaccessible = true,
+                RecurseSubdirectories = false,
+                AttributesToSkip = 0,
+                ReturnSpecialDirectories = false
+            });
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    private static void PruneEmptyDirectories(string root)
+    {
+        IEnumerable<string> directories;
+
+        try
+        {
+            directories = Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories)
+                .OrderByDescending(path => path.Length)
+                .ToList();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return;
+        }
+
+        foreach (var directory in directories)
+        {
+            try
+            {
+                if (!Directory.EnumerateFileSystemEntries(directory).Any())
+                {
+                    Directory.Delete(directory);
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // Locked or still in use; leave it for the next run.
+            }
+        }
+    }
+
+    private static void Write(StreamWriter writer, AdminEvent value) =>
+        writer.WriteLine(JsonSerializer.Serialize(value, AdminJson.Options));
+
+    private static bool Error(StreamWriter writer, string message)
+    {
+        WriteError(writer, message);
+        return false;
+    }
+
+    private static void WriteError(StreamWriter writer, string message) =>
+        Write(writer, new AdminEvent { Kind = "error", Message = message });
 
     [SupportedOSPlatform("windows")]
     private static bool IsAdministrator()

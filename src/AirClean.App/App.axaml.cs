@@ -50,7 +50,7 @@ public partial class App : Application
             var reveal = PlatformServices.CreateRevealService();
             var adminHelper = new AdminHelperClient();
             var volumeScan = new VolumeScanService(RuleSet.ForCurrentPlatform(), trash, adminHelper);
-            var deletion = new DeletionService(trash);
+            var deletion = new DeletionService(trash, adminCleanup: adminHelper);
 
             var viewModel = new MainWindowViewModel(
                 _settings,

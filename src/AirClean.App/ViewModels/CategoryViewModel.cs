@@ -26,6 +26,7 @@ public sealed partial class CategoryViewModel : ObservableObject
         [CleanCategory.SystemTemp] = StreamGeometry.Parse("M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 8v4l3 2"),
         [CleanCategory.AppCache] = StreamGeometry.Parse("M12 2l9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 17l9 5 9-5"),
         [CleanCategory.LogsDiagnostics] = StreamGeometry.Parse("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M9 13h6M9 17h6"),
+        [CleanCategory.SystemUpdates] = StreamGeometry.Parse("M12 3v12M7 10l5 5 5-5M4 21h16"),
         [CleanCategory.Trash] = StreamGeometry.Parse("M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"),
         [CleanCategory.DeveloperCache] = StreamGeometry.Parse("M8 6l-5 6 5 6M16 6l5 6-5 6"),
         [CleanCategory.LargeFiles] = StreamGeometry.Parse("M3 6h18a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1ZM6 10h.01M6 14h.01M10 12h7"),
@@ -76,6 +77,7 @@ public sealed partial class CategoryViewModel : ObservableObject
         CleanCategory.SystemTemp => "L.CategorySystemTemp",
         CleanCategory.AppCache => "L.CategoryAppCache",
         CleanCategory.LogsDiagnostics => "L.CategoryLogs",
+        CleanCategory.SystemUpdates => "L.CategorySystemUpdates",
         CleanCategory.Trash => "L.CategoryTrash",
         CleanCategory.LargeFiles => "L.CategoryLargeFiles",
         CleanCategory.Duplicates => "L.CategoryDuplicates",
@@ -153,7 +155,10 @@ public sealed partial class CategoryViewModel : ObservableObject
 
     public bool HasItems => FileCount > 0;
 
-    public bool CanExpand => FileCount > 0;
+    /// <summary>Fixed administrator rules are all-or-nothing; there is no per-file list.</summary>
+    public string? AdminRuleId { get; private set; }
+
+    public bool CanExpand => FileCount > 0 && AdminRuleId is null;
 
     public ObservableCollection<ItemRowViewModel> Details { get; } = [];
 
@@ -222,6 +227,7 @@ public sealed partial class CategoryViewModel : ObservableObject
         Scan = scan;
         Bytes = scan.Bytes;
         FileCount = scan.FileCount;
+        AdminRuleId = scan.AdminRuleId;
         SafetyLevel = scan.Safety;
         IsPermanent = scan.IsPermanent;
         HasLimited_Internal = scan.Limited;
@@ -287,6 +293,7 @@ public sealed partial class CategoryViewModel : ObservableObject
         Scan = null;
         Bytes = 0;
         FileCount = 0;
+        AdminRuleId = null;
         CountText = _localization.Format("L.CategoryCountFormat", 0);
         IsExpanded = false;
         _defaultSelected = false;

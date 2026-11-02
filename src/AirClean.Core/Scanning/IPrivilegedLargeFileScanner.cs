@@ -26,9 +26,7 @@ public sealed record LargeFileScanResult(
 /// User-facing switch for the privileged scanner. Disabled by default; enabling it makes
 /// the next scan ask Windows for elevation once.
 /// </summary>
-public interface IAdminHelper : IPrivilegedLargeFileScanner
+public interface IAdminHelper : IPrivilegedLargeFileScanner, IAdminCleanup
 {
-    bool IsAvailable { get; }
-
     bool Enabled { get; set; }
 }

@@ -15,6 +15,9 @@ public sealed class CategoryScan
     /// <summary>Volume whose recycle bin this row refers to, when it is a per-volume trash.</summary>
     public string? TrashRoot { get; init; }
 
+    /// <summary>Set for fixed administrator-only rules; the elevated helper performs the cleanup.</summary>
+    public string? AdminRuleId { get; init; }
+
     public long Bytes { get; set; }
 
     public int FileCount { get; set; }

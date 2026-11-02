@@ -43,11 +43,12 @@ public sealed record VolumeScanRequest(
 public sealed class VolumeScanService(
     RuleSet ruleSet,
     ITrashService trash,
-    IPrivilegedLargeFileScanner? privileged = null)
+    IAdminHelper? adminHelper = null)
 {
     private readonly Scanner _rules = new(ruleSet, trash);
-    private readonly LargeFileScanner _largeFiles = new(trash, privileged);
+    private readonly LargeFileScanner _largeFiles = new(trash, adminHelper);
     private readonly DuplicateScanner _duplicates = new();
+    private readonly IAdminCleanup? _adminCleanup = adminHelper;
 
     public async Task<ScanResult> ScanAsync(
         VolumeScanRequest request,
@@ -74,6 +75,29 @@ public sealed class VolumeScanService(
             foreach (var category in rulesResult.Categories)
             {
                 updates?.Report(new ScanUpdate(ScanStage.Caches, category, null));
+            }
+        }
+
+        if (request.IncludeCaches && request.Volume.IsSystem && _adminCleanup is not null)
+        {
+            var admin = await Task.Run(
+                () => _adminCleanup.Scan(AdminRuleIds.WindowsUpdateCache, cancellationToken),
+                cancellationToken);
+
+            if (admin is { FileCount: > 0 })
+            {
+                var adminCategory = new CategoryScan
+                {
+                    Category = CleanCategory.SystemUpdates,
+                    Safety = Safety.Caution,
+                    IsPermanent = true,
+                    AdminRuleId = admin.RuleId,
+                    Bytes = admin.Bytes,
+                    FileCount = admin.FileCount
+                };
+
+                categories.Add(adminCategory);
+                updates?.Report(new ScanUpdate(ScanStage.Caches, adminCategory, null));
             }
         }
 

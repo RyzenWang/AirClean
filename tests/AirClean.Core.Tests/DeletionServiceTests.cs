@@ -1,5 +1,6 @@
 using AirClean.Core.Deleting;
 using AirClean.Core.Models;
+using AirClean.Core.Scanning;
 using AirClean.Core.Trash;
 using Xunit;
 
@@ -85,6 +86,33 @@ public sealed class DeletionServiceTests : IDisposable
     }
 
     [Fact]
+    public void An_administrator_rule_is_cleaned_by_the_helper()
+    {
+        var category = new CategoryScan
+        {
+            Category = CleanCategory.SystemUpdates,
+            Safety = Safety.Caution,
+            IsPermanent = true,
+            AdminRuleId = AdminRuleIds.WindowsUpdateCache,
+            Bytes = 2_048,
+            FileCount = 4
+        };
+
+        var helper = new FakeAdminCleanup
+        {
+            Report = new AdminCleanupReport(2_048, 4, 1)
+        };
+
+        var report = new DeletionService(new TestTrash(), _journal, helper)
+            .Delete([category], DeleteMode.Trash, null, CancellationToken.None);
+
+        Assert.True(helper.Called);
+        Assert.Equal(2_048, report.FreedBytes);
+        Assert.Equal(4, report.DeletedCount);
+        Assert.Equal(1, report.Skipped[SkipReason.Permission]);
+    }
+
+    [Fact]
     public void A_journal_line_is_written_for_every_batch()
     {
         var file = Write(_root, "a.tmp", 10);
@@ -145,6 +173,26 @@ public sealed class DeletionServiceTests : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllBytes(path, new byte[size]);
         return path;
+    }
+
+    private sealed class FakeAdminCleanup : IAdminCleanup
+    {
+        public AdminCleanupReport? Report { get; init; }
+
+        public bool Called { get; private set; }
+
+        public bool IsAvailable => true;
+
+        public AdminScanResult? Scan(string ruleId, CancellationToken cancellationToken) => null;
+
+        public AdminCleanupReport? Clean(
+            string ruleId,
+            IProgress<DeletionProgress>? progress,
+            CancellationToken cancellationToken)
+        {
+            Called = true;
+            return Report;
+        }
     }
 
     public void Dispose()

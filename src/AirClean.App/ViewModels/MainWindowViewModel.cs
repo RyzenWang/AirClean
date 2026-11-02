@@ -498,9 +498,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         foreach (var category in Categories)
         {
-            category.IsApplicable = volume.IsSystem
-                ? category.Category != CleanCategory.LargeFiles
-                : category.Category is CleanCategory.LargeFiles or CleanCategory.Trash or CleanCategory.Duplicates;
+            category.IsApplicable = category.Category == CleanCategory.SystemUpdates
+                ? volume.IsSystem && IsAdminHelperAvailable && UseAdminHelper
+                : volume.IsSystem
+                    ? category.Category != CleanCategory.LargeFiles
+                    : category.Category is CleanCategory.LargeFiles or CleanCategory.Trash or CleanCategory.Duplicates;
 
             category.IsScanning = category.IsApplicable;
         }
@@ -937,16 +939,32 @@ public sealed partial class MainWindowViewModel : ObservableObject
             ConfirmItems.Add(category);
         }
 
-        var trashed = ConfirmItems.Where(category => category.Category != CleanCategory.Trash).Sum(category => category.SelectedBytes);
-        var permanent = ConfirmItems.Where(category => category.Category == CleanCategory.Trash).Sum(category => category.SelectedBytes);
+        var trashed = ConfirmItems
+            .Where(category => category.Category != CleanCategory.Trash && category.AdminRuleId is null)
+            .Sum(category => category.SelectedBytes);
+        var permanentTrash = ConfirmItems
+            .Where(category => category.Category == CleanCategory.Trash)
+            .Sum(category => category.SelectedBytes);
+        var permanentAdmin = ConfirmItems
+            .Where(category => category.AdminRuleId is not null)
+            .Sum(category => category.SelectedBytes);
+        var permanent = permanentTrash + permanentAdmin;
 
         ConfirmTitle = _localization.Format("L.ConfirmTitleFormat", ByteSize.Format(trashed + permanent));
         ConfirmTrashNote = trashed > 0
             ? _localization.Format("L.ConfirmNoteTrash", ByteSize.Format(trashed))
             : string.Empty;
-        ConfirmPermanentNote = permanent > 0
-            ? _localization.Format("L.ConfirmNotePermanentTrash", ByteSize.Format(permanent))
-            : string.Empty;
+        ConfirmPermanentNote = string.Join(
+            " ",
+            new[]
+            {
+                permanentTrash > 0
+                    ? _localization.Format("L.ConfirmNotePermanentTrash", ByteSize.Format(permanentTrash))
+                    : string.Empty,
+                permanentAdmin > 0
+                    ? _localization.Format("L.ConfirmNotePermanentAdmin", ByteSize.Format(permanentAdmin))
+                    : string.Empty
+            }.Where(note => note.Length > 0));
         HasConfirmTrashNote = trashed > 0;
         HasConfirmPermanentNote = permanent > 0;
         UsePermanent = false;

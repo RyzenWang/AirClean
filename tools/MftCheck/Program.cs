@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Principal;
+using AirClean.Core.Scanning;
 using AirClean.Core.Scanning.Mft;
 using AirClean.Core.Volumes;
 using AirClean.Platform.Admin;
@@ -47,6 +48,31 @@ var viaHelperIndex = Array.IndexOf(args, "--via-helper");
 var helperPath = viaHelperIndex >= 0 && viaHelperIndex + 1 < args.Length
     ? args[viaHelperIndex + 1]
     : null;
+
+if (args.Contains("--admin-scan"))
+{
+    if (helperPath is null)
+    {
+        Console.Error.WriteLine("--admin-scan requires --via-helper <AirClean.exe>.");
+        return 2;
+    }
+
+    var client = new AdminHelperClient(helperPath) { Enabled = true };
+    var adminWatch = Stopwatch.StartNew();
+    var adminResult = client.Scan(AdminRuleIds.WindowsUpdateCache, CancellationToken.None);
+    adminWatch.Stop();
+
+    if (adminResult is null)
+    {
+        Console.Error.WriteLine("The elevated helper admin scan failed.");
+        return 1;
+    }
+
+    Console.WriteLine(
+        $"Admin scan: {adminResult.RuleId}, {adminResult.FileCount:N0} files, " +
+        $"{adminResult.Bytes:N0} bytes, {adminWatch.Elapsed.TotalSeconds:F2}s");
+    return 0;
+}
 
 if (helperPath is not null)
 {
