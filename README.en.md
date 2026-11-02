@@ -72,10 +72,15 @@ background, coral accent, quiet information density, and calm desktop presence.
   window is useful before everything finishes.
 - **Real numbers.** Category sizes and file counts come from the actual walk, not
   estimates, and are never double-counted.
-- **NTFS MFT fast path.** On Windows NTFS with administrator access, AirClean
-  reads the master file table instead of walking directories. Without elevation
-  it falls back to the normal walk. On a Windows runner, a 1.4 GB MFT with 1.36
-  million records took about 9 s (8 s read, 0.7 s parse, 0.2 s index).
+- **NTFS MFT fast path.** On Windows NTFS with administrator access (or with
+  administrator acceleration enabled in settings), AirClean reads the master file
+  table instead of walking directories. Without elevation it falls back to the
+  normal walk. On a Windows runner, a 1.4 GB MFT with 1.36 million records took
+  about 9 s (8 s read, 0.7 s parse, 0.2 s index).
+- **Administrator acceleration.** When enabled, large-file scans launch a read-only
+  `--admin-helper` child through UAC and receive the MFT result over a named pipe.
+  Declining UAC or lacking permission falls back automatically. The main process
+  never elevates, and the helper only accepts a drive root, never a path list.
 - **Stop any time.** Cancelling a scan stops it immediately and returns to the
   welcome page without touching any files.
 
@@ -168,10 +173,11 @@ dotnet build AirClean.sln -c Release
 dotnet test AirClean.sln -c Release
 ```
 
-There are 48 Core tests and 15 Avalonia Headless tests. They cover rule
-validation, path guards, the scanners, MFT record parsing, large-file scanning,
-duplicate grouping, tri-state selection and per-item filtering, folder aggregation,
-deletion and the journal, plus three full flows: **scan → confirm → complete**,
+There are 49 Core tests and 15 Avalonia Headless tests. They cover rule
+validation, path guards, the scanners, MFT record parsing, privileged-scan
+fallback, large-file scanning, duplicate grouping, tri-state selection and
+per-item filtering, folder aggregation, deletion and the journal, plus three full
+flows: **scan → confirm → complete**,
 **switch drive → pick a large file**, and **find duplicates → select a group**.
 Headless tests
 write rendered frames to `%TEMP%/airclean-shots`.
@@ -234,13 +240,13 @@ src/
     Security/             PathGuard and path expansion
     Volumes/              Drive enumeration
     Deleting/             DeletionService and journal
-  AirClean.Platform/      Recycle Bin / Trash adapters (Shell / macOS / freedesktop)
+  AirClean.Platform/      Recycle Bin, Trash, and the administrator helper
   AirClean.App/           Avalonia UI: welcome, scanning, results, confirm, done
 tests/
-  AirClean.Core.Tests/    48 tests
+  AirClean.Core.Tests/    49 tests
   AirClean.App.Tests/     15 headless rendering and flow tests
 tools/
-  MftCheck/               Elevated MFT scan check for Windows
+  MftCheck/               Elevated MFT scan and helper round-trip check
 docs/
   DESIGN.md               Product, visual, and technical design
   DISTRIBUTION.md         Packaging, signing, and automatic updates
@@ -288,13 +294,14 @@ JSONL journal with paths and sizes only.
 ## Limitations
 
 - No startup manager, scheduled reminders, tray icon, or full settings page yet
-  (settings currently cover theme and language).
+  (settings currently cover theme, language, and the administrator toggle).
 - Duplicates on the system volume scan the user's content folders only; data
   drives are scanned whole. There is no incremental index, so every run hashes
   files again, and data drives have a 2 GB hashing cap (the UI says when the cap
   is hit). Hard links are not deduplicated.
 - No administrator-only categories yet (Windows Update cache,
-  `/var/cache/apt`, `journald`).
+  `/var/cache/apt`, `journald`); the helper currently performs read-only MFT scans
+  only, not system-level cleanup.
 - Large-file scanning prefers the NTFS MFT. That path needs administrator access
   (there is no elevation helper yet); without it AirClean falls back to walking
   the whole drive, which can take minutes on a cold mechanical drive (progress
@@ -308,7 +315,7 @@ JSONL journal with paths and sizes only.
 
 ## Roadmap
 
-Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **9 done, 2 in progress, 7 not started**.
+Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **9 done, 3 in progress, 6 not started**.
 
 | Status | Item | Notes |
 | --- | --- | --- |
@@ -323,11 +330,11 @@ Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **9 done, 2 i
 | ✅ Done | MFT-based large-file scanning | Validated on a Windows runner: a 1.4 GB MFT with 1.36 million records took about 9 s. It needs administrator access; the normal walk is the fallback. |
 | 🚧 In progress | Production signing and notarization | Workflow and secrets docs are ready; no real certificates yet, so Windows signing and Apple notarization have not been exercised. |
 | 🚧 In progress | macOS / Linux hardware validation | CI covers builds and headless tests on all three platforms; real-hardware checks for the UI, themes, Trash, and reveal are still missing. |
+| 🚧 In progress | Administrator-only categories | The elevation helper and MFT acceleration are in place and round-trip tested; Windows Update / apt / journald cleanup rules are not wired yet. |
 | ⬜ Not started | A real "undo the last cleanup" | The completion page can only open the Recycle Bin / Trash; batch tracking and restore are missing. |
-| ⬜ Not started | Administrator-only categories | Needs a separate helper, UAC / sudo elevation, and Windows Update / apt / journald rules. |
 | ⬜ Not started | Tray icon and background mode | Keep running after the window closes, tray menu, and a quick-scan entry. |
 | ⬜ Not started | Scheduled reminders | Daily / weekly reminders, off by default, no automatic deletion. |
-| ⬜ Not started | Full settings page | The current flyout only has theme and language; scan scope, exclusions, delete mode, and updates are missing. |
+| ⬜ Not started | Full settings page | The current flyout only has theme, language, and the administrator toggle; scan scope, exclusions, delete mode, and updates are missing. |
 | ⬜ Not started | Windows arm64 artifacts | The release matrix only has `win-x64`. |
 | ⬜ Not started | linux-arm64 artifacts | The release matrix only has `linux-x64`. |
 
