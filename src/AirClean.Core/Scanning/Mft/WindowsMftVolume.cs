@@ -322,7 +322,7 @@ internal sealed class WindowsMftVolume : IDisposable
 
             while (remaining > 0)
             {
-                var request = (uint)Math.Min(remaining, 8 * 1024 * 1024);
+                var request = (uint)Math.Min(remaining, 16 * 1024 * 1024);
 
                 if (!ReadFile(handle, (IntPtr)current, request, out var read, IntPtr.Zero))
                 {
