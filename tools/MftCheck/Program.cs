@@ -28,6 +28,20 @@ if (volume is null)
 
 Console.WriteLine($"Volume: {volume.Root} ({volume.FileSystem})");
 
+using (var mft = WindowsMftVolume.TryOpen(volume))
+{
+    if (mft is null)
+    {
+        Console.Error.WriteLine("Could not open the MFT volume.");
+        return 1;
+    }
+
+    Console.WriteLine(
+        $"MFT: {mft.MftValidDataLength:N0} bytes, " +
+        $"{mft.BytesPerFileRecord} bytes/record, {mft.BytesPerSector} bytes/sector, " +
+        $"{mft.MftValidDataLength / mft.BytesPerFileRecord:N0} records");
+}
+
 var stopwatch = Stopwatch.StartNew();
 var usedMft = MftLargeFileScanner.TryScan(
     volume,
