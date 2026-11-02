@@ -76,6 +76,7 @@ public sealed class FlowTests
 
             Assert.Equal(AppStage.Results, viewModel.Stage);
             Assert.True(viewModel.Categories.Sum(category => category.FileCount) > 0);
+            Assert.StartsWith("扫描用时", viewModel.ScanElapsedText);
             window.InvalidateVisual();
             Save(window.CaptureRenderedFrame()!, "results-zh-light.png");
 

@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Reflection;
 using AirClean.App.Services;
+using Avalonia.Threading;
 using AirClean.Core.Deleting;
 using AirClean.Core.Formatting;
 using AirClean.Core.Models;
@@ -37,6 +39,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private readonly UpdateService _updates = new();
     private UpdateInfo? _pendingUpdate;
+
+    private readonly DispatcherTimer _scanTimer;
+    private readonly Stopwatch _scanClock = new();
 
     private CancellationTokenSource? _cts;
     private CancellationTokenSource? _cleanCts;
@@ -86,6 +91,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _adminHelper = adminHelper;
         _largeFileThreshold = largeFileThreshold;
         _duplicateRoots = duplicateRoots;
+
+        _scanTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(200)
+        };
+        _scanTimer.Tick += (_, _) => UpdateScanElapsed();
 
         if (_adminHelper is not null)
         {
@@ -457,6 +468,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Stage = AppStage.Scanning;
         SetStatus("L.Scanning");
 
+        _scanClock.Restart();
+        SetScanElapsed(TimeSpan.Zero);
+        _scanTimer.Start();
+
         var request = new VolumeScanRequest(
             volume.Info,
             volume.IsSystem ? ContentRoots() : [volume.Root],
@@ -488,9 +503,28 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         finally
         {
+            _scanTimer.Stop();
+            _scanClock.Stop();
             IsScanComplete = true;
             OnPropertyChanged(nameof(IsScanComplete));
         }
+    }
+
+    private void UpdateScanElapsed()
+    {
+        if (Stage != AppStage.Scanning)
+        {
+            _scanTimer.Stop();
+            return;
+        }
+
+        SetScanElapsed(_scanClock.Elapsed);
+    }
+
+    private void SetScanElapsed(TimeSpan elapsed)
+    {
+        ScanElapsedText = _localization.Format("L.ScanElapsedFormat", Math.Round(elapsed.TotalSeconds, 1));
+        OnPropertyChanged(nameof(ScanElapsedText));
     }
 
     /// <summary>Says which categories this volume will produce before anything is read.</summary>
@@ -880,8 +914,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HasLimited));
 
         _scannedRoot = volume.Root;
-        ScanElapsedText = _localization.Format("L.ScanElapsedFormat", Math.Round(result.Elapsed.TotalSeconds, 1));
-        OnPropertyChanged(nameof(ScanElapsedText));
+        _scanTimer.Stop();
+        _scanClock.Stop();
+        SetScanElapsed(result.Elapsed);
         OnPropertyChanged(nameof(ScanScopeText));
 
         RefreshTotals();

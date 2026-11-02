@@ -71,6 +71,8 @@ background, coral accent, quiet information density, and calm desktop presence.
 - **Results arrive in stages.** Caches land first (in a second or two), large
   files and duplicates follow. Categories still running say **Waiting…**, so the
   window is useful before everything finishes.
+- **Elapsed time is visible.** The scanning page updates the elapsed time live, and
+  the results page keeps the total for that scan.
 - **Real numbers.** Category sizes and file counts come from the actual walk, not
   estimates, and are never double-counted.
 - **NTFS MFT fast path.** On Windows NTFS with administrator access (or with

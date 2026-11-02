@@ -346,6 +346,11 @@
                        HorizontalAlignment="Center"
                        Margin="0,18,0,0" />
 
+            <TextBlock Text="{Binding ScanElapsedText}"
+                       Classes="caption"
+                       HorizontalAlignment="Center"
+                       Margin="0,6,0,0" />
+
             <TextBlock Text="{Binding ScanTargetText}"
                        Classes="caption tertiary"
                        FontSize="10.5"
