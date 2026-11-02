@@ -44,18 +44,32 @@ jobs:
           }
           "value=$version" >> $env:GITHUB_OUTPUT
 
-      - name: Publish
+      - name: Publish (NativeAOT)
         shell: pwsh
-        run: >
-          dotnet publish src/AirClean.App/AirClean.App.csproj
-          -c Release
-          -r win-x64
-          --self-contained true
-          -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:EnableCompressionInSingleFile=true
-          -p:Version=${{ steps.version.outputs.value }}
-          -o publish/win-x64
+        run: |
+          $output = dotnet publish src/AirClean.App/AirClean.App.csproj `
+            -c Release `
+            -r win-x64 `
+            -p:PublishAot=true `
+            -p:StripSymbols=true `
+            -p:Version=${{ steps.version.outputs.value }} `
+            -o publish/win-x64 2>&1
+          $code = $LASTEXITCODE
+          $output | Write-Output
+          if ($code -ne 0) { throw "AOT publish failed with exit code $code." }
+
+          $warnings = @($output | Select-String -Pattern 'warning IL\d{4}')
+          if ($warnings.Count -gt 0) {
+            $warnings | ForEach-Object { Write-Output $_.Line }
+            throw "AOT produced $($warnings.Count) IL warning(s); fix them before releasing."
+          }
+
+          $exe = 'publish/win-x64/AirClean.exe'
+          if (-not (Test-Path $exe)) { throw 'The AOT publish output has no AirClean.exe.' }
+          $mb = ((Get-ChildItem publish/win-x64 -Recurse -File | Measure-Object Length -Sum).Sum) / 1MB
+          if ($mb -gt 90) { throw ('AOT output is {0:N0} MB; far above the expected ~42 MB.' -f $mb) }
+
+          ('Windows: NativeAOT build is {0:N1} MB over {1} files, no IL warnings.' -f $mb, (Get-ChildItem publish/win-x64 -Recurse -File).Count) >> $env:GITHUB_STEP_SUMMARY
 
       - name: Install Velopack CLI
         shell: pwsh
@@ -147,18 +161,41 @@ jobs:
             echo "value=0.0.1-dev" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Publish
+      - name: Publish (NativeAOT)
         shell: bash
-        run: >
-          dotnet publish src/AirClean.App/AirClean.App.csproj
-          -c Release
-          -r ${{ matrix.rid }}
-          --self-contained true
-          -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:EnableCompressionInSingleFile=true
-          -p:Version=${{ steps.version.outputs.value }}
-          -o publish/${{ matrix.rid }}
+        run: |
+          set -o pipefail
+          log=$(dotnet publish src/AirClean.App/AirClean.App.csproj \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            -p:PublishAot=true \
+            -p:StripSymbols=true \
+            -p:Version=${{ steps.version.outputs.value }} \
+            -o publish/${{ matrix.rid }} 2>&1) || {
+            echo "$log"
+            echo "::error::AOT publish failed"
+            exit 1
+          }
+          echo "$log"
+
+          if echo "$log" | grep -Eq 'warning IL[0-9]{4}'; then
+            echo "$log" | grep -E 'warning IL[0-9]{4}'
+            echo "::error::AOT produced IL warnings; fix them before releasing."
+            exit 1
+          fi
+
+          test -f "publish/${{ matrix.rid }}/AirClean" || {
+            echo "::error::The AOT publish output has no AirClean binary."
+            exit 1
+          }
+
+          mb=$(du -sm "publish/${{ matrix.rid }}" | cut -f1)
+          if [ "$mb" -gt 90 ]; then
+            echo "::error::AOT output is ${mb} MB, far above the expected ~42 MB."
+            exit 1
+          fi
+
+          echo "macOS ${{ matrix.arch }}: NativeAOT build is ${mb} MB over $(find "publish/${{ matrix.rid }}" -type f | wc -l) files, no IL warnings." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install Velopack CLI
         shell: bash
@@ -235,7 +272,9 @@ jobs:
 
   linux:
     name: Linux portable
-    runs-on: ubuntu-latest
+    # NativeAOT links against the build machine's glibc. ubuntu-latest (24.04) would
+    # require GLIBC_2.38 and fail on Ubuntu 22.04; pin the oldest supported runner.
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout
@@ -256,18 +295,51 @@ jobs:
             echo "value=0.0.1-dev" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Publish
+      - name: Install AOT toolchain
         shell: bash
-        run: >
-          dotnet publish src/AirClean.App/AirClean.App.csproj
-          -c Release
-          -r linux-x64
-          --self-contained true
-          -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:EnableCompressionInSingleFile=true
-          -p:Version=${{ steps.version.outputs.value }}
-          -o publish/linux-x64
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
+      - name: Publish (NativeAOT)
+        shell: bash
+        run: |
+          set -o pipefail
+          log=$(dotnet publish src/AirClean.App/AirClean.App.csproj \
+            -c Release \
+            -r linux-x64 \
+            -p:PublishAot=true \
+            -p:StripSymbols=true \
+            -p:Version=${{ steps.version.outputs.value }} \
+            -o publish/linux-x64 2>&1) || {
+            echo "$log"
+            echo "::error::AOT publish failed"
+            exit 1
+          }
+          echo "$log"
+
+          if echo "$log" | grep -Eq 'warning IL[0-9]{4}'; then
+            echo "$log" | grep -E 'warning IL[0-9]{4}'
+            echo "::error::AOT produced IL warnings; fix them before releasing."
+            exit 1
+          fi
+
+          test -f publish/linux-x64/AirClean || {
+            echo "::error::The AOT publish output has no AirClean binary."
+            exit 1
+          }
+
+          mb=$(du -sm publish/linux-x64 | cut -f1)
+          if [ "$mb" -gt 90 ]; then
+            echo "::error::AOT output is ${mb} MB, far above the expected ~42 MB."
+            exit 1
+          fi
+
+          floor=$(objdump -T publish/linux-x64/AirClean | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -1)
+          echo "Linux: NativeAOT build is ${mb} MB, requires ${floor} at most." >> "$GITHUB_STEP_SUMMARY"
+          max_allowed=2.35
+          if [ "$(printf '%s\n' "$max_allowed" "${floor#GLIBC_}" | sort -V | tail -1)" != "$max_allowed" ]; then
+            echo "::error::The binary requires ${floor}, above the supported ${max_allowed}."
+            exit 1
+          fi
 
       - name: Package
         shell: bash

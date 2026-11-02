@@ -122,12 +122,14 @@ AirClean 把清理拆成三步：**扫描、预览、清理**。没有账号，�
 | 界面 | Avalonia 11 | 一套 XAML 代码生成原生桌面窗口，支持高 DPI。 |
 | MVVM | CommunityToolkit.Mvvm | 小而克制的源生成 MVVM，不绑定框架。 |
 | 分发 | Velopack | 安装器、便携包与安装版自动更新。 |
+| 编译 | NativeAOT | 所有发布版提前编译，启动不经过 JIT。 |
 | 测试 | xUnit + Avalonia.Headless | 核心逻辑单测，加上真实窗口的离屏渲染测试。 |
 
 ## 环境要求
 
 - 构建需要 [.NET 10 SDK](https://dotnet.microsoft.com/download)。
-- Windows 10/11、macOS 13+，或现代 Linux 桌面（X11 / Wayland）。
+- Windows 10/11、macOS 13+，或 Ubuntu 22.04+ / glibc 2.35+ 的 Linux 桌面
+  （X11 / Wayland）。
 - Linux 需要常见的 Avalonia 桌面依赖：X11/Wayland、fontconfig，以及 OpenGL
   或软件渲染；显示中文界面还需要系统安装 CJK 字体。
 
@@ -156,12 +158,12 @@ MFT 记录解析、特权扫描回退、大文件扫描、重复文件分组、�
 以及“扫描 → 确认 → 完成”、“切换磁盘 → 勾选大文件”、“查找重复 → 勾选整组”三条链路。
 Headless 测试会把渲染截图写到 `%TEMP%/airclean-shots`。
 
-CI 在 Ubuntu、Windows 与 macOS 三平台上执行 restore、build 和 test；Windows
-额外执行一次 NativeAOT 发布并把 IL 警告视为失败。
+CI 在 Ubuntu 22.04、Windows 与 macOS 三平台上执行 restore、build、test，并各做
+一次 NativeAOT 发布；任何 IL 警告都会让 CI 失败。
 
-### NativeAOT（可选）
+### NativeAOT
 
-Windows 上已验证可以原生 AOT 发布：
+发布版使用 NativeAOT 提前编译：
 
 ```bash
 dotnet publish src/AirClean.App -c Release -r win-x64 `
@@ -173,8 +175,9 @@ dotnet publish src/AirClean.App -c Release -r win-x64 `
 设置、规则和清理日志都改成了 `JsonSerializerContext` 源生成序列化，这是 AOT
 能正常读写配置的前提。
 
-当前发布包仍使用 JIT 自包含单文件；NativeAOT 的 Velopack 更新链路和 Linux /
-macOS 产线还没有切换，正式切换前需要把三平台 AOT 检查与安装版更新验证补齐。
+Linux 发布在 Ubuntu 22.04 runner 上构建，二进制要求 glibc 不高于 2.35；CI 会读取
+`objdump` 的符号版本并拒绝更高的下限。Velopack 更新链路仍需要在 AOT 安装版上做一次
+“检查更新 → 下载 → 重启更新”的实机验证。
 
 ## 操作与快捷键
 

@@ -16,15 +16,17 @@ AirClean 用 [Velopack](https://velopack.io/) 生成 Windows 安装器、macOS `
 
 `releases.*.json` 是应用内更新用的清单。便携版与源码运行不会自更新；装 Setup.exe 或 `.pkg` 才会。
 
+所有发布平台都使用 NativeAOT 提前编译，不再发布 JIT 单文件包。Windows 需要 MSVC
+生成工具；Linux 需要 clang 与 zlib1g-dev，并在 Ubuntu 22.04 上构建以保证
+glibc 下限不高于 2.35；macOS 使用 Xcode 自带 clang。
+
 ## 本地打包
 
 ```bash
 dotnet publish src/AirClean.App/AirClean.App.csproj -c Release -r win-x64 \
-  --self-contained true \
-  -p:PublishSingleFile=true \
-  -p:IncludeNativeLibrariesForSelfExtract=true \
-  -p:EnableCompressionInSingleFile=true \
-  -p:Version=0.1.0 \
+  -p:PublishAot=true \
+  -p:StripSymbols=true \
+  -p:Version=0.2.0 \
   -o publish/win-x64
 
 dotnet tool install vpk --version 1.2.161 --tool-path .vpk

@@ -151,12 +151,14 @@ background, coral accent, quiet information density, and calm desktop presence.
 | UI | Avalonia 11 | Native desktop windows from one XAML codebase, with high-DPI support. |
 | MVVM | CommunityToolkit.Mvvm | Small, source-generated, no framework lock-in. |
 | Packaging | Velopack | Installers, portable packages, and automatic updates. |
+| Compilation | NativeAOT | Every release is compiled ahead of time; startup never hits the JIT. |
 | Tests | xUnit + Avalonia.Headless | Core unit tests plus off-screen rendering of the real windows. |
 
 ## Requirements
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download) for building.
-- Windows 10/11, macOS 13+, or a modern Linux desktop (X11 or Wayland).
+- Windows 10/11, macOS 13+, or a Linux desktop on Ubuntu 22.04+ / glibc 2.35+
+  (X11 or Wayland).
 - On Linux, the usual Avalonia desktop dependencies are required: X11/Wayland,
   fontconfig, and OpenGL or a software renderer. A CJK font is needed to render
   the Chinese UI.
@@ -191,12 +193,12 @@ flows: **scan → confirm → complete**,
 Headless tests
 write rendered frames to `%TEMP%/airclean-shots`.
 
-CI runs restore, build, and test on Ubuntu, Windows, and macOS, plus a Windows
-NativeAOT publish that fails on any IL warning.
+CI runs restore, build, test, and a NativeAOT publish on Ubuntu 22.04, Windows, and
+macOS; any IL warning fails the build.
 
-### NativeAOT (optional)
+### NativeAOT
 
-NativeAOT publishing is verified on Windows:
+Release builds use NativeAOT:
 
 ```bash
 dotnet publish src/AirClean.App -c Release -r win-x64 `
@@ -209,9 +211,10 @@ On this machine the AOT output was about 41.6 MB and the first window appeared i
 the cleanup journal now use source-generated `JsonSerializerContext` serializers,
 which is what keeps those paths working without runtime code generation.
 
-Release packages still use the JIT self-contained single-file build. The Velopack
-update path and the Linux / macOS AOT pipelines have not been switched yet; both
-should be checked before making AOT the release default.
+Linux releases are built on an Ubuntu 22.04 runner and must stay at or below glibc
+2.35; CI reads the binary's symbol versions with `objdump` and rejects a higher
+floor. The Velopack update path still needs an installed-build check: update check,
+background download, restart, and version switch.
 
 ## Controls and shortcuts
 
