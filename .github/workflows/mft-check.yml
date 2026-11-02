@@ -49,6 +49,16 @@ jobs:
           $app = (Resolve-Path "src/AirClean.App/bin/Release/net10.0/AirClean.exe").Path
           dotnet run --project tools/MftCheck/MftCheck.csproj -c Release -- --via-helper $app
 
+      - name: Seed an administrator-cleanup test file
+        shell: pwsh
+        run: |
+          $directory = Join-Path $env:WINDIR "SoftwareDistribution\Download"
+          New-Item -ItemType Directory -Path $directory -Force | Out-Null
+          [IO.File]::WriteAllBytes(
+            (Join-Path $directory "airclean-helper-check.bin"),
+            (New-Object byte[] 4096))
+          Write-Host "Seeded a 4 KB file in $directory"
+
       - name: Run the administrator scan round-trip
         shell: pwsh
         run: |
@@ -60,3 +70,12 @@ jobs:
         run: |
           $app = (Resolve-Path "src/AirClean.App/bin/Release/net10.0/AirClean.exe").Path
           dotnet run --project tools/MftCheck/MftCheck.csproj -c Release -- --admin-clean --via-helper $app
+
+      - name: Verify the seeded file was removed
+        shell: pwsh
+        run: |
+          $file = Join-Path $env:WINDIR "SoftwareDistribution\Download\airclean-helper-check.bin"
+          if (Test-Path -LiteralPath $file) {
+            throw "The administrator cleanup did not remove the seeded file."
+          }
+          Write-Host "The seeded file was removed."
