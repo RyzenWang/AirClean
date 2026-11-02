@@ -65,6 +65,8 @@ AirClean 把清理拆成三步：**扫描、预览、清理**。没有账号，�
 - **分阶段出结果**：缓存先出来（1–2 秒），大文件和重复文件随后补上；正在跑的类别
   显示“等待中…”，不用等全部算完。
 - **真实体积**：边扫边出结果，分类体积与文件数都来自实际遍历，不估算、不重复相加。
+- **NTFS MFT 快扫**：Windows + NTFS 且以管理员身份运行时，直接读取主文件表，
+  不再逐目录遍历；普通权限会自动回退到整盘遍历。
 - **可随时停止**：扫描中取消会立即停下并回到欢迎页，不触碰任何文件。
 
 ### 预览与挑选
@@ -139,8 +141,8 @@ dotnet build AirClean.sln -c Release
 dotnet test AirClean.sln -c Release
 ```
 
-42 个 Core 测试与 15 个 Avalonia Headless 测试，覆盖规则校验、路径守卫、扫描器、
-大文件扫描、重复文件分组、三态勾选与按条目过滤、目录聚合、删除与日志，
+48 个 Core 测试与 15 个 Avalonia Headless 测试，覆盖规则校验、路径守卫、扫描器、
+MFT 记录解析、大文件扫描、重复文件分组、三态勾选与按条目过滤、目录聚合、删除与日志，
 以及“扫描 → 确认 → 完成”、“切换磁盘 → 勾选大文件”、“查找重复 → 勾选整组”三条链路。
 Headless 测试会把渲染截图写到 `%TEMP%/airclean-shots`。
 
@@ -195,14 +197,14 @@ CI 在 Ubuntu、Windows 与 macOS 三平台上执行 restore、build 和 test。
 src/
   AirClean.Core/          无 UI：规则、扫描器、路径守卫、删除、日志、设置
     Rules/                内嵌 JSON 规则（windows / macos / linux）
-    Scanning/             遍历、去重、年龄与深度过滤、进度、大文件扫描
+    Scanning/             遍历、去重、MFT、年龄与深度过滤、进度、大文件扫描
     Security/             PathGuard、路径展开
     Volumes/              磁盘枚举
     Deleting/             DeletionService、journal
   AirClean.Platform/      回收站与废纸篓适配（Shell / macOS / freedesktop）
   AirClean.App/           Avalonia 界面：欢迎、扫描、结果、确认、完成
 tests/
-  AirClean.Core.Tests/    42 个
+  AirClean.Core.Tests/    48 个
   AirClean.App.Tests/     15 个 Headless 渲染与流程测试
 docs/
   DESIGN.md               设计与技术方案
@@ -247,15 +249,15 @@ Tag 发布会用 [Velopack](https://velopack.io/) 生成：
 - 重复文件在系统盘只扫用户内容目录，数据盘扫整盘；没有增量索引，每次全量哈希，
   因此数据盘有 2 GB 哈希上限（达到上限会提示“比对已达到上限”）；硬链接未去重
 - 管理员权限项（Windows Update 缓存、`/var/cache/apt`、`journald`）
-- 大文件扫描靠整盘遍历：机械盘冷缓存下可能要几分钟（有进度和取消）；
-  基于 MFT 的秒级扫描还没做
+- 大文件扫描在 NTFS 上会优先读取 MFT；该路径需要管理员权限（当前没有提权助手），
+  普通权限会自动回退到整盘遍历，机械盘冷缓存下仍可能要几分钟（有进度和取消）
 - Windows 上真正的“撤销”（现在只提供打开回收站；macOS/Linux 移交到系统废纸篓）
 - macOS/Linux 尚未实机验证（CI 矩阵已就绪，大文件扫描的卷枚举按平台分支）
 - Windows 与 macOS 的签名 / 公证步骤还没有用真实证书跑过；未签名包会触发系统提示
 
 ## 路线图
 
-状态：✅ 已完成 · 🚧 进行中 · ⬜ 未开始。当前 **8 项已完成、2 项进行中、8 项未开始**。
+状态：✅ 已完成 · 🚧 进行中 · ⬜ 未开始。当前 **8 项已完成、3 项进行中、7 项未开始**。
 
 | 状态 | 项目 | 说明 |
 | --- | --- | --- |
@@ -269,9 +271,9 @@ Tag 发布会用 [Velopack](https://velopack.io/) 生成：
 | ✅ 已完成 | Windows / macOS 安装版自动更新 | 后台检查与下载，状态栏提示重启。 |
 | 🚧 进行中 | 正式签名与公证 | 工作流和 Secrets 文档已就绪；缺真实证书，Windows 签名与 Apple 公证尚未实际跑通。 |
 | 🚧 进行中 | macOS / Linux 实机验证 | CI 已覆盖三平台构建与 Headless 测试；真机上的窗口、主题、回收站与文件管理器定位还没验收。 |
+| 🚧 进行中 | 基于 MFT 的秒级大文件扫描 | MFT 读取与索引已实现；需要管理员权限，尚未在提权环境完成实测，普通权限自动回退整盘遍历。 |
 | ⬜ 未开始 | 真正的“撤销上一次清理” | 完成页目前只能打开回收站 / 废纸篓；需要记录清理批次并支持恢复。 |
 | ⬜ 未开始 | 管理员权限项 | 需要独立 Helper、UAC / sudo 提权，以及 Windows Update / apt / journald 规则。 |
-| ⬜ 未开始 | 基于 MFT 的秒级大文件扫描 | 大文件扫描仍是整盘遍历；下一步读取 NTFS MFT / USN。 |
 | ⬜ 未开始 | 托盘图标与后台常驻 | 关闭窗口后继续驻留、托盘菜单和快速扫描入口。 |
 | ⬜ 未开始 | 定时提醒 | 按天 / 周提醒可清理；默认关闭，不自动删除。 |
 | ⬜ 未开始 | 完整设置页 | 当前设置弹层只有主题与语言；需要扫描范围、排除项、删除方式与更新设置。 |

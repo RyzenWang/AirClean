@@ -72,6 +72,9 @@ background, coral accent, quiet information density, and calm desktop presence.
   window is useful before everything finishes.
 - **Real numbers.** Category sizes and file counts come from the actual walk, not
   estimates, and are never double-counted.
+- **NTFS MFT fast path.** On Windows NTFS with administrator access, AirClean
+  reads the master file table instead of walking directories. Without elevation
+  it falls back to the normal walk.
 - **Stop any time.** Cancelling a scan stops it immediately and returns to the
   welcome page without touching any files.
 
@@ -164,11 +167,12 @@ dotnet build AirClean.sln -c Release
 dotnet test AirClean.sln -c Release
 ```
 
-There are 42 Core tests and 15 Avalonia Headless tests. They cover rule
-validation, path guards, the scanners, large-file scanning, duplicate grouping,
-tri-state selection and per-item filtering, folder aggregation, deletion and the
-journal, plus three full flows: **scan → confirm → complete**, **switch drive →
-pick a large file**, and **find duplicates → select a group**. Headless tests
+There are 48 Core tests and 15 Avalonia Headless tests. They cover rule
+validation, path guards, the scanners, MFT record parsing, large-file scanning,
+duplicate grouping, tri-state selection and per-item filtering, folder aggregation,
+deletion and the journal, plus three full flows: **scan → confirm → complete**,
+**switch drive → pick a large file**, and **find duplicates → select a group**.
+Headless tests
 write rendered frames to `%TEMP%/airclean-shots`.
 
 CI runs restore, build, and test on Ubuntu, Windows, and macOS.
@@ -225,14 +229,14 @@ More detail: [docs/DESIGN.md](docs/DESIGN.md).
 src/
   AirClean.Core/          UI-free rules, scanners, path guard, deletion, journal
     Rules/                Embedded JSON rules (windows / macos / linux)
-    Scanning/             Walk, dedupe, age/depth filters, progress, large files
+    Scanning/             Walk, dedupe, MFT, age/depth filters, progress, large files
     Security/             PathGuard and path expansion
     Volumes/              Drive enumeration
     Deleting/             DeletionService and journal
   AirClean.Platform/      Recycle Bin / Trash adapters (Shell / macOS / freedesktop)
   AirClean.App/           Avalonia UI: welcome, scanning, results, confirm, done
 tests/
-  AirClean.Core.Tests/    42 tests
+  AirClean.Core.Tests/    48 tests
   AirClean.App.Tests/     15 headless rendering and flow tests
 docs/
   DESIGN.md               Product, visual, and technical design
@@ -288,9 +292,10 @@ JSONL journal with paths and sizes only.
   is hit). Hard links are not deduplicated.
 - No administrator-only categories yet (Windows Update cache,
   `/var/cache/apt`, `journald`).
-- Large-file scanning walks the whole drive. A cold mechanical drive can take
-  minutes (progress and cancellation are available); MFT-based scanning is not
-  implemented yet.
+- Large-file scanning prefers the NTFS MFT. That path needs administrator access
+  (there is no elevation helper yet); without it AirClean falls back to walking
+  the whole drive, which can take minutes on a cold mechanical drive (progress
+  and cancellation are available).
 - No true "undo" on Windows yet; the completion page can open the Recycle Bin,
   and macOS/Linux hand files to the system Trash.
 - macOS and Linux have not been verified on real hardware. The CI matrix is in
@@ -300,7 +305,7 @@ JSONL journal with paths and sizes only.
 
 ## Roadmap
 
-Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **8 done, 2 in progress, 8 not started**.
+Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **8 done, 3 in progress, 7 not started**.
 
 | Status | Item | Notes |
 | --- | --- | --- |
@@ -314,9 +319,9 @@ Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **8 done, 2 i
 | ✅ Done | Auto-update on installed Windows / macOS builds | Background check/download with a restart prompt. |
 | 🚧 In progress | Production signing and notarization | Workflow and secrets docs are ready; no real certificates yet, so Windows signing and Apple notarization have not been exercised. |
 | 🚧 In progress | macOS / Linux hardware validation | CI covers builds and headless tests on all three platforms; real-hardware checks for the UI, themes, Trash, and reveal are still missing. |
+| 🚧 In progress | MFT-based large-file scanning | MFT reading and indexing are implemented; it needs administrator access and has not been validated in an elevated environment. The normal walk is the fallback. |
 | ⬜ Not started | A real "undo the last cleanup" | The completion page can only open the Recycle Bin / Trash; batch tracking and restore are missing. |
 | ⬜ Not started | Administrator-only categories | Needs a separate helper, UAC / sudo elevation, and Windows Update / apt / journald rules. |
-| ⬜ Not started | MFT-based large-file scanning | Large-file scanning still walks the whole volume; NTFS MFT / USN is next. |
 | ⬜ Not started | Tray icon and background mode | Keep running after the window closes, tray menu, and a quick-scan entry. |
 | ⬜ Not started | Scheduled reminders | Daily / weekly reminders, off by default, no automatic deletion. |
 | ⬜ Not started | Full settings page | The current flyout only has theme and language; scan scope, exclusions, delete mode, and updates are missing. |

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AirClean.Core.Models;
+using AirClean.Core.Scanning.Mft;
 using AirClean.Core.Security;
 using AirClean.Core.Trash;
 using AirClean.Core.Volumes;
@@ -51,6 +52,36 @@ public sealed class LargeFileScanner(ITrashService trash)
         CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
+
+        // NTFS exposes the whole file index without walking directories. It needs raw
+        // volume access (elevation); when that is unavailable this returns false silently
+        // and the normal walk below takes over.
+        if (MftLargeFileScanner.TryScan(volume, thresholdBytes, progress, cancellationToken, out var mft) &&
+            mft is not null)
+        {
+            var mftCategory = new CategoryScan
+            {
+                Category = CleanCategory.LargeFiles,
+                Safety = Safety.Caution,
+                IsExplicitSelection = true,
+                MatchedBytes = mft.MatchedBytes,
+                MatchedCount = mft.MatchedCount
+            };
+
+            foreach (var item in mft.Items)
+            {
+                mftCategory.Add(item);
+            }
+
+            stopwatch.Stop();
+
+            return new ScanResult
+            {
+                Categories = [mftCategory, ScanTrash(volume)],
+                Elapsed = stopwatch.Elapsed
+            };
+        }
+
         var candidates = new List<CleanItem>();
         long filesSeen = 0;
         long matchedBytes = 0;
@@ -166,6 +197,19 @@ public sealed class LargeFileScanner(ITrashService trash)
             largeFiles.Add(item);
         }
 
+        progress?.Report(new ScanProgress(filesSeen, matchedBytes, candidates.Count, current));
+        stopwatch.Stop();
+
+        return new ScanResult
+        {
+            Categories = [largeFiles, ScanTrash(volume)],
+            Elapsed = stopwatch.Elapsed,
+            SkippedPermission = skipped
+        };
+    }
+
+    private CategoryScan ScanTrash(VolumeInfo volume)
+    {
         var trashSample = trash.Probe(volume.Root);
         var trashCategory = new CategoryScan
         {
@@ -181,14 +225,6 @@ public sealed class LargeFileScanner(ITrashService trash)
             trashCategory.FileCount = sample.ItemCount;
         }
 
-        progress?.Report(new ScanProgress(filesSeen, matchedBytes, candidates.Count, current));
-        stopwatch.Stop();
-
-        return new ScanResult
-        {
-            Categories = [largeFiles, trashCategory],
-            Elapsed = stopwatch.Elapsed,
-            SkippedPermission = skipped
-        };
+        return trashCategory;
     }
 }
