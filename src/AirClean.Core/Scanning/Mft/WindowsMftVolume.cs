@@ -17,6 +17,7 @@ internal sealed class WindowsMftVolume : IDisposable
     private const uint FileShareRead = 0x00000001;
     private const uint FileShareWrite = 0x00000002;
     private const uint OpenExisting = 3;
+    private const uint FileFlagSequentialScan = 0x08000000;
     private const uint FsctlGetNtfsVolumeData = 0x00090064;
 
     private readonly SafeFileHandle _handle;
@@ -66,7 +67,7 @@ internal sealed class WindowsMftVolume : IDisposable
             FileShareRead | FileShareWrite,
             IntPtr.Zero,
             OpenExisting,
-            0,
+            FileFlagSequentialScan,
             IntPtr.Zero);
 
         if (handle.IsInvalid)
@@ -321,7 +322,7 @@ internal sealed class WindowsMftVolume : IDisposable
 
             while (remaining > 0)
             {
-                var request = (uint)Math.Min(remaining, 1024 * 1024);
+                var request = (uint)Math.Min(remaining, 8 * 1024 * 1024);
 
                 if (!ReadFile(handle, (IntPtr)current, request, out var read, IntPtr.Zero))
                 {

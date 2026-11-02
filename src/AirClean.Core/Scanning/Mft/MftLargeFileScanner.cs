@@ -52,7 +52,7 @@ internal static class MftLargeFileScanner
             }
 
             var recordSize = mft.BytesPerFileRecord;
-            var bufferSize = Math.Clamp(recordSize * 1024, 64 * 1024, 4 * 1024 * 1024);
+            var bufferSize = Math.Clamp(recordSize * 8192, 256 * 1024, 8 * 1024 * 1024);
             bufferSize -= bufferSize % recordSize;
             var buffer = new byte[bufferSize];
             var entries = new Dictionary<uint, MftEntry>();
