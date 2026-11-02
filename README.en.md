@@ -307,8 +307,9 @@ JSONL journal with paths and sizes only.
   is hit). Hard links are not deduplicated.
 - Administrator-only categories are partial: the Windows Update cache is wired to
   the helper; `/var/cache/apt` and `journald` still need a Linux-side elevation path.
-- Large-file scanning prefers the NTFS MFT. That path needs administrator access
-  (there is no elevation helper yet); without it AirClean falls back to walking
+- Large-file scanning prefers the NTFS MFT. That path needs administrator access,
+  which can be enabled through the administrator toggle (UAC + helper); without it
+  AirClean falls back to walking
   the whole drive, which can take minutes on a cold mechanical drive (progress
   and cancellation are available).
 - No true "undo" on Windows yet; the completion page can open the Recycle Bin,
