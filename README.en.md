@@ -74,7 +74,8 @@ background, coral accent, quiet information density, and calm desktop presence.
   estimates, and are never double-counted.
 - **NTFS MFT fast path.** On Windows NTFS with administrator access, AirClean
   reads the master file table instead of walking directories. Without elevation
-  it falls back to the normal walk.
+  it falls back to the normal walk. On a Windows runner, a 1.4 GB MFT with 1.36
+  million records took about 8.5 s (7.6 s read, 0.66 s parse, 0.14 s index).
 - **Stop any time.** Cancelling a scan stops it immediately and returns to the
   welcome page without touching any files.
 
@@ -238,6 +239,8 @@ src/
 tests/
   AirClean.Core.Tests/    48 tests
   AirClean.App.Tests/     15 headless rendering and flow tests
+tools/
+  MftCheck/               Elevated MFT scan check for Windows
 docs/
   DESIGN.md               Product, visual, and technical design
   DISTRIBUTION.md         Packaging, signing, and automatic updates
@@ -305,7 +308,7 @@ JSONL journal with paths and sizes only.
 
 ## Roadmap
 
-Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **8 done, 3 in progress, 7 not started**.
+Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **9 done, 2 in progress, 7 not started**.
 
 | Status | Item | Notes |
 | --- | --- | --- |
@@ -317,9 +320,9 @@ Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **8 done, 3 i
 | ✅ Done | English / Simplified Chinese and light / dark themes | Live switching, including follow-system. |
 | ✅ Done | Windows installer, macOS pkg, Linux portable build | Velopack packaging is wired up. |
 | ✅ Done | Auto-update on installed Windows / macOS builds | Background check/download with a restart prompt. |
+| ✅ Done | MFT-based large-file scanning | Validated on a Windows runner: a 1.4 GB MFT with 1.36 million records took about 8.5 s. It needs administrator access; the normal walk is the fallback. |
 | 🚧 In progress | Production signing and notarization | Workflow and secrets docs are ready; no real certificates yet, so Windows signing and Apple notarization have not been exercised. |
 | 🚧 In progress | macOS / Linux hardware validation | CI covers builds and headless tests on all three platforms; real-hardware checks for the UI, themes, Trash, and reveal are still missing. |
-| 🚧 In progress | MFT-based large-file scanning | MFT reading and indexing are implemented; it needs administrator access and has not been validated in an elevated environment. The normal walk is the fallback. |
 | ⬜ Not started | A real "undo the last cleanup" | The completion page can only open the Recycle Bin / Trash; batch tracking and restore are missing. |
 | ⬜ Not started | Administrator-only categories | Needs a separate helper, UAC / sudo elevation, and Windows Update / apt / journald rules. |
 | ⬜ Not started | Tray icon and background mode | Keep running after the window closes, tray menu, and a quick-scan entry. |
