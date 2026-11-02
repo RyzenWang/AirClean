@@ -1,7 +1,14 @@
+using System.Diagnostics;
 using AirClean.Core.Models;
 using AirClean.Core.Volumes;
 
 namespace AirClean.Core.Scanning.Mft;
+
+internal sealed record MftScanStats(
+    long RecordsRead,
+    long ReadMilliseconds,
+    long ParseMilliseconds,
+    long IndexMilliseconds);
 
 /// <summary>
 /// Fast path for large-file scans on NTFS. It reads the MFT in a handful of sequential
@@ -16,9 +23,19 @@ internal static class MftLargeFileScanner
         long thresholdBytes,
         IProgress<ScanProgress>? progress,
         CancellationToken cancellationToken,
-        out MftLargeFileResult? result)
+        out MftLargeFileResult? result) =>
+        TryScan(volume, thresholdBytes, progress, cancellationToken, out result, out _);
+
+    public static bool TryScan(
+        VolumeInfo volume,
+        long thresholdBytes,
+        IProgress<ScanProgress>? progress,
+        CancellationToken cancellationToken,
+        out MftLargeFileResult? result,
+        out MftScanStats? stats)
     {
         result = null;
+        stats = null;
 
         if (!OperatingSystem.IsWindows())
         {
@@ -42,7 +59,10 @@ internal static class MftLargeFileScanner
             var total = mft.MftValidDataLength;
             var position = 0L;
             var filesSeen = 0L;
+            var recordsRead = 0L;
             var lastReport = DateTime.MinValue;
+            var readWatch = new Stopwatch();
+            var parseWatch = new Stopwatch();
 
             while (position < total)
             {
@@ -56,7 +76,11 @@ internal static class MftLargeFileScanner
                     break;
                 }
 
+                readWatch.Start();
                 mft.ReadMft(position, buffer.AsSpan(0, count));
+                readWatch.Stop();
+
+                parseWatch.Start();
 
                 for (var offset = 0; offset < count; offset += recordSize)
                 {
@@ -72,6 +96,8 @@ internal static class MftLargeFileScanner
                     {
                         continue;
                     }
+
+                    recordsRead++;
 
                     if (!entry.IsDirectory)
                     {
@@ -97,6 +123,7 @@ internal static class MftLargeFileScanner
                     entries[entry.RecordNumber] = entry;
                 }
 
+                parseWatch.Stop();
                 position += count;
             }
 
@@ -108,7 +135,15 @@ internal static class MftLargeFileScanner
                 return false;
             }
 
+            var indexWatch = Stopwatch.StartNew();
             result = new MftIndex(entries).FindLargeFiles(volume, thresholdBytes, cancellationToken);
+            indexWatch.Stop();
+
+            stats = new MftScanStats(
+                recordsRead,
+                readWatch.ElapsedMilliseconds,
+                parseWatch.ElapsedMilliseconds,
+                indexWatch.ElapsedMilliseconds);
 
             progress?.Report(new ScanProgress(filesSeen, result.MatchedBytes, result.MatchedCount, volume.Root));
             return true;

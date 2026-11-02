@@ -48,7 +48,8 @@ var usedMft = MftLargeFileScanner.TryScan(
     thresholdBytes: 1024 * 1024,
     progress: null,
     CancellationToken.None,
-    out var result);
+    out var result,
+    out var stats);
 stopwatch.Stop();
 
 if (!usedMft || result is null)
@@ -61,6 +62,13 @@ Console.WriteLine(
     $"MFT: {result.MatchedCount:N0} files >= 1 MB, " +
     $"{result.MatchedBytes:N0} bytes total, top {result.Items.Count}, " +
     $"{stopwatch.Elapsed.TotalSeconds:F2}s");
+
+if (stats is not null)
+{
+    Console.WriteLine(
+        $"  records={stats.RecordsRead:N0}, read={stats.ReadMilliseconds:N0}ms, " +
+        $"parse={stats.ParseMilliseconds:N0}ms, index={stats.IndexMilliseconds:N0}ms");
+}
 
 foreach (var item in result.Items.Take(5))
 {
