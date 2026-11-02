@@ -32,9 +32,10 @@ It is the second app in the Air series and shares its design language and stack
 with [AirPDF](https://github.com/RyzenWang/AirPDF): the same warm paper
 background, coral accent, quiet information density, and calm desktop presence.
 
-> **Status:** 0.1 MVP. Scan, preview, and clean are wired end to end, with
-> per-drive scanning and hand-picked large files. A benchmark on Windows scanned
-> 22,000 files (7.4 GB total) in about 1.3 s. Screenshots use demo data.
+> **Status:** 0.2 preview. Scan, preview, and clean are wired end to end, with
+> per-drive scanning, hand-picked large files, the MFT fast path, and the
+> administrator helper. A benchmark on Windows scanned 22,000 files (7.4 GB total)
+> in about 1.3 s. Screenshots use demo data.
 
 ---
 
@@ -262,8 +263,8 @@ docs/
 ## Install and release
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 Tagged releases are packaged with [Velopack](https://velopack.io/):

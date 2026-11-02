@@ -30,7 +30,8 @@ AirClean 把清理拆成三步：**扫描、预览、清理**。没有账号，�
 它是 Air 系列的第二款产品，与 [AirPDF](https://github.com/RyzenWang/AirPDF)
 共用一套设计语言和技术栈：暖纸底、珊瑚红、克制的信息密度，以及同样安静的桌面体验。
 
-> **状态：** 0.1 MVP。扫描、预览、清理已经打通，支持切换磁盘与逐条挑选大文件。
+> **状态：** 0.2 预览版。扫描、预览、清理已经打通，支持切换磁盘、逐条挑选大文件、
+> MFT 快扫与管理员权限助手。
 > Windows 上实测扫描 2.2 万个文件（共 7.4 GB）用时约 1.3 秒。截图使用演示数据。
 
 ---
@@ -225,8 +226,8 @@ docs/
 ## 安装与发布
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 Tag 发布会用 [Velopack](https://velopack.io/) 生成：
