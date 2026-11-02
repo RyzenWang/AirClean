@@ -2,7 +2,13 @@ using AirClean.Core.Scanning;
 
 namespace AirClean.Platform.Admin;
 
-internal sealed record AdminRule(string Id, string Root);
+internal enum AdminRuleKind
+{
+    Directory,
+    Journal
+}
+
+internal sealed record AdminRule(string Id, AdminRuleKind Kind, string Root);
 
 internal static class AdminRules
 {
@@ -17,15 +23,26 @@ internal static class AdminRules
                 ? null
                 : new AdminRule(
                     AdminRuleIds.WindowsUpdateCache,
+                    AdminRuleKind.Directory,
                     Path.Combine(windows, "SoftwareDistribution", "Download"));
         }
 
-        if (OperatingSystem.IsLinux() &&
-            string.Equals(ruleId, AdminRuleIds.LinuxAptCache, StringComparison.Ordinal))
+        if (!OperatingSystem.IsLinux())
         {
-            return new AdminRule(AdminRuleIds.LinuxAptCache, "/var/cache/apt/archives");
+            return null;
         }
 
-        return null;
+        return ruleId switch
+        {
+            AdminRuleIds.LinuxAptCache => new AdminRule(
+                AdminRuleIds.LinuxAptCache,
+                AdminRuleKind.Directory,
+                "/var/cache/apt/archives"),
+            AdminRuleIds.LinuxJournald => new AdminRule(
+                AdminRuleIds.LinuxJournald,
+                AdminRuleKind.Journal,
+                string.Empty),
+            _ => null
+        };
     }
 }

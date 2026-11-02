@@ -97,6 +97,11 @@ public sealed class LocalizationService
             ["L.CategorySystemUpdatesDesc"] = (
                 "Downloaded updates and package archives; needs administrator rights",
                 "已下载的系统更新与软件包缓存；需要管理员权限"),
+            ["L.CategorySystemLogs"] = ("System journal", "系统日志"),
+            ["L.CategorySystemLogsDesc"] = (
+                "systemd journal; keeps the last 14 days and at most 500 MB",
+                "systemd journal；清理后保留最近 14 天且不超过 500 MB"),
+            ["L.ActionCount"] = ("1 cleanup", "1 项清理"),
             ["L.CategoryTrash"] = ("Trash", "废纸篓"),
             ["L.CategoryTrashDesc"] = ("Emptied immediately, cannot be undone", "清空后立即释放空间，无法恢复"),
             ["L.CategoryDev"] = ("Developer caches", "开发缓存"),

@@ -12,6 +12,37 @@ public sealed class CategorySelectionTests
     private readonly FakeReveal _reveal = new();
 
     [AvaloniaFact]
+    public void Administrator_action_categories_are_all_or_nothing()
+    {
+        var category = new CategoryViewModel(
+            CleanCategory.SystemLogs,
+            _localization,
+            _reveal.Reveal,
+            revealSupported: true);
+
+        category.Apply(new CategoryScan
+        {
+            Category = CleanCategory.SystemLogs,
+            Safety = Safety.Caution,
+            IsPermanent = true,
+            AdminRuleId = "linux.journald",
+            IsAdminAction = true,
+            Bytes = 1_024,
+            FileCount = 1
+        });
+
+        Assert.False(category.CanExpand);
+        Assert.Equal("1 cleanup", category.CountText);
+        Assert.Equal(0, category.SelectedFileCount);
+
+        category.SelectionState = true;
+
+        Assert.Equal(1, category.SelectedFileCount);
+        Assert.Equal(1_024, category.SelectedBytes);
+        Assert.Same(category.Scan, category.BuildScan());
+    }
+
+    [AvaloniaFact]
     public void All_items_start_selected_for_safe_categories()
     {
         var category = Create();

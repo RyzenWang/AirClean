@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -173,6 +174,23 @@ public static class AdminHelperHost
             return Error(writer, "Unknown administrator rule.");
         }
 
+        if (rule.Kind == AdminRuleKind.Journal)
+        {
+            var journalBytes = MeasureJournal();
+
+            Write(
+                writer,
+                new AdminEvent
+                {
+                    Kind = "admin-scan",
+                    RuleId = rule.Id,
+                    MatchedBytes = journalBytes,
+                    MatchedCount = journalBytes > 0 ? 1 : 0
+                });
+
+            return true;
+        }
+
         var (bytes, count) = Measure(rule.Root);
 
         Write(
@@ -193,6 +211,11 @@ public static class AdminHelperHost
         if (AdminRules.Find(request.RuleId ?? string.Empty) is not { } rule)
         {
             return Error(writer, "Unknown administrator rule.");
+        }
+
+        if (rule.Kind == AdminRuleKind.Journal)
+        {
+            return CleanJournal(writer, rule);
         }
 
         var files = EnumerateFiles(rule.Root).ToList();
@@ -252,6 +275,118 @@ public static class AdminHelperHost
             });
 
         return true;
+    }
+
+    private static bool CleanJournal(StreamWriter writer, AdminRule rule)
+    {
+        var journalctl = FindJournalctl();
+
+        if (journalctl is null)
+        {
+            return Error(writer, "journalctl was not found.");
+        }
+
+        var before = MeasureJournal();
+
+        RunJournalctl(journalctl, "--no-pager --vacuum-time=14d");
+        RunJournalctl(journalctl, "--no-pager --vacuum-size=500M");
+
+        var after = MeasureJournal();
+        var freed = Math.Max(0, before - after);
+
+        Write(
+            writer,
+            new AdminEvent
+            {
+                Kind = "admin-clean",
+                RuleId = rule.Id,
+                MatchedBytes = freed,
+                MatchedCount = freed > 0 ? 1 : 0,
+                Skipped = 0
+            });
+
+        return true;
+    }
+
+    private static long MeasureJournal()
+    {
+        long bytes = 0;
+
+        foreach (var root in new[] { "/var/log/journal", "/run/log/journal" })
+        {
+            foreach (var file in EnumerateFiles(root))
+            {
+                try
+                {
+                    bytes += file.Length;
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    // A rotated file may disappear while we are measuring it.
+                }
+            }
+        }
+
+        return bytes;
+    }
+
+    private static bool RunJournalctl(string executable, string arguments)
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = executable,
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            });
+
+            if (process is null)
+            {
+                return false;
+            }
+
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+
+            if (!process.WaitForExit(30_000))
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    // Best effort.
+                }
+
+                return false;
+            }
+
+            _ = stdout.GetAwaiter().GetResult();
+            _ = stderr.GetAwaiter().GetResult();
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string? FindJournalctl()
+    {
+        foreach (var path in new[] { "/usr/bin/journalctl", "/bin/journalctl" })
+        {
+            if (File.Exists(path))
+            {
+                return path;
+            }
+        }
+
+        return null;
     }
 
     private static (long Bytes, int Count) Measure(string root)

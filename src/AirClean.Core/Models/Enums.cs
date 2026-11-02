@@ -6,6 +6,7 @@ public enum CleanCategory
     AppCache,
     LogsDiagnostics,
     SystemUpdates,
+    SystemLogs,
     Trash,
     DeveloperCache,
     LargeFiles,

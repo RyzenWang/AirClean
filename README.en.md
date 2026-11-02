@@ -83,11 +83,11 @@ background, coral accent, quiet information density, and calm desktop presence.
   Declining UAC or lacking permission falls back automatically. The main process
   never elevates, and the helper only accepts a drive root or a fixed rule ID, never
   a path list.
-- **Update and package cache.** With administrator access enabled, the scan lists the
-  Windows Update cache or Linux `/var/cache/apt/archives`; the helper deletes it
-  permanently and the confirmation dialog says so separately. The Linux elevation
-  path has not been verified on real hardware; `journald` still needs its own
-  log-cleanup entry.
+- **Updates, package caches, and logs.** With administrator access enabled, the scan
+  lists the Windows Update cache, Linux `/var/cache/apt/archives`, and a separate
+  system-journal entry; the helper deletes them permanently and the confirmation
+  dialog says so separately. Journal cleanup keeps the last 14 days and at most
+  500 MB. The Linux elevation path has not been verified on real hardware.
 - **Stop any time.** Cancelling a scan stops it immediately and returns to the
   welcome page without touching any files.
 
@@ -180,7 +180,7 @@ dotnet build AirClean.sln -c Release
 dotnet test AirClean.sln -c Release
 ```
 
-There are 50 Core tests and 15 Avalonia Headless tests. They cover rule
+There are 50 Core tests and 16 Avalonia Headless tests. They cover rule
 validation, path guards, the scanners, MFT record parsing, privileged-scan
 fallback, large-file scanning, duplicate grouping, tri-state selection and
 per-item filtering, folder aggregation, deletion and the journal, plus three full
@@ -251,7 +251,7 @@ src/
   AirClean.App/           Avalonia UI: welcome, scanning, results, confirm, done
 tests/
   AirClean.Core.Tests/    50 tests
-  AirClean.App.Tests/     15 headless rendering and flow tests
+  AirClean.App.Tests/     16 headless rendering and flow tests
 tools/
   MftCheck/               Elevated MFT, helper, and system-cleanup check
 docs/
@@ -306,9 +306,6 @@ JSONL journal with paths and sizes only.
   drives are scanned whole. There is no incremental index, so every run hashes
   files again, and data drives have a 2 GB hashing cap (the UI says when the cap
   is hit). Hard links are not deduplicated.
-- Administrator-only categories are partial: the Windows Update cache and the Linux
-  apt package cache are wired to the helper (Linux elevation is not hardware-tested);
-  `journald` and more system rules are not.
 - Large-file scanning prefers the NTFS MFT. That path needs administrator access,
   which can be enabled through the administrator toggle (UAC + helper); without it
   AirClean falls back to walking
@@ -316,14 +313,15 @@ JSONL journal with paths and sizes only.
   and cancellation are available).
 - No true "undo" on Windows yet; the completion page can open the Recycle Bin,
   and macOS/Linux hand files to the system Trash.
-- macOS and Linux have not been verified on real hardware. The CI matrix is in
-  place and volume enumeration branches per platform.
+- macOS and Linux have not been verified on real hardware, including the Linux
+  `pkexec` elevation path. The CI matrix is in place and volume enumeration branches
+  per platform.
 - Windows signing and Apple notarization have not been run with real
   certificates; unsigned packages trigger the usual platform warnings.
 
 ## Roadmap
 
-Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **9 done, 3 in progress, 6 not started**.
+Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **10 done, 2 in progress, 6 not started**.
 
 | Status | Item | Notes |
 | --- | --- | --- |
@@ -336,9 +334,9 @@ Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **9 done, 3 i
 | ✅ Done | Windows installer, macOS pkg, Linux portable build | Velopack packaging is wired up. |
 | ✅ Done | Auto-update on installed Windows / macOS builds | Background check/download with a restart prompt. |
 | ✅ Done | MFT-based large-file scanning | Validated on a Windows runner: a 1.4 GB MFT with 1.36 million records took about 9 s. It needs administrator access; the normal walk is the fallback. |
+| ✅ Done | Administrator-only categories | The helper, MFT acceleration, Windows Update cache, apt package cache, and journald cleanup are wired; Linux elevation still needs real-hardware validation. |
 | 🚧 In progress | Production signing and notarization | Workflow and secrets docs are ready; no real certificates yet, so Windows signing and Apple notarization have not been exercised. |
 | 🚧 In progress | macOS / Linux hardware validation | CI covers builds and headless tests on all three platforms; real-hardware checks for the UI, themes, Trash, and reveal are still missing. |
-| 🚧 In progress | Administrator-only categories | The helper, MFT acceleration, Windows Update cache, and apt package cache cleanup are wired; apt elevation is not hardware-tested, and journald plus more system rules are not wired. |
 | ⬜ Not started | A real "undo the last cleanup" | The completion page can only open the Recycle Bin / Trash; batch tracking and restore are missing. |
 | ⬜ Not started | Tray icon and background mode | Keep running after the window closes, tray menu, and a quick-scan entry. |
 | ⬜ Not started | Scheduled reminders | Daily / weekly reminders, off by default, no automatic deletion. |

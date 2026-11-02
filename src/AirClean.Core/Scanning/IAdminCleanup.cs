@@ -7,6 +7,7 @@ public static class AdminRuleIds
 {
     public const string WindowsUpdateCache = "win.update-cache";
     public const string LinuxAptCache = "linux.apt-cache";
+    public const string LinuxJournald = "linux.journald";
 
     public static string? SystemUpdatesForCurrentPlatform =>
         OperatingSystem.IsWindows()
@@ -14,6 +15,9 @@ public static class AdminRuleIds
             : OperatingSystem.IsLinux()
                 ? LinuxAptCache
                 : null;
+
+    public static string? SystemLogsForCurrentPlatform =>
+        OperatingSystem.IsLinux() ? LinuxJournald : null;
 }
 
 /// <summary>

@@ -102,6 +102,31 @@ public sealed class VolumeScanService(
             }
         }
 
+        if (request.IncludeCaches && request.Volume.IsSystem && _adminCleanup is not null &&
+            AdminRuleIds.SystemLogsForCurrentPlatform is { } logRuleId)
+        {
+            var logs = await Task.Run(
+                () => _adminCleanup.Scan(logRuleId, cancellationToken),
+                cancellationToken);
+
+            if (logs is { FileCount: > 0 })
+            {
+                var logCategory = new CategoryScan
+                {
+                    Category = CleanCategory.SystemLogs,
+                    Safety = Safety.Caution,
+                    IsPermanent = true,
+                    AdminRuleId = logs.RuleId,
+                    IsAdminAction = true,
+                    Bytes = logs.Bytes,
+                    FileCount = logs.FileCount
+                };
+
+                categories.Add(logCategory);
+                updates?.Report(new ScanUpdate(ScanStage.Caches, logCategory, null));
+            }
+        }
+
         if (request.IncludeLargeFiles)
         {
             var stageProgress = new Progress<ScanProgress>(value => progress?.Report(

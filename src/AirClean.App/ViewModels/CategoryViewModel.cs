@@ -27,6 +27,7 @@ public sealed partial class CategoryViewModel : ObservableObject
         [CleanCategory.AppCache] = StreamGeometry.Parse("M12 2l9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 17l9 5 9-5"),
         [CleanCategory.LogsDiagnostics] = StreamGeometry.Parse("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M9 13h6M9 17h6"),
         [CleanCategory.SystemUpdates] = StreamGeometry.Parse("M12 3v12M7 10l5 5 5-5M4 21h16"),
+        [CleanCategory.SystemLogs] = StreamGeometry.Parse("M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5V5a2 2 0 0 1 2-2h14v14H6.5A2.5 2.5 0 0 0 4 19.5Z"),
         [CleanCategory.Trash] = StreamGeometry.Parse("M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"),
         [CleanCategory.DeveloperCache] = StreamGeometry.Parse("M8 6l-5 6 5 6M16 6l5 6-5 6"),
         [CleanCategory.LargeFiles] = StreamGeometry.Parse("M3 6h18a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1ZM6 10h.01M6 14h.01M10 12h7"),
@@ -78,6 +79,7 @@ public sealed partial class CategoryViewModel : ObservableObject
         CleanCategory.AppCache => "L.CategoryAppCache",
         CleanCategory.LogsDiagnostics => "L.CategoryLogs",
         CleanCategory.SystemUpdates => "L.CategorySystemUpdates",
+        CleanCategory.SystemLogs => "L.CategorySystemLogs",
         CleanCategory.Trash => "L.CategoryTrash",
         CleanCategory.LargeFiles => "L.CategoryLargeFiles",
         CleanCategory.Duplicates => "L.CategoryDuplicates",
@@ -158,6 +160,8 @@ public sealed partial class CategoryViewModel : ObservableObject
     /// <summary>Fixed administrator rules are all-or-nothing; there is no per-file list.</summary>
     public string? AdminRuleId { get; private set; }
 
+    public bool IsAdminAction { get; private set; }
+
     public bool CanExpand => FileCount > 0 && AdminRuleId is null;
 
     public ObservableCollection<ItemRowViewModel> Details { get; } = [];
@@ -228,11 +232,12 @@ public sealed partial class CategoryViewModel : ObservableObject
         Bytes = scan.Bytes;
         FileCount = scan.FileCount;
         AdminRuleId = scan.AdminRuleId;
+        IsAdminAction = scan.IsAdminAction;
         SafetyLevel = scan.Safety;
         IsPermanent = scan.IsPermanent;
         HasLimited_Internal = scan.Limited;
         IsScanning = false;
-        CountText = _localization.Format("L.CategoryCountFormat", FileCount);
+        CountText = FormatCountText();
 
         var selectAll = scan.Safety == Safety.Safe && scan.FileCount > 0;
         _defaultSelected = selectAll;
@@ -294,6 +299,7 @@ public sealed partial class CategoryViewModel : ObservableObject
         Bytes = 0;
         FileCount = 0;
         AdminRuleId = null;
+        IsAdminAction = false;
         CountText = _localization.Format("L.CategoryCountFormat", 0);
         IsExpanded = false;
         _defaultSelected = false;
@@ -326,7 +332,7 @@ public sealed partial class CategoryViewModel : ObservableObject
     {
         Name = _localization.T(NameKey);
         Description = _localization.T(DescriptionKey);
-        CountText = _localization.Format("L.CategoryCountFormat", FileCount);
+        CountText = FormatCountText();
         BuildDirectoryGroups();
         RebuildVisibleDetails();
         RefreshDetailSummary();
@@ -453,6 +459,10 @@ public sealed partial class CategoryViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectionNote));
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    private string FormatCountText() => IsAdminAction
+        ? _localization.T("L.ActionCount")
+        : _localization.Format("L.CategoryCountFormat", FileCount);
 
     private void RefreshDetailSummary()
     {

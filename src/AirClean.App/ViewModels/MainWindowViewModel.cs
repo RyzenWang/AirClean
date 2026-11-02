@@ -498,8 +498,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         foreach (var category in Categories)
         {
-            category.IsApplicable = category.Category == CleanCategory.SystemUpdates
-                ? volume.IsSystem && IsAdminHelperAvailable && UseAdminHelper
+            var adminCategory = category.Category is CleanCategory.SystemUpdates or CleanCategory.SystemLogs;
+            var adminRuleAvailable = category.Category == CleanCategory.SystemUpdates
+                ? AdminRuleIds.SystemUpdatesForCurrentPlatform is not null
+                : AdminRuleIds.SystemLogsForCurrentPlatform is not null;
+
+            category.IsApplicable = adminCategory
+                ? volume.IsSystem && adminRuleAvailable && IsAdminHelperAvailable && UseAdminHelper
                 : volume.IsSystem
                     ? category.Category != CleanCategory.LargeFiles
                     : category.Category is CleanCategory.LargeFiles or CleanCategory.Trash or CleanCategory.Duplicates;

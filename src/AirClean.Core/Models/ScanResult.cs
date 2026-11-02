@@ -18,6 +18,9 @@ public sealed class CategoryScan
     /// <summary>Set for fixed administrator-only rules; the elevated helper performs the cleanup.</summary>
     public string? AdminRuleId { get; init; }
 
+    /// <summary>True for an action whose count is "1 cleanup" rather than a number of files.</summary>
+    public bool IsAdminAction { get; init; }
+
     public long Bytes { get; set; }
 
     public int FileCount { get; set; }
