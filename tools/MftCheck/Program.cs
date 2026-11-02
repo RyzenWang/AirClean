@@ -49,16 +49,34 @@ var helperPath = viaHelperIndex >= 0 && viaHelperIndex + 1 < args.Length
     ? args[viaHelperIndex + 1]
     : null;
 
-if (args.Contains("--admin-scan"))
+if (args.Contains("--admin-scan") || args.Contains("--admin-clean"))
 {
     if (helperPath is null)
     {
-        Console.Error.WriteLine("--admin-scan requires --via-helper <AirClean.exe>.");
+        Console.Error.WriteLine("--admin-scan/--admin-clean require --via-helper <AirClean.exe>.");
         return 2;
     }
 
     var client = new AdminHelperClient(helperPath) { Enabled = true };
     var adminWatch = Stopwatch.StartNew();
+
+    if (args.Contains("--admin-clean"))
+    {
+        var cleanResult = client.Clean(AdminRuleIds.WindowsUpdateCache, progress: null, CancellationToken.None);
+        adminWatch.Stop();
+
+        if (cleanResult is null)
+        {
+            Console.Error.WriteLine("The elevated helper admin cleanup failed.");
+            return 1;
+        }
+
+        Console.WriteLine(
+            $"Admin clean: {cleanResult.FileCount:N0} files, {cleanResult.Bytes:N0} bytes, " +
+            $"{cleanResult.Skipped:N0} skipped, {adminWatch.Elapsed.TotalSeconds:F2}s");
+        return 0;
+    }
+
     var adminResult = client.Scan(AdminRuleIds.WindowsUpdateCache, CancellationToken.None);
     adminWatch.Stop();
 

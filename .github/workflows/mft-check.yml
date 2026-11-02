@@ -54,3 +54,9 @@ jobs:
         run: |
           $app = (Resolve-Path "src/AirClean.App/bin/Release/net10.0/AirClean.exe").Path
           dotnet run --project tools/MftCheck/MftCheck.csproj -c Release -- --admin-scan --via-helper $app
+
+      - name: Run the administrator cleanup round-trip
+        shell: pwsh
+        run: |
+          $app = (Resolve-Path "src/AirClean.App/bin/Release/net10.0/AirClean.exe").Path
+          dotnet run --project tools/MftCheck/MftCheck.csproj -c Release -- --admin-clean --via-helper $app
