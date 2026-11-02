@@ -249,11 +249,6 @@ public sealed class DeletionService(
 
 internal static class JournalWriter
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     public static void Append(string directory, Guid batchId, DeleteMode mode, DeletionReport report, IReadOnlyList<JournalEntry> entries)
     {
         try
@@ -261,20 +256,21 @@ internal static class JournalWriter
             Directory.CreateDirectory(directory);
 
             var path = Path.Combine(directory, DateTime.UtcNow.ToString("yyyy-MM") + ".jsonl");
-            var payload = new
+            var payload = new JournalPayload
             {
-                v = 1,
-                batchId,
-                at = DateTimeOffset.UtcNow,
-                mode = mode.ToString().ToLowerInvariant(),
-                deleted = report.DeletedCount,
-                trashedBytes = report.TrashedBytes,
-                freedBytes = report.FreedBytes,
-                skipped = report.Skipped,
-                items = entries
+                BatchId = batchId,
+                At = DateTimeOffset.UtcNow,
+                Mode = mode.ToString().ToLowerInvariant(),
+                Deleted = report.DeletedCount,
+                TrashedBytes = report.TrashedBytes,
+                FreedBytes = report.FreedBytes,
+                Skipped = new Dictionary<SkipReason, int>(report.Skipped),
+                Items = entries.ToList()
             };
 
-            File.AppendAllText(path, JsonSerializer.Serialize(payload, Options) + Environment.NewLine);
+            File.AppendAllText(
+                path,
+                JsonSerializer.Serialize(payload, JournalJsonContext.Default.JournalPayload) + Environment.NewLine);
         }
         catch
         {

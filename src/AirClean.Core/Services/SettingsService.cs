@@ -13,12 +13,6 @@ public sealed class SettingsService
     private const double MinimumWindowWidth = 920;
     private const double MinimumWindowHeight = 620;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     private readonly object _gate = new();
 
     public SettingsService(string? settingsDirectory = null)
@@ -73,7 +67,7 @@ public sealed class SettingsService
                 }
 
                 var json = File.ReadAllText(SettingsPath);
-                var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
+                var settings = JsonSerializer.Deserialize(json, SettingsJsonContext.Default.AppSettings);
                 return Normalize(settings ?? new AppSettings());
             }
             catch
@@ -91,7 +85,7 @@ public sealed class SettingsService
             {
                 System.IO.Directory.CreateDirectory(SettingsDirectory);
                 var temporaryPath = SettingsPath + ".tmp";
-                File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings, JsonOptions));
+                File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings, SettingsJsonContext.Default.AppSettings));
                 File.Move(temporaryPath, SettingsPath, overwrite: true);
                 return true;
             }

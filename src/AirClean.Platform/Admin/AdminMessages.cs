@@ -1,11 +1,12 @@
-using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AirClean.Platform.Admin;
 
-internal static class AdminJson
-{
-    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
-}
+/// <summary>Source-generated helper protocol serializer; required by trimming and NativeAOT.</summary>
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(AdminRequest))]
+[JsonSerializable(typeof(AdminEvent))]
+internal sealed partial class AdminJsonContext : JsonSerializerContext;
 
 internal sealed class AdminRequest
 {

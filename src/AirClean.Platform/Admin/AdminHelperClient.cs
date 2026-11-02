@@ -160,7 +160,7 @@ public sealed class AdminHelperClient(string? helperPath = null) : IAdminHelper,
             try
             {
                 request.Token = _token!;
-                _writer!.WriteLine(JsonSerializer.Serialize(request, AdminJson.Options));
+                _writer!.WriteLine(JsonSerializer.Serialize(request, AdminJsonContext.Default.AdminRequest));
 
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(TimeSpan.FromMinutes(2));
@@ -175,7 +175,7 @@ public sealed class AdminHelperClient(string? helperPath = null) : IAdminHelper,
                         return null;
                     }
 
-                    var value = JsonSerializer.Deserialize<AdminEvent>(line, AdminJson.Options);
+                    var value = JsonSerializer.Deserialize(line, AdminJsonContext.Default.AdminEvent);
 
                     if (value is null)
                     {

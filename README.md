@@ -156,7 +156,25 @@ MFT 记录解析、特权扫描回退、大文件扫描、重复文件分组、�
 以及“扫描 → 确认 → 完成”、“切换磁盘 → 勾选大文件”、“查找重复 → 勾选整组”三条链路。
 Headless 测试会把渲染截图写到 `%TEMP%/airclean-shots`。
 
-CI 在 Ubuntu、Windows 与 macOS 三平台上执行 restore、build 和 test。
+CI 在 Ubuntu、Windows 与 macOS 三平台上执行 restore、build 和 test；Windows
+额外执行一次 NativeAOT 发布并把 IL 警告视为失败。
+
+### NativeAOT（可选）
+
+Windows 上已验证可以原生 AOT 发布：
+
+```bash
+dotnet publish src/AirClean.App -c Release -r win-x64 `
+  -p:PublishAot=true `
+  -p:StripSymbols=true
+```
+
+本机实测 AOT 输出约 41.6 MB，首窗口 0.27–0.65 秒；同版本 JIT 单文件约 3.0 秒。
+设置、规则和清理日志都改成了 `JsonSerializerContext` 源生成序列化，这是 AOT
+能正常读写配置的前提。
+
+当前发布包仍使用 JIT 自包含单文件；NativeAOT 的 Velopack 更新链路和 Linux /
+macOS 产线还没有切换，正式切换前需要把三平台 AOT 检查与安装版更新验证补齐。
 
 ## 操作与快捷键
 

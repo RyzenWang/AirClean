@@ -81,7 +81,7 @@ public static class AdminHelperHost
                     break;
                 }
 
-                var request = JsonSerializer.Deserialize<AdminRequest>(requestLine, AdminJson.Options);
+                var request = JsonSerializer.Deserialize(requestLine, AdminJsonContext.Default.AdminRequest);
 
                 if (request is null ||
                     !TokensEqual(token, request.Token) ||
@@ -502,7 +502,7 @@ public static class AdminHelperHost
     }
 
     private static void Write(StreamWriter writer, AdminEvent value) =>
-        writer.WriteLine(JsonSerializer.Serialize(value, AdminJson.Options));
+        writer.WriteLine(JsonSerializer.Serialize(value, AdminJsonContext.Default.AdminEvent));
 
     private static bool Error(StreamWriter writer, string message)
     {

@@ -191,7 +191,27 @@ flows: **scan → confirm → complete**,
 Headless tests
 write rendered frames to `%TEMP%/airclean-shots`.
 
-CI runs restore, build, and test on Ubuntu, Windows, and macOS.
+CI runs restore, build, and test on Ubuntu, Windows, and macOS, plus a Windows
+NativeAOT publish that fails on any IL warning.
+
+### NativeAOT (optional)
+
+NativeAOT publishing is verified on Windows:
+
+```bash
+dotnet publish src/AirClean.App -c Release -r win-x64 `
+  -p:PublishAot=true `
+  -p:StripSymbols=true
+```
+
+On this machine the AOT output was about 41.6 MB and the first window appeared in
+0.27–0.65 s, against about 3.0 s for the JIT single-file build. Settings, rules, and
+the cleanup journal now use source-generated `JsonSerializerContext` serializers,
+which is what keeps those paths working without runtime code generation.
+
+Release packages still use the JIT self-contained single-file build. The Velopack
+update path and the Linux / macOS AOT pipelines have not been switched yet; both
+should be checked before making AOT the release default.
 
 ## Controls and shortcuts
 

@@ -59,12 +59,8 @@ public sealed class RuleSet
 
     public static RuleSet Load(Stream stream)
     {
-        var file = JsonSerializer.Deserialize<RuleFile>(stream, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
-        }) ?? throw new InvalidDataException("Rule file is empty.");
+        var file = JsonSerializer.Deserialize(stream, RuleJsonContext.Default.RuleFile)
+            ?? throw new InvalidDataException("Rule file is empty.");
 
         if (file.SchemaVersion != 1)
         {
@@ -143,37 +139,38 @@ public sealed class RuleSet
         };
     }
 
-    private sealed class RuleFile
-    {
-        public int SchemaVersion { get; set; } = 1;
+}
 
-        public string Platform { get; set; } = string.Empty;
+internal sealed class RuleFile
+{
+    public int SchemaVersion { get; set; } = 1;
 
-        public List<RuleDto> Rules { get; set; } = [];
-    }
+    public string Platform { get; set; } = string.Empty;
 
-    private sealed class RuleDto
-    {
-        public string Id { get; set; } = string.Empty;
+    public List<RuleDto> Rules { get; set; } = [];
+}
 
-        public string Category { get; set; } = string.Empty;
+internal sealed class RuleDto
+{
+    public string Id { get; set; } = string.Empty;
 
-        public string Safety { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
 
-        public string Action { get; set; } = "contents";
+    public string Safety { get; set; } = string.Empty;
 
-        public string[]? Roots { get; set; }
+    public string Action { get; set; } = "contents";
 
-        public string[]? Include { get; set; }
+    public string[]? Roots { get; set; }
 
-        public string[]? Exclude { get; set; }
+    public string[]? Include { get; set; }
 
-        public int MaxDepth { get; set; } = 6;
+    public string[]? Exclude { get; set; }
 
-        public int MinAgeDays { get; set; } = 1;
+    public int MaxDepth { get; set; } = 6;
 
-        public bool RequiresElevation { get; set; }
+    public int MinAgeDays { get; set; } = 1;
 
-        public string? Source { get; set; }
-    }
+    public bool RequiresElevation { get; set; }
+
+    public string? Source { get; set; }
 }
