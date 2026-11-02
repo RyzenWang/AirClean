@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.Principal;
 using AirClean.Core.Scanning.Mft;
 using AirClean.Core.Volumes;
+using AirClean.Platform.Admin;
 
 if (!OperatingSystem.IsWindows())
 {
@@ -40,6 +41,37 @@ using (var mft = WindowsMftVolume.TryOpen(volume))
         $"MFT: {mft.MftValidDataLength:N0} bytes, " +
         $"{mft.BytesPerFileRecord} bytes/record, {mft.BytesPerSector} bytes/sector, " +
         $"{mft.MftValidDataLength / mft.BytesPerFileRecord:N0} records");
+}
+
+var viaHelperIndex = Array.IndexOf(args, "--via-helper");
+var helperPath = viaHelperIndex >= 0 && viaHelperIndex + 1 < args.Length
+    ? args[viaHelperIndex + 1]
+    : null;
+
+if (helperPath is not null)
+{
+    var client = new AdminHelperClient(helperPath) { Enabled = true };
+    var helperWatch = Stopwatch.StartNew();
+    var helperResult = client.TryScan(volume, 1024 * 1024, progress: null, CancellationToken.None);
+    helperWatch.Stop();
+
+    if (helperResult is null)
+    {
+        Console.Error.WriteLine("The elevated helper round-trip failed.");
+        return 1;
+    }
+
+    Console.WriteLine(
+        $"Helper: {helperResult.MatchedCount:N0} files >= 1 MB, " +
+        $"{helperResult.MatchedBytes:N0} bytes total, top {helperResult.Items.Count}, " +
+        $"{helperWatch.Elapsed.TotalSeconds:F2}s");
+
+    foreach (var item in helperResult.Items.Take(5))
+    {
+        Console.WriteLine($"  {item.Size,15:N0}  {item.Path}");
+    }
+
+    return helperResult.MatchedCount > 0 ? 0 : 1;
 }
 
 var stopwatch = Stopwatch.StartNew();

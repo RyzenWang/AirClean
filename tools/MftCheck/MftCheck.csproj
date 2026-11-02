@@ -9,5 +9,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AirClean.Core\AirClean.Core.csproj" />
+    <ProjectReference Include="..\..\src\AirClean.Platform\AirClean.Platform.csproj" />
   </ItemGroup>
 </Project>

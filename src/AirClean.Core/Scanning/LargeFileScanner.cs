@@ -11,7 +11,7 @@ namespace AirClean.Core.Scanning;
 /// Finds the largest files on one volume. Unlike cache rules this deliberately looks inside
 /// user folders, because the user picks the files themselves — nothing is pre-selected.
 /// </summary>
-public sealed class LargeFileScanner(ITrashService trash)
+public sealed class LargeFileScanner(ITrashService trash, IPrivilegedLargeFileScanner? privileged = null)
 {
     public const long DefaultThresholdBytes = 100L * 1024 * 1024;
     public const int MaxItems = 200;
@@ -59,25 +59,29 @@ public sealed class LargeFileScanner(ITrashService trash)
         if (MftLargeFileScanner.TryScan(volume, thresholdBytes, progress, cancellationToken, out var mft) &&
             mft is not null)
         {
-            var mftCategory = new CategoryScan
-            {
-                Category = CleanCategory.LargeFiles,
-                Safety = Safety.Caution,
-                IsExplicitSelection = true,
-                MatchedBytes = mft.MatchedBytes,
-                MatchedCount = mft.MatchedCount
-            };
-
-            foreach (var item in mft.Items)
-            {
-                mftCategory.Add(item);
-            }
-
             stopwatch.Stop();
 
             return new ScanResult
             {
-                Categories = [mftCategory, ScanTrash(volume)],
+                Categories = [CreateLargeCategory(mft.Items, mft.MatchedBytes, mft.MatchedCount), ScanTrash(volume)],
+                Elapsed = stopwatch.Elapsed
+            };
+        }
+
+        // The app itself never runs elevated. If the user opted in, ask the helper process
+        // to run the same read-only MFT scan with administrator rights. A declined UAC
+        // prompt simply returns null and the ordinary walk continues.
+        if (privileged?.TryScan(volume, thresholdBytes, progress, cancellationToken) is { } elevated)
+        {
+            stopwatch.Stop();
+
+            return new ScanResult
+            {
+                Categories =
+                [
+                    CreateLargeCategory(elevated.Items, elevated.MatchedBytes, elevated.MatchedCount),
+                    ScanTrash(volume)
+                ],
                 Elapsed = stopwatch.Elapsed
             };
         }
@@ -183,29 +187,37 @@ public sealed class LargeFileScanner(ITrashService trash)
             .Take(MaxItems)
             .ToList();
 
-        var largeFiles = new CategoryScan
-        {
-            Category = CleanCategory.LargeFiles,
-            Safety = Safety.Caution,
-            IsExplicitSelection = true,
-            MatchedBytes = matchedBytes,
-            MatchedCount = candidates.Count
-        };
-
-        foreach (var item in top)
-        {
-            largeFiles.Add(item);
-        }
-
         progress?.Report(new ScanProgress(filesSeen, matchedBytes, candidates.Count, current));
         stopwatch.Stop();
 
         return new ScanResult
         {
-            Categories = [largeFiles, ScanTrash(volume)],
+            Categories = [CreateLargeCategory(top, matchedBytes, candidates.Count), ScanTrash(volume)],
             Elapsed = stopwatch.Elapsed,
             SkippedPermission = skipped
         };
+    }
+
+    private static CategoryScan CreateLargeCategory(
+        IReadOnlyList<CleanItem> items,
+        long matchedBytes,
+        int matchedCount)
+    {
+        var category = new CategoryScan
+        {
+            Category = CleanCategory.LargeFiles,
+            Safety = Safety.Caution,
+            IsExplicitSelection = true,
+            MatchedBytes = matchedBytes,
+            MatchedCount = matchedCount
+        };
+
+        foreach (var item in items)
+        {
+            category.Add(item);
+        }
+
+        return category;
     }
 
     private CategoryScan ScanTrash(VolumeInfo volume)

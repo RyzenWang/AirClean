@@ -31,6 +31,9 @@ public sealed class LocalizationService
             ["L.Language"] = ("Language", "语言"),
             ["L.Appearance"] = ("Appearance", "外观"),
             ["L.Settings"] = ("Settings", "设置"),
+            ["L.UseAdminHelper"] = (
+                "Use administrator rights for faster scans",
+                "使用管理员权限加速扫描"),
             ["L.ThemeSystem"] = ("Follow system", "跟随系统"),
             ["L.ThemeLight"] = ("Light", "浅色"),
             ["L.ThemeDark"] = ("Dark", "深色"),

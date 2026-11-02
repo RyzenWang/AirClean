@@ -35,6 +35,16 @@ jobs:
           }
           Write-Host "Running elevated as $($identity.Name)"
 
-      - name: Run the MFT check
+      - name: Run the direct MFT check
         shell: pwsh
         run: dotnet run --project tools/MftCheck/MftCheck.csproj -c Release
+
+      - name: Build the app for the helper round-trip
+        shell: pwsh
+        run: dotnet build src/AirClean.App/AirClean.App.csproj -c Release
+
+      - name: Run the elevated helper round-trip
+        shell: pwsh
+        run: |
+          $app = (Resolve-Path "src/AirClean.App/bin/Release/net10.0/AirClean.exe").Path
+          dotnet run --project tools/MftCheck/MftCheck.csproj -c Release -- --via-helper $app

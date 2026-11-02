@@ -19,4 +19,7 @@ public sealed class AppSettings
     public double WindowHeight { get; set; } = 860;
 
     public bool WindowMaximized { get; set; }
+
+    /// <summary>Ask the elevated helper for the MFT fast path on each NTFS scan.</summary>
+    public bool UseAdminHelper { get; set; }
 }

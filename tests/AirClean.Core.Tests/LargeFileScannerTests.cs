@@ -44,6 +44,25 @@ public sealed class LargeFileScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task Uses_the_privileged_scanner_when_in_process_mft_is_unavailable()
+    {
+        var volume = Volume(_root);
+        var item = new CleanItem(Path.Combine(_root, "from-helper.bin"), volume.Root, 40, DateTime.UtcNow);
+        var privileged = new FakePrivilegedScanner(
+            new LargeFileScanResult([item], MatchedBytes: 100, MatchedCount: 2));
+
+        var result = await new LargeFileScanner(new TestTrash(), privileged)
+            .ScanAsync(volume, thresholdBytes: 20, progress: null, CancellationToken.None);
+
+        var large = Assert.Single(result.Categories, category => category.Category == CleanCategory.LargeFiles);
+        Assert.Equal(1, privileged.Calls);
+        Assert.Equal(100, large.MatchedBytes);
+        Assert.Equal(2, large.MatchedCount);
+        Assert.Single(large.Items);
+        Assert.Equal(item.Path, large.Items[0].Path);
+    }
+
+    [Fact]
     public async Task Caps_the_list_at_two_hundred_entries()
     {
         for (var index = 0; index < 210; index++)
@@ -60,6 +79,21 @@ public sealed class LargeFileScannerTests : IDisposable
 
     private static VolumeInfo Volume(string root) =>
         new(Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar, "Test", "NTFS", 1_000_000, 500_000, false, false);
+
+    private sealed class FakePrivilegedScanner(LargeFileScanResult result) : IPrivilegedLargeFileScanner
+    {
+        public int Calls { get; private set; }
+
+        public LargeFileScanResult? TryScan(
+            VolumeInfo volume,
+            long thresholdBytes,
+            IProgress<ScanProgress>? progress,
+            CancellationToken cancellationToken)
+        {
+            Calls++;
+            return result;
+        }
+    }
 
     private void Write(string relativePath, int size)
     {

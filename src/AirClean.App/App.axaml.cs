@@ -8,6 +8,7 @@ using AirClean.Core.Rules;
 using AirClean.Core.Scanning;
 using AirClean.Core.Services;
 using AirClean.Platform;
+using AirClean.Platform.Admin;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -47,7 +48,8 @@ public partial class App : Application
 
             var trash = PlatformServices.CreateTrashService();
             var reveal = PlatformServices.CreateRevealService();
-            var volumeScan = new VolumeScanService(RuleSet.ForCurrentPlatform(), trash);
+            var adminHelper = new AdminHelperClient();
+            var volumeScan = new VolumeScanService(RuleSet.ForCurrentPlatform(), trash, adminHelper);
             var deletion = new DeletionService(trash);
 
             var viewModel = new MainWindowViewModel(
@@ -58,7 +60,8 @@ public partial class App : Application
                 volumeScan,
                 deletion,
                 trash,
-                reveal);
+                reveal,
+                adminHelper: adminHelper);
 
             var window = new MainWindow
             {

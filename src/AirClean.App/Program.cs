@@ -1,3 +1,4 @@
+using AirClean.Platform.Admin;
 using Avalonia;
 using Velopack;
 
@@ -8,6 +9,12 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if (OperatingSystem.IsWindows() && AdminHelperHost.IsHelperCommand(args))
+        {
+            Environment.ExitCode = AdminHelperHost.Run(args);
+            return;
+        }
+
         // Velopack must handle install/update hooks before any UI starts.
         VelopackApp.Build().Run();
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

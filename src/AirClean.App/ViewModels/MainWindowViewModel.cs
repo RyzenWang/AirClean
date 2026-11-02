@@ -31,6 +31,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly VolumeScanService _volumeScan;
     private readonly DeletionService _deletion;
     private readonly ITrashService _trash;
+    private readonly IAdminHelper? _adminHelper;
     private readonly long _largeFileThreshold;
     private readonly IReadOnlyList<string>? _duplicateRoots;
 
@@ -72,7 +73,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IRevealService reveal,
         long largeFileThreshold = LargeFileScanner.DefaultThresholdBytes,
         IReadOnlyList<VolumeInfo>? volumes = null,
-        IReadOnlyList<string>? duplicateRoots = null)
+        IReadOnlyList<string>? duplicateRoots = null,
+        IAdminHelper? adminHelper = null)
     {
         _settings = settings;
         _localization = localization;
@@ -81,8 +83,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _volumeScan = volumeScan;
         _deletion = deletion;
         _trash = trash;
+        _adminHelper = adminHelper;
         _largeFileThreshold = largeFileThreshold;
         _duplicateRoots = duplicateRoots;
+
+        if (_adminHelper is not null)
+        {
+            _adminHelper.Enabled = _settings.UseAdminHelper;
+        }
 
         foreach (var volume in volumes ?? VolumeService.List())
         {
@@ -221,6 +229,25 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsScanComplete { get; private set; }
 
     public string LanguageShortLabel => _localization.LanguageShortLabel;
+
+    public bool IsAdminHelperAvailable => _adminHelper?.IsAvailable == true;
+
+    public bool UseAdminHelper
+    {
+        get => _adminHelper?.Enabled == true;
+        set
+        {
+            if (_adminHelper is null || _adminHelper.Enabled == value)
+            {
+                return;
+            }
+
+            _adminHelper.Enabled = value;
+            _settings.UseAdminHelper = value;
+            _persist();
+            OnPropertyChanged();
+        }
+    }
 
     public bool IsLightTheme => !_theme.IsDark;
 

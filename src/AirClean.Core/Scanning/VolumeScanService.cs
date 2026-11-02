@@ -40,10 +40,13 @@ public sealed record VolumeScanRequest(
 /// published as they finish so the window fills in progressively instead of waiting for
 /// the slowest hash to complete.
 /// </summary>
-public sealed class VolumeScanService(RuleSet ruleSet, ITrashService trash)
+public sealed class VolumeScanService(
+    RuleSet ruleSet,
+    ITrashService trash,
+    IPrivilegedLargeFileScanner? privileged = null)
 {
     private readonly Scanner _rules = new(ruleSet, trash);
-    private readonly LargeFileScanner _largeFiles = new(trash);
+    private readonly LargeFileScanner _largeFiles = new(trash, privileged);
     private readonly DuplicateScanner _duplicates = new();
 
     public async Task<ScanResult> ScanAsync(
