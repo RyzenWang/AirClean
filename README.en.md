@@ -299,10 +299,10 @@ Tagged releases are packaged with [Velopack](https://velopack.io/):
 - macOS arm64 / x64: `AirClean-osx-*.pkg` installer and a portable package
 - Linux x64: portable `.tar.gz`
 
-> **Windows and macOS packages are not published yet.** They are currently
-> unsigned, so the release ships only the Linux portable build. Once the matching
-> signing secrets are configured, the workflow adds the Windows / macOS assets
-> automatically.
+> **The Windows and macOS Setup installers are withheld while unsigned.** The
+> release keeps the portable packages, full nupkg files, and update manifests, and
+> hides only `AirClean-win-Setup.exe` and `AirClean-osx-*-Setup.pkg`. Once the
+> matching signing secrets are configured, they are included automatically.
 
 Installed builds check GitHub for a newer stable release, download it in the
 background, and show **Restart to update**. Portable and source builds do not

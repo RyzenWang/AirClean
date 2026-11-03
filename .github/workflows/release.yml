@@ -368,17 +368,17 @@ jobs:
         with:
           path: artifacts
 
-      - name: Keep only signed platform packages
+      - name: Remove unsigned installers
         shell: bash
         run: |
           if [ -z "${WINDOWS_CERTIFICATE_BASE64:-}" ]; then
-            echo "Windows signing is not configured; excluding Windows packages from the release."
-            rm -rf artifacts/AirClean-win-x64
+            echo "Windows signing is not configured; withholding AirClean-win-Setup.exe."
+            find artifacts/AirClean-win-x64 -maxdepth 1 -type f -name 'AirClean-win-Setup.exe' -delete
           fi
 
           if [ -z "${MACOS_CERTIFICATE_BASE64:-}" ]; then
-            echo "macOS signing is not configured; excluding macOS packages from the release."
-            rm -rf artifacts/AirClean-osx-arm64 artifacts/AirClean-osx-x64
+            echo "macOS signing is not configured; withholding the macOS Setup.pkg files."
+            find artifacts -maxdepth 2 -type f -name '*-Setup.pkg' -delete
           fi
 
           echo "Release payload:"
@@ -394,3 +394,29 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-preview') }}
+
+      - name: Note withheld installers
+        if: env.WINDOWS_CERTIFICATE_BASE64 == '' || env.MACOS_CERTIFICATE_BASE64 == ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          body=$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
+
+          if echo "$body" | grep -q 'Unsigned installers withheld'; then
+            exit 0
+          fi
+
+          withheld=""
+          if [ -z "${WINDOWS_CERTIFICATE_BASE64:-}" ]; then
+            withheld="Windows Setup.exe"
+          fi
+          if [ -z "${MACOS_CERTIFICATE_BASE64:-}" ]; then
+            withheld="${withheld:+$withheld / }macOS Setup.pkg"
+          fi
+
+          note="> **Unsigned installers withheld:** ${withheld}. Portable packages, nupkg files and update manifests are included; the withheld installers return once the matching signing secrets are configured."
+
+          gh release edit "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --notes "$(printf '%s\n\n%s' "$body" "$note")"
