@@ -259,6 +259,10 @@ Tag 发布会用 [Velopack](https://velopack.io/) 生成：
 - macOS arm64 / x64：`AirClean-osx-*.pkg` 安装器与便携包
 - Linux x64：便携 `.tar.gz`
 
+> **Windows / macOS 安装包暂不开放下载。** 当前构建未签名，Release 只发布 Linux
+> 便携包；配置对应的签名 Secrets 后，工作流才会自动把 Windows / macOS 产物加入
+> Release。
+
 安装版会检查 GitHub 上的稳定版本、后台下载并显示“重启以更新”；便携版与源码运行
 不自更新。tag 里带 `-preview` 会标成预发布，不会被应用内更新选中。
 

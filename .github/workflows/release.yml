@@ -358,12 +358,31 @@ jobs:
     needs: [windows, macos, linux]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
+    env:
+      WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+      MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
 
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Keep only signed platform packages
+        shell: bash
+        run: |
+          if [ -z "${WINDOWS_CERTIFICATE_BASE64:-}" ]; then
+            echo "Windows signing is not configured; excluding Windows packages from the release."
+            rm -rf artifacts/AirClean-win-x64
+          fi
+
+          if [ -z "${MACOS_CERTIFICATE_BASE64:-}" ]; then
+            echo "macOS signing is not configured; excluding macOS packages from the release."
+            rm -rf artifacts/AirClean-osx-arm64 artifacts/AirClean-osx-x64
+          fi
+
+          echo "Release payload:"
+          find artifacts -type f -maxdepth 3 | sort
 
       - name: Publish release
         uses: softprops/action-gh-release@v2

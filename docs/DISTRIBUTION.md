@@ -16,6 +16,10 @@ AirClean 用 [Velopack](https://velopack.io/) 生成 Windows 安装器、macOS `
 
 `releases.*.json` 是应用内更新用的清单。便携版与源码运行不会自更新；装 Setup.exe 或 `.pkg` 才会。
 
+当前 Windows / macOS 包未签名，发布任务会按 Secrets 是否配置决定是否把对应平台产物
+加入 GitHub Release；未配置时只发布 Linux 便携包。Windows 与 macOS 的构建仍会运行并
+上传到 Actions artifacts，供维护者内测。
+
 所有发布平台都使用 NativeAOT 提前编译，不再发布 JIT 单文件包。Windows 需要 MSVC
 生成工具；Linux 需要 clang 与 zlib1g-dev，并在 Ubuntu 22.04 上构建以保证
 glibc 下限不高于 2.35；macOS 使用 Xcode 自带 clang。
