@@ -1,0 +1,164 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirClean.App.ViewModels"
+             x:Class="AirClean.App.Views.CompletionView"
+             x:DataType="vm:MainWindowViewModel">
+  <ScrollViewer IsVisible="{Binding IsCompletedVisible}"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+    <Grid MaxWidth="760" Margin="46,36" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="0" Width="620" HorizontalAlignment="Center">
+        <Border Width="42" Height="42" CornerRadius="11" Background="{DynamicResource SafeSoftBrush}" HorizontalAlignment="Left">
+          <Path Data="{StaticResource IconCheck}"
+                Stroke="{DynamicResource SafeBrush}"
+                StrokeThickness="2"
+                Width="20"
+                Height="20"
+                Stretch="Uniform"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center" />
+        </Border>
+
+        <TextBlock Text="{Binding CompletedTitle}"
+                   FontSize="31"
+                   FontWeight="SemiBold"
+                   LetterSpacing="-0.7"
+                   Margin="0,16,0,0" />
+
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+          <TextBlock Text="{Binding CompletedSubTrash}" Classes="caption" FontSize="12" />
+          <TextBlock Text="·" Classes="caption" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}" IsVisible="{Binding ShowSubSeparator}" />
+          <TextBlock Text="{Binding CompletedSubFreed}" Classes="caption" FontSize="12" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,20,0,0">
+          <Button Classes="primary" Content="{DynamicResource L.Done}" Command="{Binding DoneCommand}" />
+          <Button Classes="ghost"
+                  Content="{Binding UndoButtonText}"
+                  Command="{Binding UndoLastCleanCommand}"
+                  IsVisible="{Binding IsUndoVisible}"
+                  IsEnabled="{Binding CanUndo}" />
+          <Button Classes="ghost"
+                  Content="{DynamicResource L.OpenTrash}"
+                  Command="{Binding OpenTrashCommand}"
+                  IsVisible="{Binding CanOpenTrash}" />
+          <Button Classes="ghost"
+                  Content="{Binding EmptyTrashButtonText}"
+                  Command="{Binding OpenEmptyTrashConfirmCommand}"
+                  IsVisible="{Binding IsEmptyTrashVisible}"
+                  IsEnabled="{Binding CanEmptyTrash}" />
+        </StackPanel>
+
+        <TextBlock Text="{Binding UndoMessage}"
+                   IsVisible="{Binding HasUndoMessage}"
+                   Classes="caption"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,10,0,0" />
+
+        <Border Classes="card"
+                IsVisible="{Binding HasCleanupDetails}"
+                Padding="6,10,16,8"
+                Margin="0,26,0,0">
+          <StackPanel>
+            <TextBlock Text="{DynamicResource L.CleanupDetails}" Classes="eyebrow" Margin="10,6,0,6" />
+            <ItemsControl ItemsSource="{Binding CompletionItems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CategoryViewModel">
+                  <Grid ColumnDefinitions="*,Auto" Height="30" Margin="10,0">
+                    <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding SizeText}"
+                               FontSize="11.5"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Border IsVisible="{Binding HasTrashNote}"
+                Background="{DynamicResource CautionSoftBrush}"
+                BorderBrush="#EBD9BC"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="12,10"
+                Margin="0,14,0,0">
+          <TextBlock Text="{Binding CompletedNote}"
+                     FontSize="10.5"
+                     Foreground="{DynamicResource CautionBrush}"
+                     TextWrapping="Wrap" />
+        </Border>
+
+        <Border IsVisible="{Binding HasSkipped}"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="14,12"
+                Margin="0,12,0,0">
+          <StackPanel Spacing="6">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="{Binding SkippedText}"
+                         FontSize="12"
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
+              <Button Grid.Column="1"
+                      Classes="soft"
+                      Content="{Binding ExportSkipText}"
+                      Command="{Binding ExportSkipReportCommand}"
+                      IsVisible="{Binding CanExportSkipReport}"
+                      IsEnabled="{Binding !IsExportingSkip}"
+                      MinHeight="20"
+                      Padding="8,1"
+                      FontSize="10" />
+            </Grid>
+
+            <ItemsControl ItemsSource="{Binding SkipGroups}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:SkipGroupViewModel">
+                  <StackPanel Spacing="2">
+                    <Button Classes="rowtoggle"
+                            Command="{Binding ToggleCommand}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            Padding="0">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding Title}" FontSize="11" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding CountText}"
+                                   Classes="caption"
+                                   FontSize="10"
+                                   VerticalAlignment="Center" />
+                      </Grid>
+                    </Button>
+                    <ItemsControl ItemsSource="{Binding Paths}"
+                                  IsVisible="{Binding IsExpanded}"
+                                  Margin="10,0,0,4">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                          <TextBlock Text="{Binding}"
+                                     FontSize="10"
+                                     Foreground="{DynamicResource TextTertiaryBrush}"
+                                     TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="{DynamicResource L.SkippedTruncated}"
+                       IsVisible="{Binding SkippedTruncated}"
+                       Classes="caption"
+                       FontSize="10"
+                       Foreground="{DynamicResource CautionBrush}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

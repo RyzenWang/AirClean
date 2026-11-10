@@ -56,6 +56,11 @@ public sealed class LocalizationService
             ["L.VersionFormat"] = ("AirClean {0}", "AirClean {0}"),
 
             ["L.Scanning"] = ("Scanning…", "正在扫描…"),
+            ["L.ScanCanceled"] = ("Scan canceled", "扫描已取消"),
+            ["L.ScanCanceledNote"] = (
+                "The scan stopped early; these results only cover the categories that finished.",
+                "扫描提前结束，当前结果只包含已完成的分类。"),
+            ["L.CategoryCanceled"] = ("Not finished", "未完成"),
             ["L.ScanningLarge"] = ("Looking for large files…", "正在查找大文件…"),
             ["L.ScanningDuplicates"] = ("Comparing duplicates…", "正在比对重复文件…"),
             ["L.Pending"] = ("Waiting…", "等待中…"),
@@ -65,6 +70,7 @@ public sealed class LocalizationService
                         ["L.ScanFound"] = ("Reclaimable so far", "已找到可清理"),
             ["L.ScanFilesFormat"] = ("{0:N0} files scanned", "已扫描 {0:N0} 个文件"),
             ["L.ItemsCountFormat"] = ("{0:N0} files", "{0:N0} 个文件"),
+            ["L.ItemCountOneFormat"] = ("1 file", "1 个文件"),
             ["L.FoundSummaryFormat"] = ("Found {0} · {1:N0} files", "共发现 {0} · {1:N0} 个文件"),
             ["L.FoundLargeFormat"] = ("{0} · {1:N0} large files, top {2} listed", "{0} · {1:N0} 个大文件，已列出最大的 {2} 个"),
             ["L.SystemVolume"] = ("System drive", "系统盘"),
@@ -139,6 +145,9 @@ public sealed class LocalizationService
             ["L.ProtectedNote"] = ("Protected items are never listed", "受保护项目不会被列出"),
             ["L.ScanScope"] = ("Only caches, logs and the Trash are scanned. Documents are never touched.", "只扫描缓存、日志与废纸篓，不会碰你的文档。"),
             ["L.LimitedNote"] = ("Duplicate hashing hit its cap — clean, then scan again for more.", "重复文件比对已达到上限，清理后可再次扫描。"),
+            ["L.LimitedGroupsNoteFormat"] = (
+                "Only the first {0} duplicate groups are listed; {1} more were found.",
+                "只列出前 {0} 组重复文件；另有 {1} 组未列出。"),
 
             ["L.ConfirmTitleFormat"] = ("Clean {0}?", "清理 {0}？"),
             ["L.ConfirmNoteTrash"] = ("{0} moves to the Trash and can be restored.", "{0} 将移到废纸篓，可以恢复。"),
@@ -151,17 +160,43 @@ public sealed class LocalizationService
             ["L.DeletingProgressFormat"] = ("{0:N0} / {1:N0}", "{0:N0} / {1:N0}"),
 
             ["L.DoneTitleFormat"] = ("Cleaned {0}", "已清理 {0}"),
+            ["L.UndoneTitleFormat"] = ("Restored {0}", "已恢复 {0}"),
             ["L.DoneSubTrashFormat"] = ("{0} moved to the Trash", "{0} 已移到废纸篓"),
             ["L.DoneSubFreedFormat"] = ("{0} deleted permanently", "{0} 已永久删除"),
             ["L.DoneNoteTrashFormat"] = ("{0} is still in the Trash — it frees up when you empty it.", "还有 {0} 在废纸篓里，清空后才会释放。"),
             ["L.Done"] = ("Done", "完成"),
+            ["L.UndoLastClean"] = ("Undo this cleanup", "撤销本次清理"),
+            ["L.UndoShort"] = ("Undo", "撤销"),
+            ["L.Undoing"] = ("Undoing…", "正在撤销…"),
+            ["L.UndoResultFormat"] = ("Restored {0:N0} files · {1}", "已恢复 {0:N0} 个文件 · {1}"),
+            ["L.UndoPartialFormat"] = (
+                "Restored {0:N0} of {1:N0} files · {2}",
+                "已恢复 {0:N0} / {1:N0} 个文件 · {2}"),
             ["L.OpenTrash"] = ("Open Trash", "打开回收站"),
+            ["L.EmptyTrashNow"] = ("Empty Trash", "清空废纸篓"),
+            ["L.EmptyingTrash"] = ("Emptying…", "正在清空…"),
+            ["L.EmptyTrashTitle"] = ("Empty the Trash?", "清空废纸篓？"),
+            ["L.EmptyTrashNote"] = (
+                "This permanently deletes everything in this drive's Trash, including files from other apps and earlier cleanups. It cannot be undone.",
+                "将永久删除该磁盘废纸篓中的全部内容，包括其他应用和更早清理的文件。此操作无法恢复。"),
+            ["L.EmptyTrashConfirm"] = ("Empty Trash", "清空"),
+            ["L.EmptyTrashDoneFormat"] = ("Freed {0} from the Trash", "已从废纸篓释放 {0}"),
+            ["L.EmptyTrashFailedFormat"] = ("Could not empty the Trash: {0}", "清空废纸篓失败：{0}"),
             ["L.Rescan"] = ("Scan again", "重新扫描"),
             ["L.SkippedFormat"] = ("Skipped {0:N0} files", "已跳过 {0:N0} 个文件"),
+            ["L.SkippedOne"] = ("Skipped 1 file", "已跳过 1 个文件"),
             ["L.SkippedItemFormat"] = ("{0} {1}", "{0} {1}"),
             ["L.SkippedInUse"] = ("in use", "使用中"),
             ["L.SkippedPermission"] = ("no permission", "权限不足"),
-            ["L.SkippedChanged"] = ("changed since scan", "扫描后已变更")
+            ["L.SkippedChanged"] = ("changed since scan", "扫描后已变更"),
+            ["L.SkippedNotFound"] = ("no longer exists", "已不存在"),
+            ["L.SkippedProtected"] = ("protected path", "受保护路径"),
+            ["L.SkippedReparse"] = ("link or reparse point", "链接或重解析点"),
+            ["L.SkippedTruncated"] = ("Only the first 500 skipped files are listed.", "只列出前 500 个跳过的文件。"),
+            ["L.ExportCsv"] = ("Export CSV", "导出 CSV"),
+            ["L.Exporting"] = ("Exporting…", "正在导出…"),
+            ["L.ExportSaved"] = ("Report saved", "报告已保存"),
+            ["L.ExportCanceled"] = ("Export canceled", "已取消导出")
         };
 
     private ResourceDictionary? _dictionary;

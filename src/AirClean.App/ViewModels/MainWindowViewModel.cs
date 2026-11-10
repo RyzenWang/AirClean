@@ -30,10 +30,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly LocalizationService _localization;
     private readonly ThemeService _theme;
     private readonly Action _persist;
-    private readonly VolumeScanService _volumeScan;
+    private readonly IVolumeScanService _volumeScan;
     private readonly DeletionService _deletion;
+    private readonly JournalStore _journal;
     private readonly ITrashService _trash;
     private readonly IAdminHelper? _adminHelper;
+    private readonly IReportExporter? _reportExporter;
     private readonly long _largeFileThreshold;
     private readonly IReadOnlyList<string>? _duplicateRoots;
 
@@ -64,22 +66,36 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private int _totalCount;
     private long _totalMatchedBytes;
     private int _totalMatchedCount;
+    private bool _limitedByGroupCap;
+    private int _duplicateGroupCount;
     private string? _scannedRoot;
+    private bool _wasScanCanceled;
     private DeletionReport? _lastReport;
+    private JournalBatch? _lastBatch;
+    private bool _isUndoing;
+    private string _undoMessage = string.Empty;
+    private int _undoRestoredCount;
+    private int _undoFailedCount;
+    private long _undoRestoredBytes;
+    private string? _undoError;
+    private bool _isEmptyTrashConfirmVisible;
+    private bool _isEmptyingTrash;
+    private bool _isExportingSkip;
 
     public MainWindowViewModel(
         AppSettings settings,
         LocalizationService localization,
         ThemeService theme,
         Action persist,
-        VolumeScanService volumeScan,
+        IVolumeScanService volumeScan,
         DeletionService deletion,
         ITrashService trash,
         IRevealService reveal,
         long largeFileThreshold = LargeFileScanner.DefaultThresholdBytes,
         IReadOnlyList<VolumeInfo>? volumes = null,
         IReadOnlyList<string>? duplicateRoots = null,
-        IAdminHelper? adminHelper = null)
+        IAdminHelper? adminHelper = null,
+        IReportExporter? reportExporter = null)
     {
         _settings = settings;
         _localization = localization;
@@ -87,8 +103,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _persist = persist;
         _volumeScan = volumeScan;
         _deletion = deletion;
+        _journal = deletion.Journal;
         _trash = trash;
         _adminHelper = adminHelper;
+        _reportExporter = reportExporter;
         _largeFileThreshold = largeFileThreshold;
         _duplicateRoots = duplicateRoots;
 
@@ -120,12 +138,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         RefreshDisk();
         RefreshCategoryTexts();
+        RefreshRecentCleanups();
 
         _localization.LanguageChanged += (_, _) =>
         {
             RefreshCategoryTexts();
             RecomputeSelection();
             RefreshCompletionTexts();
+            RefreshRecentCleanups();
             OnPropertyChanged(nameof(StatusText));
             OnPropertyChanged(nameof(SelectionSummary));
             OnPropertyChanged(nameof(FoundSummary));
@@ -138,6 +158,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(DiskTotalSummary));
             OnPropertyChanged(nameof(ScanScopeText));
             OnPropertyChanged(nameof(WelcomeScanHint));
+            OnPropertyChanged(nameof(UndoButtonText));
+            OnPropertyChanged(nameof(EmptyTrashButtonText));
+            OnPropertyChanged(nameof(LimitedNote));
+            OnPropertyChanged(nameof(ExportSkipText));
+            RefreshUndoMessage();
 
             foreach (var volume in Volumes)
             {
@@ -153,6 +178,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public ObservableCollection<CategoryViewModel> Categories { get; } = [];
+
+    public ObservableCollection<RecentCleanupViewModel> RecentCleanups { get; } = [];
+
+    public bool HasRecentCleanups => RecentCleanups.Count > 0;
+
+    public bool HasNoRecentCleanups => !HasRecentCleanups;
 
     public ObservableCollection<CategoryViewModel> ConfirmItems { get; } = [];
 
@@ -235,6 +266,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsResultsVisible => Stage == AppStage.Results;
 
     public bool IsCompletedVisible => Stage == AppStage.Completed;
+
+    /// <summary>True when a cancelled scan stopped on the results page with partial data.</summary>
+    public bool WasScanCanceled
+    {
+        get => _wasScanCanceled;
+        private set => SetProperty(ref _wasScanCanceled, value);
+    }
 
     /// <summary>True once every stage has reported (or the scan was cancelled / failed).</summary>
     public bool IsScanComplete { get; private set; }
@@ -355,6 +393,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool HasLimited { get; private set; }
 
+    public string LimitedNote
+    {
+        get
+        {
+            if (_limitedByGroupCap && _duplicateGroupCount > DuplicateScanner.MaxGroups)
+            {
+                return _localization.Format(
+                    "L.LimitedGroupsNoteFormat",
+                    DuplicateScanner.MaxGroups,
+                    _duplicateGroupCount - DuplicateScanner.MaxGroups);
+            }
+
+            return _localization.T("L.LimitedNote");
+        }
+    }
+
     // ---- selection ----
 
     public string SelectionSummary => _localization.Format(
@@ -421,15 +475,120 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public string SkippedText { get; private set; } = string.Empty;
 
-    public string SkippedDetail { get; private set; } = string.Empty;
-
     public bool HasSkipped { get; private set; }
+
+    /// <summary>Hidden once the whole batch has been restored; the category sizes would lie.</summary>
+    public bool HasCleanupDetails =>
+        !(_undoRestoredCount > 0 && _lastReport is { TrashedBytes: 0, FreedBytes: 0 });
 
     public bool ShowSubSeparator => HasTrashNote && HasFreedNote;
 
     public bool HasFreedNote { get; private set; }
 
     public bool CanOpenTrash => _trash.IsSupported && _lastReport is { TrashedBytes: > 0 };
+
+    public bool CanUndo => !IsUndoing &&
+                           _trash.IsSupported &&
+                           _lastReport is { TrashedBytes: > 0 } &&
+                           _lastBatch is { } batch &&
+                           batch.CanUndo;
+
+    public bool IsUndoVisible => (CanUndo || IsUndoing) && _lastReport is not null;
+
+    public bool IsUndoing
+    {
+        get => _isUndoing;
+        private set
+        {
+            if (SetProperty(ref _isUndoing, value))
+            {
+                OnPropertyChanged(nameof(CanUndo));
+                OnPropertyChanged(nameof(IsUndoVisible));
+                OnPropertyChanged(nameof(UndoButtonText));
+            }
+        }
+    }
+
+    public string UndoButtonText => IsUndoing
+        ? _localization.T("L.Undoing")
+        : _localization.T("L.UndoLastClean");
+
+    public string UndoMessage
+    {
+        get => _undoMessage;
+        private set
+        {
+            if (SetProperty(ref _undoMessage, value))
+            {
+                OnPropertyChanged(nameof(HasUndoMessage));
+            }
+        }
+    }
+
+    public bool HasUndoMessage => _undoMessage.Length > 0;
+
+    public bool CanEmptyTrash => !IsEmptyingTrash &&
+                                 _trash.IsSupported &&
+                                 _lastReport is { TrashedBytes: > 0 };
+
+    public bool IsEmptyTrashVisible => _trash.IsSupported && _lastReport is { TrashedBytes: > 0 };
+
+    public bool IsEmptyTrashConfirmVisible
+    {
+        get => _isEmptyTrashConfirmVisible;
+        private set
+        {
+            if (SetProperty(ref _isEmptyTrashConfirmVisible, value))
+            {
+                OnPropertyChanged(nameof(CanEmptyTrash));
+            }
+        }
+    }
+
+    public bool IsEmptyingTrash
+    {
+        get => _isEmptyingTrash;
+        private set
+        {
+            if (SetProperty(ref _isEmptyingTrash, value))
+            {
+                OnPropertyChanged(nameof(CanEmptyTrash));
+                OnPropertyChanged(nameof(IsEmptyTrashVisible));
+                OnPropertyChanged(nameof(EmptyTrashButtonText));
+            }
+        }
+    }
+
+    public string EmptyTrashButtonText => IsEmptyingTrash
+        ? _localization.T("L.EmptyingTrash")
+        : _localization.T("L.EmptyTrashNow");
+
+    public ObservableCollection<SkipGroupViewModel> SkipGroups { get; } = [];
+
+    public bool HasSkipGroups => SkipGroups.Count > 0;
+
+    public bool SkippedTruncated { get; private set; }
+
+    public bool CanExportSkipReport => _reportExporter is not null &&
+                                       !IsExportingSkip &&
+                                       _lastReport is { Items.Count: > 0 };
+
+    public bool IsExportingSkip
+    {
+        get => _isExportingSkip;
+        private set
+        {
+            if (SetProperty(ref _isExportingSkip, value))
+            {
+                OnPropertyChanged(nameof(CanExportSkipReport));
+                OnPropertyChanged(nameof(ExportSkipText));
+            }
+        }
+    }
+
+    public string ExportSkipText => IsExportingSkip
+        ? _localization.T("L.Exporting")
+        : _localization.T("L.ExportCsv");
 
     // ---- commands ----
 
@@ -464,6 +623,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ScanTargetText = string.Empty;
         ScanTitleText = _localization.T("L.Scanning");
         HasLimited = false;
+        WasScanCanceled = false;
         IsScanComplete = false;
         Stage = AppStage.Scanning;
         SetStatus("L.Scanning");
@@ -493,8 +653,27 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            Stage = AppStage.Welcome;
-            SetStatus(null);
+            SetScanElapsed(_scanClock.Elapsed);
+
+            if (Stage == AppStage.Results ||
+                Categories.Any(category => category.IsApplicable && category.FileCount > 0))
+            {
+                WasScanCanceled = true;
+
+                foreach (var category in Categories.Where(category => category.IsScanning))
+                {
+                    category.IsScanning = false;
+                    category.IsCanceled = true;
+                }
+
+                Stage = AppStage.Results;
+                SetStatus("L.ScanCanceled");
+            }
+            else
+            {
+                Stage = AppStage.Welcome;
+                SetStatus(null);
+            }
         }
         catch (Exception exception)
         {
@@ -726,6 +905,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 () => _deletion.Delete(categories, mode, progress, _cleanCts.Token));
 
             _lastReport = report;
+            _lastBatch = _journal.Find(report.BatchId);
+            ResetUndoState();
+            RefreshRecentCleanups();
             BuildCompletion(categories, report);
             Stage = AppStage.Completed;
             SetStatus(report.Canceled ? "L.CleanCanceled" : "L.CleanComplete");
@@ -766,6 +948,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void Done()
     {
         _lastReport = null;
+        _lastBatch = null;
+        IsEmptyTrashConfirmVisible = false;
+        IsEmptyingTrash = false;
+        SkipGroups.Clear();
+        SkippedTruncated = false;
+        OnPropertyChanged(nameof(HasSkipGroups));
+        OnPropertyChanged(nameof(SkippedTruncated));
+        OnPropertyChanged(nameof(CanExportSkipReport));
+        ResetUndoState();
         CompletionItems.Clear();
         Stage = AppStage.Welcome;
         SetStatus(null);
@@ -775,8 +966,162 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void OpenTrash() => _trash.OpenTrash();
 
     [RelayCommand]
+    private async Task UndoLastCleanAsync()
+    {
+        if (_lastBatch is not { } batch || IsUndoing)
+        {
+            return;
+        }
+
+        IsUndoing = true;
+        _undoRestoredCount = 0;
+        _undoFailedCount = 0;
+        _undoRestoredBytes = 0;
+        _undoError = null;
+        UndoMessage = string.Empty;
+
+        var restoredPaths = new List<string>();
+
+        try
+        {
+            foreach (var item in batch.Items.Where(item => !item.Restored).Reverse())
+            {
+                if (_trash.TryRestore(item.TrashPath, item.Path, out var error))
+                {
+                    restoredPaths.Add(item.Path);
+                    _undoRestoredCount++;
+                    _undoRestoredBytes += item.Size;
+                }
+                else
+                {
+                    _undoFailedCount++;
+                    _undoError = error;
+                }
+            }
+        }
+        finally
+        {
+            IsUndoing = false;
+        }
+
+        if (restoredPaths.Count > 0)
+        {
+            _journal.MarkRestored(batch.BatchId, restoredPaths);
+            _lastBatch = _journal.Find(batch.BatchId) ?? batch;
+
+            if (_lastReport is { } report)
+            {
+                _lastReport = report with
+                {
+                    TrashedBytes = Math.Max(0, report.TrashedBytes - _undoRestoredBytes)
+                };
+            }
+
+            RefreshCompletionTexts();
+            RefreshRecentCleanups();
+        }
+
+        RefreshUndoMessage();
+        OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(IsUndoVisible));
+        SetStatusRaw(_undoMessage);
+    }
+
+    [RelayCommand]
+    private void OpenEmptyTrashConfirm()
+    {
+        if (CanEmptyTrash)
+        {
+            IsEmptyTrashConfirmVisible = true;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelEmptyTrashConfirm() => IsEmptyTrashConfirmVisible = false;
+
+    [RelayCommand]
+    private async Task ConfirmEmptyTrashAsync()
+    {
+        if (IsEmptyingTrash)
+        {
+            return;
+        }
+
+        IsEmptyTrashConfirmVisible = false;
+        IsEmptyingTrash = true;
+
+        try
+        {
+            // Windows empties one drive's recycle bin; the Unix trash is shared, so all
+            // batches have to be marked as non-restorable there.
+            var volumeRoot = OperatingSystem.IsWindows() ? SelectedVolume?.Info.Root : null;
+            var freed = await Task.Run(() => _trash.Empty(volumeRoot));
+
+            _journal.MarkTrashEmptied(volumeRoot);
+
+            if (_lastReport is { } report)
+            {
+                _lastReport = report with
+                {
+                    TrashedBytes = 0,
+                    FreedBytes = report.FreedBytes + Math.Max(0, freed),
+                    TrashEmptied = true
+                };
+            }
+
+            _lastBatch = _lastReport is { } current ? _journal.Find(current.BatchId) : null;
+
+            RefreshCompletionTexts();
+            RefreshRecentCleanups();
+            SetStatusRaw(_localization.Format("L.EmptyTrashDoneFormat", ByteSize.Format(freed)));
+        }
+        catch (Exception exception)
+        {
+            SetStatusRaw(_localization.Format("L.EmptyTrashFailedFormat", exception.Message));
+        }
+        finally
+        {
+            IsEmptyingTrash = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportSkipReportAsync()
+    {
+        if (_reportExporter is null ||
+            _lastReport is not { } report ||
+            report.Items.Count == 0 ||
+            IsExportingSkip)
+        {
+            return;
+        }
+
+        IsExportingSkip = true;
+
+        try
+        {
+            var csv = SkipReportCsv.Build(report.Items, DateTimeOffset.Now);
+            var saved = await _reportExporter.SaveAsync(
+                $"airclean-skipped-{DateTime.Now:yyyyMMdd}.csv",
+                csv);
+
+            SetStatusRaw(_localization.T(saved ? "L.ExportSaved" : "L.ExportCanceled"));
+        }
+        finally
+        {
+            IsExportingSkip = false;
+        }
+    }
+
+    [RelayCommand]
     private void Escape()
     {
+        if (IsEmptyTrashConfirmVisible && !IsEmptyingTrash)
+        {
+            CancelEmptyTrashConfirm();
+            return;
+        }
+
         if (IsConfirmVisible && !IsDeleting)
         {
             CancelConfirm();
@@ -911,7 +1256,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         HasLimited = result.Limited || Categories.Any(category => category.HasLimited_Internal);
+        _limitedByGroupCap = result.LimitedByGroupCap;
+        _duplicateGroupCount = result.DuplicateGroupCount;
         OnPropertyChanged(nameof(HasLimited));
+        OnPropertyChanged(nameof(LimitedNote));
 
         _scannedRoot = volume.Root;
         _scanTimer.Stop();
@@ -1037,32 +1385,42 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         if (_lastReport is not { } report)
         {
+            SkipGroups.Clear();
+            SkippedTruncated = false;
+            OnPropertyChanged(nameof(HasSkipGroups));
+            OnPropertyChanged(nameof(SkippedTruncated));
+            OnPropertyChanged(nameof(CanExportSkipReport));
             return;
         }
 
         var total = report.TotalBytes;
-        CompletedTitle = _localization.Format("L.DoneTitleFormat", ByteSize.Format(total));
-        CompletedSubTrash = report.TrashedBytes > 0
+        var fullyUndone = _undoRestoredCount > 0 &&
+                          report.TrashedBytes == 0 &&
+                          report.FreedBytes == 0;
+
+        CompletedTitle = fullyUndone
+            ? _localization.Format("L.UndoneTitleFormat", ByteSize.Format(_undoRestoredBytes))
+            : _localization.Format("L.DoneTitleFormat", ByteSize.Format(total));
+
+        CompletedSubTrash = !fullyUndone && report.TrashedBytes > 0
             ? _localization.Format("L.DoneSubTrashFormat", ByteSize.Format(report.TrashedBytes))
             : string.Empty;
-        CompletedSubFreed = report.FreedBytes > 0
+        CompletedSubFreed = !fullyUndone && report.FreedBytes > 0
             ? _localization.Format("L.DoneSubFreedFormat", ByteSize.Format(report.FreedBytes))
             : string.Empty;
-        HasFreedNote = report.FreedBytes > 0;
-        CompletedNote = report.TrashedBytes > 0
+
+        HasFreedNote = !fullyUndone && report.FreedBytes > 0;
+        CompletedNote = !fullyUndone && report.TrashedBytes > 0
             ? _localization.Format("L.DoneNoteTrashFormat", ByteSize.Format(report.TrashedBytes))
             : string.Empty;
-        HasTrashNote = report.TrashedBytes > 0;
+        HasTrashNote = !fullyUndone && report.TrashedBytes > 0;
 
         var skipped = report.Skipped.Values.Sum();
         HasSkipped = skipped > 0;
-        SkippedText = _localization.Format("L.SkippedFormat", skipped);
-        SkippedDetail = string.Join(" · ", new[]
-        {
-            Detail("L.SkippedInUse", SkipReason.InUse),
-            Detail("L.SkippedPermission", SkipReason.Permission),
-            Detail("L.SkippedChanged", SkipReason.ChangedSinceScan)
-        }.Where(part => part.Length > 0));
+        SkippedText = skipped == 1
+            ? _localization.T("L.SkippedOne")
+            : _localization.Format("L.SkippedFormat", skipped);
+        RefreshSkipGroups(report);
 
         OnPropertyChanged(nameof(CompletedTitle));
         OnPropertyChanged(nameof(CompletedSubTrash));
@@ -1072,19 +1430,123 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HasFreedNote));
         OnPropertyChanged(nameof(ShowSubSeparator));
         OnPropertyChanged(nameof(SkippedText));
-        OnPropertyChanged(nameof(SkippedDetail));
         OnPropertyChanged(nameof(HasSkipped));
         OnPropertyChanged(nameof(CanOpenTrash));
+        OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(IsUndoVisible));
+        OnPropertyChanged(nameof(HasCleanupDetails));
+    }
 
-        string Detail(string key, SkipReason reason)
+    private void RefreshSkipGroups(DeletionReport report)
+    {
+        SkipGroups.Clear();
+
+        foreach (var group in report.Items
+                     .GroupBy(item => item.Reason)
+                     .OrderByDescending(group => group.Count()))
         {
-            if (_lastReport is not { } current || !current.Skipped.TryGetValue(reason, out var count))
-            {
-                return string.Empty;
-            }
+            var paths = group
+                .Select(item => item.Path)
+                .Where(path => path.Length > 0)
+                .Take(20)
+                .ToArray();
 
-            return _localization.Format("L.SkippedItemFormat", _localization.T(key), count);
+            SkipGroups.Add(new SkipGroupViewModel(group.Key, _localization, paths, group.Count()));
         }
+
+        SkippedTruncated = report.SkippedTruncated ||
+                           report.Skipped.Values.Sum() > report.Items.Count;
+
+        OnPropertyChanged(nameof(HasSkipGroups));
+        OnPropertyChanged(nameof(SkippedTruncated));
+        OnPropertyChanged(nameof(CanExportSkipReport));
+    }
+
+    private void ResetUndoState()
+    {
+        _undoRestoredCount = 0;
+        _undoFailedCount = 0;
+        _undoRestoredBytes = 0;
+        _undoError = null;
+        UndoMessage = string.Empty;
+        OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(IsUndoVisible));
+        OnPropertyChanged(nameof(HasCleanupDetails));
+    }
+
+    private void RefreshUndoMessage()
+    {
+        if (_undoRestoredCount == 0 && _undoFailedCount == 0)
+        {
+            UndoMessage = string.Empty;
+            return;
+        }
+
+        UndoMessage = _undoFailedCount == 0
+            ? _localization.Format("L.UndoResultFormat", _undoRestoredCount, ByteSize.Format(_undoRestoredBytes))
+            : _localization.Format(
+                "L.UndoPartialFormat",
+                _undoRestoredCount,
+                _undoRestoredCount + _undoFailedCount,
+                _undoError ?? string.Empty);
+    }
+
+    private void RefreshRecentCleanups()
+    {
+        RecentCleanups.Clear();
+
+        foreach (var batch in _journal.ReadRecent(3))
+        {
+            RecentCleanups.Add(new RecentCleanupViewModel(
+                batch,
+                _localization,
+                _trash.IsSupported,
+                UndoRecentAsync));
+        }
+
+        OnPropertyChanged(nameof(HasRecentCleanups));
+        OnPropertyChanged(nameof(HasNoRecentCleanups));
+    }
+
+    private async Task UndoRecentAsync(RecentCleanupViewModel item)
+    {
+        if (item.Batch is not { } batch || !batch.CanUndo)
+        {
+            return;
+        }
+
+        var restored = new List<string>();
+        var bytes = 0L;
+        var failed = 0;
+        string? error = null;
+
+        await Task.Run(() =>
+        {
+            foreach (var entry in batch.Items.Where(entry => !entry.Restored).Reverse())
+            {
+                if (_trash.TryRestore(entry.TrashPath, entry.Path, out var reason))
+                {
+                    restored.Add(entry.Path);
+                    bytes += entry.Size;
+                }
+                else
+                {
+                    failed++;
+                    error = reason;
+                }
+            }
+        });
+
+        if (restored.Count > 0)
+        {
+            _journal.MarkRestored(batch.BatchId, restored);
+        }
+
+        RefreshRecentCleanups();
+
+        SetStatusRaw(failed == 0
+            ? _localization.Format("L.UndoResultFormat", restored.Count, ByteSize.Format(bytes))
+            : _localization.Format("L.UndoPartialFormat", restored.Count, restored.Count + failed, error ?? string.Empty));
     }
 
     private void RefreshDisk()

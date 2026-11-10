@@ -1,3 +1,4 @@
+using AirClean.App.Services;
 using AirClean.Platform.Admin;
 using Avalonia;
 using Velopack;
@@ -16,8 +17,19 @@ internal static class Program
             return;
         }
 
-        // Velopack must handle install/update hooks before any UI starts.
+        // Crash logging must exist before anything else can fail; Velopack hooks must run
+        // before any window is created.
+        CrashLog.Install();
         VelopackApp.Build().Run();
+
+        using var singleInstance = SingleInstance.Acquire();
+        if (!singleInstance.IsFirst)
+        {
+            singleInstance.SignalExisting();
+            return;
+        }
+
+        App.SharedInstance = singleInstance;
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

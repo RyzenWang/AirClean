@@ -503,7 +503,7 @@ Linux:   /  /usr  /bin  /sbin  /etc  /boot  /dev  /proc  /sys  ~  ~/Desktop|Docu
           4. ITrashService.MoveToTrash | File.Delete | EmptyTrash
           5. 失败按原因归类：InUse / Permission / Changed / NotFound
           6. 记录恢复位置（若有）
-        7. 写 journal（JSONL，一条一个批次）
+        7. 写 journal（每批一个 JSON 文件）
         8. 自底向上清理空目录
 ```
 
@@ -521,25 +521,29 @@ Linux:   /  /usr  /bin  /sbin  /etc  /boot  /dev  /proc  /sys  ~  ~/Desktop|Docu
 
 | 平台 | 能否应用内撤销 | 原因 |
 | --- | --- | --- |
-| macOS | ✅ | `trashItemAtURL` 返回 `resultingItemURL`，可原路移回 |
-| Linux | ✅ | Trash 规范有 `info/*.trashinfo`，可还原 |
-| Windows | ⚠️ v0.1 只给"打开回收站" | `IFileOperation` 不返回回收站内路径；v0.2 解析 `$Recycle.Bin\<SID>\$I*` 元数据实现真正撤销 |
+| macOS | ✅（主卷） | journal 记录移入后的路径，恢复时直接移回；`NSFileManager` 与外置卷 `.Trashes` 仍待补 |
+| Linux | ✅ | journal 路径优先，缺失时读 `info/*.trashinfo` 并按原始路径匹配 |
+| Windows | ✅ | 按原路径解析 `$Recycle.Bin\<SID>\$I*`，定位对应 `$R` 后移回；长路径仍受删除路径限制 |
 
-**这一点必须写在完成页上**，不能给一个点了没反应的"撤销"按钮。Windows 上按钮文案是"打开回收站"，而不是"撤销"。
+**实现必须如实报告**：部分失败、目标已存在、原目录缺失、回收站已被清空，都要在完成页上写清楚，不能给一个点了没反应的"撤销"按钮。
 
 #### Journal
 
-`%APPDATA%\AirClean\journal\2026-10.jsonl`，一行一个批次：
+`%APPDATA%\AirClean\journal\<yyyy-MM>\<utcTicks>-<batchId>.json`，每批一个文件，
+先写 `.tmp` 再原子改名：
 
 ```json
-{"v":1,"batchId":"01J...","startedAt":"2026-10-31T06:20:11Z","mode":"trash",
- "items":[{"p":"/Users/me/Library/Caches/com.x/y.bin","s":1048576,"r":"/Users/me/.Trash/y.bin"}],
- "deleted":64210,"bytes":12400000000,"skipped":{"inUse":812,"permission":214,"changed":36}}
+{"v":2,"batchId":"…","at":"2026-10-31T06:20:11Z","mode":"trash","canceled":false,
+ "deleted":64210,"trashedBytes":12400000000,"freedBytes":0,
+ "skipped":{"inUse":812,"permission":214},
+ "items":[{"p":"/Users/me/Library/Caches/com.x/y.bin","s":1048576,
+           "r":"/Users/me/.Trash/y.bin","restored":false}]}
 ```
 
-- 保留 30 天 / 200 批次，超过滚动删除。
-- 只记路径与体积，不记文件内容、不记文件名以外的任何信息。
-- 供"最近清理"与撤销使用，也是"扫描记录"页的数据源。
+- 保留 30 天 / 200 批次，超过滚动删除；撤销成功后只更新该批次文件。
+- 只记路径、体积与回收站位置，不记文件内容；全部留在本机。
+- 供"最近清理"与撤销使用，也是"跳过报告"与"扫描记录"的数据源。
+- 0.2 及更早的 `journal/yyyy-MM.jsonl` 仍可读取：只能作为历史查看，不能撤销。
 
 #### 失败处理
 

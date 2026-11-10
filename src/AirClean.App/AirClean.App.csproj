@@ -7,7 +7,7 @@
     <ApplicationIcon>Assets/airclean.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <AssemblyTitle>AirClean</AssemblyTitle>
     <Product>AirClean</Product>
     <Description>A feather-light, cross-platform disk cleaner built with .NET and Avalonia.</Description>

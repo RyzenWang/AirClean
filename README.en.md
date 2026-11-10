@@ -32,10 +32,10 @@ It is the second app in the Air series and shares its design language and stack
 with [AirPDF](https://github.com/RyzenWang/AirPDF): the same warm paper
 background, coral accent, quiet information density, and calm desktop presence.
 
-> **Status:** 0.2 preview. Scan, preview, and clean are wired end to end, with
-> per-drive scanning, hand-picked large files, the MFT fast path, and the
-> administrator helper. A benchmark on Windows scanned 22,000 files (7.4 GB total)
-> in about 1.3 s. Screenshots use demo data.
+> **Status:** 0.3 preview. Scan, preview, clean, undo, recent cleanups, and the
+> skip report are wired end to end, with per-drive scanning, hand-picked large files,
+> the MFT fast path, and the administrator helper. A benchmark on Windows scanned
+> 22,000 files (7.4 GB total) in about 1.3 s. Screenshots use demo data.
 
 ---
 
@@ -52,6 +52,10 @@ background, coral accent, quiet information density, and calm desktop presence.
 ![Confirmation: Trash and permanent deletion explained separately](docs/screens/confirm-en.png)
 
 ![Cleanup complete: Trash and permanent deletions reported separately](docs/screens/completed-en.png)
+
+| Undo this cleanup | Skip report, grouped by reason and exportable as CSV |
+| --- | --- |
+| <img src="docs/screens/completed-undo-en.png" alt="Undo this cleanup" width="420" /> | <img src="docs/screens/completed-skip-report-en.png" alt="Skip report" width="420" /> |
 
 | Dark theme | Simplified Chinese |
 | --- | --- |
@@ -125,13 +129,25 @@ background, coral accent, quiet information density, and calm desktop presence.
 - **Trash by default.** Every cleanup starts with a confirmation dialog.
   Permanent deletion only happens when you explicitly tick **Skip the Trash and
   delete permanently**.
+- **Undo the last cleanup.** The completion page can move this batch's files back
+  to their original paths. Partial failures are listed per item, nothing is
+  overwritten, and the undo entry disappears once the Trash is emptied.
+- **Recent cleanups.** The welcome page lists the last three batches (time, file
+  count, size) and can undo each one.
 - **The Trash is separate.** Emptying it is permanent, so the confirmation dialog
-  calls it out separately instead of folding it into a normal delete.
+  calls it out separately instead of folding it into a normal delete. The completion
+  page can empty it too, and says that files from other apps are included.
+- **A skip report.** The completion page groups skipped files by reason, expands to
+  the paths, and exports a CSV. At most 500 samples are kept, and the UI says when
+  the list was truncated.
 - **Re-check before delete.** Every item is verified again: still under its rule
   root, outside the protected list, unchanged in size and modification time, not
   in use, and not a link. Anything that fails is skipped with a reason.
-- **A local journal.** Every batch writes one JSONL line to the per-user app data
-  folder (`%APPDATA%\AirClean\journal` on Windows), with paths and sizes only.
+- **A local journal.** Every batch writes one JSON file under the per-user app data
+  folder (`%APPDATA%\AirClean\journal\<yyyy-MM>\` on Windows), with paths, sizes and
+  the trash location, kept for 30 days or 200 batches. Unhandled exceptions go to
+  `crash.log` in the same folder (512 KB cap, local only). Older monthly JSONL files
+  are still read but cannot be restored.
 - **Offline.** No account, no ads, no telemetry. Installed builds contact GitHub
   only to check for updates.
 
@@ -326,7 +342,7 @@ A rule root that points at a system directory, the user's documents, `~/.ssh`,
 and similar locations is rejected during the scan. Files go to the system Trash
 by default; permanent deletion requires an explicit opt-in; emptying the Trash is
 a separate action and is labelled as irreversible. Each batch writes a local
-JSONL journal with paths and sizes only.
+JSON journal with paths, sizes and trash locations; 30 days or 200 batches.
 
 ## Limitations
 
@@ -341,8 +357,10 @@ JSONL journal with paths and sizes only.
   AirClean falls back to walking
   the whole drive, which can take minutes on a cold mechanical drive (progress
   and cancellation are available).
-- No true "undo" on Windows yet; the completion page can open the Recycle Bin,
-  and macOS/Linux hand files to the system Trash.
+- Windows deletion still uses the legacy shell API, so paths beyond MAX_PATH are
+  not supported; undo itself restores by original path.
+- macOS now moves items through `NSFileManager`; external-volume `.Trashes` and
+  real-hardware behaviour are not verified yet.
 - macOS and Linux have not been verified on real hardware, including the Linux
   `pkexec` elevation path. The CI matrix is in place and volume enumeration branches
   per platform.
@@ -351,7 +369,7 @@ JSONL journal with paths and sizes only.
 
 ## Roadmap
 
-Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **10 done, 2 in progress, 6 not started**.
+Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **11 done, 2 in progress, 5 not started**.
 
 | Status | Item | Notes |
 | --- | --- | --- |
@@ -359,7 +377,7 @@ Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **10 done, 2 
 | ✅ Done | Hand-picked large files | Top 200 files of at least 100 MB, nothing selected by default. |
 | ✅ Done | Duplicate groups with explicit selection | Size bucket → first 64 KB → SHA-256; one copy kept per group. |
 | ✅ Done | Tri-state selection, folder aggregation, per-item exclusion | Includes indeterminate categories and whole-folder selection. |
-| ✅ Done | Cleanup progress, cancellation, Trash, and a local journal | Cancellable progress, Trash by default, a JSONL journal per batch. |
+| ✅ Done | Cleanup progress, cancellation, Trash, and a local journal | Cancellable progress, Trash by default, a JSON journal per batch. |
 | ✅ Done | English / Simplified Chinese and light / dark themes | Live switching, including follow-system. |
 | ✅ Done | Windows installer, macOS pkg, Linux portable build | Velopack packaging is wired up. |
 | ✅ Done | Auto-update on installed Windows / macOS builds | Background check/download with a restart prompt. |
@@ -367,7 +385,7 @@ Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **10 done, 2 
 | ✅ Done | Administrator-only categories | The helper, MFT acceleration, Windows Update cache, apt package cache, and journald cleanup are wired; Linux elevation still needs real-hardware validation. |
 | 🚧 In progress | Production signing and notarization | Workflow and secrets docs are ready; no real certificates yet, so Windows signing and Apple notarization have not been exercised. |
 | 🚧 In progress | macOS / Linux hardware validation | CI covers builds and headless tests on all three platforms; real-hardware checks for the UI, themes, Trash, and reveal are still missing. |
-| ⬜ Not started | A real "undo the last cleanup" | The completion page can only open the Recycle Bin / Trash; batch tracking and restore are missing. |
+| ✅ Done | A real "undo the last cleanup" | The completion page and welcome list restore files; Windows parses the Recycle Bin `$I` metadata, Linux reads `.trashinfo`, macOS restores from the journal on the main volume. |
 | ⬜ Not started | Tray icon and background mode | Keep running after the window closes, tray menu, and a quick-scan entry. |
 | ⬜ Not started | Scheduled reminders | Daily / weekly reminders, off by default, no automatic deletion. |
 | ⬜ Not started | Full settings page | The current flyout only has theme, language, and the administrator toggle; scan scope, exclusions, delete mode, and updates are missing. |

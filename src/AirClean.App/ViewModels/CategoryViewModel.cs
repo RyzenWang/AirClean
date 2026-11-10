@@ -40,6 +40,7 @@ public sealed partial class CategoryViewModel : ObservableObject
 
     private bool _isApplicable = true;
     private bool _isScanning;
+    private bool _isCanceled;
     private bool _isExpanded;
     private bool? _selectionState = false;
     private bool _defaultSelected;
@@ -107,8 +108,30 @@ public sealed partial class CategoryViewModel : ObservableObject
     public bool IsScanning
     {
         get => _isScanning;
-        set => SetProperty(ref _isScanning, value);
+        set
+        {
+            if (SetProperty(ref _isScanning, value))
+            {
+                OnPropertyChanged(nameof(ShowCounts));
+            }
+        }
     }
+
+    /// <summary>True when the scan was cancelled before this category finished.</summary>
+    public bool IsCanceled
+    {
+        get => _isCanceled;
+        set
+        {
+            if (SetProperty(ref _isCanceled, value))
+            {
+                OnPropertyChanged(nameof(ShowCounts));
+            }
+        }
+    }
+
+    /// <summary>Counts and sizes are meaningless until a category has actually run.</summary>
+    public bool ShowCounts => !IsScanning && !IsCanceled;
 
     /// <summary>The scan stopped early for this category (item or hash cap).</summary>
     public bool HasLimited_Internal { get; private set; }
@@ -237,6 +260,7 @@ public sealed partial class CategoryViewModel : ObservableObject
         IsPermanent = scan.IsPermanent;
         HasLimited_Internal = scan.Limited;
         IsScanning = false;
+        IsCanceled = false;
         CountText = FormatCountText();
 
         var selectAll = scan.Safety == Safety.Safe && scan.FileCount > 0;
@@ -302,6 +326,7 @@ public sealed partial class CategoryViewModel : ObservableObject
         IsAdminAction = false;
         CountText = _localization.Format("L.CategoryCountFormat", 0);
         IsExpanded = false;
+        IsCanceled = false;
         _defaultSelected = false;
         _selectedShownCount = 0;
         _selectedShownBytes = 0;

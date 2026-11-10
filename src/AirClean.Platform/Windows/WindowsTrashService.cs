@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using AirClean.Core.Trash;
 
 namespace AirClean.Platform.Windows;
@@ -8,6 +9,7 @@ namespace AirClean.Platform.Windows;
 /// Recycle Bin integration through the shell. Long paths beyond MAX_PATH are not handled
 /// yet; the design doc lists <c>IFileOperation</c> as the follow-up.
 /// </summary>
+[SupportedOSPlatform("windows")]
 internal sealed class WindowsTrashService : ITrashService
 {
     private const uint FoDelete = 0x0003;
@@ -38,14 +40,11 @@ internal sealed class WindowsTrashService : ITrashService
         }
     }
 
-    public bool MoveToTrash(string path, out string? error)
+    public TrashMoveResult MoveToTrash(string path)
     {
-        error = null;
-
         if (!IsRecyclableVolume(path))
         {
-            error = "The volume does not have a recycle bin.";
-            return false;
+            return TrashMoveResult.Failed("The volume does not have a recycle bin.");
         }
 
         try
@@ -61,18 +60,21 @@ internal sealed class WindowsTrashService : ITrashService
 
             if (result == 0 && !operation.Aborted)
             {
-                return true;
+                // SHFileOperation does not report the recycle-bin path. Restore resolves
+                // the item by its original path instead (see RecycleBin.TryRestore).
+                return TrashMoveResult.Moved();
             }
 
-            error = $"SHFileOperation failed (0x{result:X}).";
-            return false;
+            return TrashMoveResult.Failed($"SHFileOperation failed (0x{result:X}).");
         }
         catch (Exception exception)
         {
-            error = exception.Message;
-            return false;
+            return TrashMoveResult.Failed(exception.Message);
         }
     }
+
+    public bool TryRestore(string? trashPath, string originalPath, out string? error) =>
+        RecycleBin.TryRestore(trashPath, originalPath, out error);
 
     public long Empty(string? rootPath = null)
     {

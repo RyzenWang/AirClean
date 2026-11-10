@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using AirClean.Core.Trash;
 
@@ -72,9 +73,12 @@ internal sealed class UnixTrashService : ITrashService
         }
     }
 
-    public bool MoveToTrash(string path, out string? error)
+    public TrashMoveResult MoveToTrash(string path)
     {
-        error = null;
+        if (OperatingSystem.IsMacOS() && MacTrash.TryMove(path, out var macPath, out _))
+        {
+            return TrashMoveResult.Moved(macPath);
+        }
 
         try
         {
@@ -98,12 +102,178 @@ internal sealed class UnixTrashService : ITrashService
                 WriteTrashInfo(name, source);
             }
 
-            return true;
+            return TrashMoveResult.Moved(destination);
         }
         catch (Exception exception)
         {
+            return TrashMoveResult.Failed(exception.Message);
+        }
+    }
+
+    public bool TryRestore(string? trashPath, string originalPath, out string? error)
+    {
+        error = null;
+
+        try
+        {
+            var source = ResolveTrashPath(trashPath, originalPath);
+            if (source is null)
+            {
+                error = "The item is no longer in the trash.";
+                return false;
+            }
+
+            if (File.Exists(originalPath) || Directory.Exists(originalPath))
+            {
+                error = "The original location already contains an item with that name.";
+                return false;
+            }
+
+            var parent = Path.GetDirectoryName(originalPath);
+            if (string.IsNullOrEmpty(parent) || !Directory.Exists(parent))
+            {
+                error = "The original folder no longer exists.";
+                return false;
+            }
+
+            if (Directory.Exists(source))
+            {
+                Directory.Move(source, originalPath);
+            }
+            else
+            {
+                File.Move(source, originalPath);
+            }
+
+            if (!_isMac)
+            {
+                RemoveTrashInfo(source, originalPath);
+            }
+
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+        {
             error = exception.Message;
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Uses the path the caller recorded when it exists; otherwise walks the .trashinfo
+    /// files and picks the newest entry whose original path matches. The fallback is what
+    /// makes restore work after a restart on a journal written before the path was known.
+    /// </summary>
+    private string? ResolveTrashPath(string? trashPath, string originalPath)
+    {
+        if (!string.IsNullOrWhiteSpace(trashPath) && (File.Exists(trashPath) || Directory.Exists(trashPath)))
+        {
+            return trashPath;
+        }
+
+        if (_isMac)
+        {
+            // macOS restore currently relies on the path recorded when the item was moved.
+            // The NSFileManager upgrade (AC-305) is what adds external-volume support.
+            return null;
+        }
+
+        if (!Directory.Exists(InfoDirectory) || !Directory.Exists(FilesDirectory))
+        {
+            return null;
+        }
+
+        string? best = null;
+        var bestDeletedAt = DateTimeOffset.MinValue;
+
+        foreach (var infoFile in Directory.EnumerateFiles(InfoDirectory, "*.trashinfo"))
+        {
+            var info = ReadTrashInfo(infoFile);
+            if (info is null || !string.Equals(info.Value.Path, originalPath, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var name = Path.GetFileNameWithoutExtension(infoFile);
+            var candidate = Path.Combine(FilesDirectory, name);
+            if (!File.Exists(candidate) && !Directory.Exists(candidate))
+            {
+                continue;
+            }
+
+            if (info.Value.DeletedAt > bestDeletedAt)
+            {
+                bestDeletedAt = info.Value.DeletedAt;
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    private static (string Path, DateTimeOffset DeletedAt)? ReadTrashInfo(string infoFile)
+    {
+        try
+        {
+            string? path = null;
+            var deletedAt = DateTimeOffset.MinValue;
+
+            foreach (var line in File.ReadLines(infoFile))
+            {
+                if (line.StartsWith("Path=", StringComparison.Ordinal))
+                {
+                    path = Uri.UnescapeDataString(line[5..]);
+                }
+                else if (line.StartsWith("DeletionDate=", StringComparison.Ordinal) &&
+                         DateTime.TryParseExact(
+                             line.AsSpan("DeletionDate=".Length),
+                             "yyyy-MM-ddTHH:mm:ss",
+                             CultureInfo.InvariantCulture,
+                             DateTimeStyles.AssumeLocal,
+                             out var when))
+                {
+                    deletedAt = new DateTimeOffset(when);
+                }
+            }
+
+            return string.IsNullOrWhiteSpace(path) ? null : (path, deletedAt);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void RemoveTrashInfo(string trashPath, string originalPath)
+    {
+        try
+        {
+            var direct = Path.Combine(InfoDirectory, Path.GetFileName(trashPath) + ".trashinfo");
+            if (File.Exists(direct))
+            {
+                File.Delete(direct);
+                return;
+            }
+
+            if (!Directory.Exists(InfoDirectory))
+            {
+                return;
+            }
+
+            foreach (var infoFile in Directory.EnumerateFiles(InfoDirectory, "*.trashinfo"))
+            {
+                var info = ReadTrashInfo(infoFile);
+                if (info is not null && string.Equals(info.Value.Path, originalPath, StringComparison.Ordinal))
+                {
+                    File.Delete(infoFile);
+                    return;
+                }
+            }
+        }
+        catch
+        {
+            // A stale .trashinfo only affects a later restore-by-path; the file is back.
         }
     }
 

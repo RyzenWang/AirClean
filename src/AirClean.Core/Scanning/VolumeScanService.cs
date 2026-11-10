@@ -43,7 +43,7 @@ public sealed record VolumeScanRequest(
 public sealed class VolumeScanService(
     RuleSet ruleSet,
     ITrashService trash,
-    IAdminHelper? adminHelper = null)
+    IAdminHelper? adminHelper = null) : IVolumeScanService
 {
     private readonly Scanner _rules = new(ruleSet, trash);
     private readonly LargeFileScanner _largeFiles = new(trash, adminHelper);
@@ -60,6 +60,8 @@ public sealed class VolumeScanService(
         var groups = new List<DuplicateGroup>();
         var started = DateTime.UtcNow;
         var limited = false;
+        var limitedByGroupCap = false;
+        var duplicateGroupCount = 0;
         var skipped = 0;
 
         // Cheap categories first: the window is useful within a second or two.
@@ -187,6 +189,8 @@ public sealed class VolumeScanService(
             }
 
             limited |= duplicateResult.Limited;
+            limitedByGroupCap |= duplicateResult.LimitedByGroupCap;
+            duplicateGroupCount = duplicateResult.DuplicateGroupCount;
         }
 
         return new ScanResult
@@ -195,6 +199,8 @@ public sealed class VolumeScanService(
             Elapsed = DateTime.UtcNow - started,
             SkippedPermission = skipped,
             Limited = limited,
+            LimitedByGroupCap = limitedByGroupCap,
+            DuplicateGroupCount = duplicateGroupCount,
             DuplicateGroups = groups
         };
     }

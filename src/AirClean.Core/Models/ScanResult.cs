@@ -61,6 +61,12 @@ public sealed class ScanResult
     /// <summary>The scan stopped early (hash budget or item cap) and does not cover everything.</summary>
     public bool Limited { get; init; }
 
+    /// <summary>The duplicate list was capped by <see cref="Scanning.DuplicateScanner.MaxGroups"/>.</summary>
+    public bool LimitedByGroupCap { get; init; }
+
+    /// <summary>Total duplicate groups before the display cap, for an honest "N more" note.</summary>
+    public int DuplicateGroupCount { get; init; }
+
     /// <summary>Populated only by the duplicate scan.</summary>
     public IReadOnlyList<DuplicateGroup>? DuplicateGroups { get; init; }
 
@@ -75,6 +81,9 @@ public sealed class ScanResult
 
 public sealed record DeletionProgress(int Done, int Total, string? CurrentPath);
 
+/// <summary>One file the cleanup had to skip, with the reason it was refused.</summary>
+public sealed record SkippedItem(string Path, SkipReason Reason);
+
 public sealed record DeletionReport(
     Guid BatchId,
     long DeletedCount,
@@ -82,7 +91,11 @@ public sealed record DeletionReport(
     long FreedBytes,
     IReadOnlyDictionary<SkipReason, int> Skipped,
     bool TrashEmptied,
-    bool Canceled = false)
+    bool Canceled = false,
+    IReadOnlyList<SkippedItem>? SkippedItems = null,
+    bool SkippedTruncated = false)
 {
     public long TotalBytes => TrashedBytes + FreedBytes;
+
+    public IReadOnlyList<SkippedItem> Items => SkippedItems ?? [];
 }

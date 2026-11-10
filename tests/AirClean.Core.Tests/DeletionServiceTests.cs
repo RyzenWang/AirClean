@@ -103,7 +103,7 @@ public sealed class DeletionServiceTests : IDisposable
             Report = new AdminCleanupReport(2_048, 4, 1)
         };
 
-        var report = new DeletionService(new TestTrash(), _journal, helper)
+        var report = new DeletionService(new TestTrash(), new JournalStore(_journal), helper)
             .Delete([category], DeleteMode.Trash, null, CancellationToken.None);
 
         Assert.True(helper.Called);
@@ -113,16 +113,31 @@ public sealed class DeletionServiceTests : IDisposable
     }
 
     [Fact]
-    public void A_journal_line_is_written_for_every_batch()
+    public void Skipped_items_record_a_sample_with_the_reason()
+    {
+        var file = Write(_root, "gone-by-delete.bin", 64);
+        var category = BuildCategory((file, _root));
+        File.Delete(file);
+
+        var report = Delete([category], DeleteMode.Permanent);
+
+        var item = Assert.Single(report.Items);
+        Assert.Equal(file, item.Path);
+        Assert.Equal(SkipReason.NotFound, item.Reason);
+        Assert.False(report.SkippedTruncated);
+    }
+
+    [Fact]
+    public void A_journal_batch_is_written_for_every_cleanup()
     {
         var file = Write(_root, "a.tmp", 10);
         Delete([BuildCategory((file, _root))], DeleteMode.Permanent);
 
-        var files = Directory.GetFiles(_journal, "*.jsonl");
+        var files = Directory.GetFiles(_journal, "*.json", SearchOption.AllDirectories);
         Assert.Single(files);
-        var line = File.ReadAllText(files[0]);
-        Assert.Contains("batchId", line);
-        Assert.Contains("a.tmp", line);
+        var json = File.ReadAllText(files[0]);
+        Assert.Contains("\"batchId\"", json);
+        Assert.Contains("a.tmp", json);
     }
 
     [Fact]
@@ -134,7 +149,7 @@ public sealed class DeletionServiceTests : IDisposable
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
-        var report = new DeletionService(new TestTrash(), _journal)
+        var report = new DeletionService(new TestTrash(), new JournalStore(_journal))
             .Delete([BuildCategory((first, _root), (second, _root))], DeleteMode.Permanent, null, cancellation.Token);
 
         Assert.True(report.Canceled);
@@ -143,11 +158,27 @@ public sealed class DeletionServiceTests : IDisposable
         Assert.True(File.Exists(second));
 
         // The journal still records the batch so the log stays truthful.
-        Assert.Single(Directory.GetFiles(_journal, "*.jsonl"));
+        Assert.Single(Directory.GetFiles(_journal, "*.json", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public void Trashed_items_record_the_trash_path_returned_by_the_platform()
+    {
+        var file = Write(_root, "cache.bin", 64);
+        var trash = new TestTrash
+        {
+            TrashPathFactory = path => "/trash/" + Path.GetFileName(path)
+        };
+
+        Delete([BuildCategory((file, _root))], DeleteMode.Trash, trash);
+
+        var batch = Assert.Single(new JournalStore(_journal).ReadRecent());
+        var item = Assert.Single(batch.Items);
+        Assert.Equal("/trash/cache.bin", item.TrashPath);
     }
 
     private DeletionReport Delete(IReadOnlyList<CategoryScan> categories, DeleteMode mode, TestTrash? trash = null) =>
-        new DeletionService(trash ?? new TestTrash(), _journal)
+        new DeletionService(trash ?? new TestTrash(), new JournalStore(_journal))
             .Delete(categories, mode, null, CancellationToken.None);
 
     private static CategoryScan BuildCategory(params (string Path, string Root)[] items)

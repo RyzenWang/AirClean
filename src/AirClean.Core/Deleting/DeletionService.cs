@@ -1,13 +1,9 @@
-using System.Text.Json;
 using AirClean.Core.Models;
 using AirClean.Core.Scanning;
 using AirClean.Core.Security;
-using AirClean.Core.Services;
 using AirClean.Core.Trash;
 
 namespace AirClean.Core.Deleting;
-
-internal sealed record JournalEntry(string Path, long Size);
 
 /// <summary>
 /// Deletes exactly the items that were scanned. Every item is re-checked first: still
@@ -16,13 +12,15 @@ internal sealed record JournalEntry(string Path, long Size);
 /// </summary>
 public sealed class DeletionService(
     ITrashService trash,
-    string? journalDirectory = null,
+    JournalStore? journal = null,
     IAdminCleanup? adminCleanup = null)
 {
     private const int MaxJournalEntries = 20_000;
+    private const int MaxSkippedSamples = 500;
 
-    private readonly string _journalDirectory = journalDirectory
-        ?? Path.Combine(SettingsService.GetDefaultDirectory(), "journal");
+    private readonly JournalStore _journal = journal ?? new JournalStore();
+
+    public JournalStore Journal => _journal;
 
     public DeletionReport Delete(
         IReadOnlyList<CategoryScan> categories,
@@ -32,6 +30,7 @@ public sealed class DeletionService(
     {
         var batchId = Guid.NewGuid();
         var skipped = new Dictionary<SkipReason, int>();
+        var skippedSamples = new List<SkippedItem>();
         var entries = new List<JournalEntry>();
         var directories = new List<(string Path, string Root)>();
         var total = categories
@@ -69,7 +68,7 @@ public sealed class DeletionService(
                             throw new OperationCanceledException(cancellationToken);
                         }
 
-                        Count(skipped, SkipReason.Permission);
+                        Skip(skipped, skippedSamples, SkipReason.Permission, string.Empty);
                         continue;
                     }
 
@@ -97,7 +96,7 @@ public sealed class DeletionService(
 
                     if (!PathGuard.IsUnder(item.Root, item.Path) || blocked)
                     {
-                        Count(skipped, SkipReason.Protected);
+                        Skip(skipped, skippedSamples, SkipReason.Protected, item.Path);
                         continue;
                     }
 
@@ -107,13 +106,13 @@ public sealed class DeletionService(
                         info = new FileInfo(item.Path);
                         if (!info.Exists)
                         {
-                            Count(skipped, SkipReason.NotFound);
+                            Skip(skipped, skippedSamples, SkipReason.NotFound, item.Path);
                             continue;
                         }
                     }
                     catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                     {
-                        Count(skipped, SkipReason.Permission);
+                        Skip(skipped, skippedSamples, SkipReason.Permission, item.Path);
                         continue;
                     }
 
@@ -121,15 +120,17 @@ public sealed class DeletionService(
                     {
                         if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
                         {
-                            Count(skipped, SkipReason.ReparsePoint);
+                            Skip(skipped, skippedSamples, SkipReason.ReparsePoint, item.Path);
                             continue;
                         }
 
                         if (info.Length != item.Size || info.LastWriteTimeUtc != item.LastWriteUtc)
                         {
-                            Count(skipped, SkipReason.ChangedSinceScan);
+                            Skip(skipped, skippedSamples, SkipReason.ChangedSinceScan, item.Path);
                             continue;
                         }
+
+                        string? trashPath = null;
 
                         if (mode == DeleteMode.Permanent)
                         {
@@ -143,19 +144,21 @@ public sealed class DeletionService(
                         }
                         else
                         {
-                            if (!trash.MoveToTrash(item.Path, out _))
+                            var moved = trash.MoveToTrash(item.Path);
+                            if (!moved.Success)
                             {
-                                Count(skipped, SkipReason.Permission);
+                                Skip(skipped, skippedSamples, SkipReason.Permission, item.Path);
                                 continue;
                             }
 
                             trashedBytes += item.Size;
+                            trashPath = moved.TrashPath;
                         }
 
                         deleted++;
                         if (entries.Count < MaxJournalEntries)
                         {
-                            entries.Add(new JournalEntry(item.Path, item.Size));
+                            entries.Add(new JournalEntry(item.Path, item.Size, trashPath));
                         }
 
                         if (Path.GetDirectoryName(item.Path) is { Length: > 0 } directory)
@@ -165,11 +168,11 @@ public sealed class DeletionService(
                     }
                     catch (UnauthorizedAccessException)
                     {
-                        Count(skipped, SkipReason.Permission);
+                        Skip(skipped, skippedSamples, SkipReason.Permission, item.Path);
                     }
                     catch (IOException)
                     {
-                        Count(skipped, SkipReason.InUse);
+                        Skip(skipped, skippedSamples, SkipReason.InUse, item.Path);
                     }
 
                     done++;
@@ -190,8 +193,18 @@ public sealed class DeletionService(
         progress?.Report(new DeletionProgress(done, total, null));
         PruneEmptyDirectories(directories, cancellationToken);
 
-        var report = new DeletionReport(batchId, deleted, trashedBytes, freedBytes, skipped, trashEmptied, canceled);
-        JournalWriter.Append(_journalDirectory, batchId, mode, report, entries);
+        var skippedTotal = skipped.Values.Sum();
+        var report = new DeletionReport(
+            batchId,
+            deleted,
+            trashedBytes,
+            freedBytes,
+            skipped,
+            trashEmptied,
+            canceled,
+            skippedSamples,
+            skippedTotal > skippedSamples.Count);
+        _journal.Append(report, mode, entries);
         return report;
     }
 
@@ -213,6 +226,20 @@ public sealed class DeletionService(
     private static void Count(Dictionary<SkipReason, int> skipped, SkipReason reason)
     {
         skipped[reason] = skipped.GetValueOrDefault(reason) + 1;
+    }
+
+    private static void Skip(
+        Dictionary<SkipReason, int> skipped,
+        List<SkippedItem> samples,
+        SkipReason reason,
+        string path)
+    {
+        Count(skipped, reason);
+
+        if (samples.Count < MaxSkippedSamples)
+        {
+            samples.Add(new SkippedItem(path, reason));
+        }
     }
 
     private static void PruneEmptyDirectories(List<(string Path, string Root)> directories, CancellationToken cancellationToken)
@@ -243,38 +270,6 @@ public sealed class DeletionService(
 
                 current = Path.GetDirectoryName(current);
             }
-        }
-    }
-}
-
-internal static class JournalWriter
-{
-    public static void Append(string directory, Guid batchId, DeleteMode mode, DeletionReport report, IReadOnlyList<JournalEntry> entries)
-    {
-        try
-        {
-            Directory.CreateDirectory(directory);
-
-            var path = Path.Combine(directory, DateTime.UtcNow.ToString("yyyy-MM") + ".jsonl");
-            var payload = new JournalPayload
-            {
-                BatchId = batchId,
-                At = DateTimeOffset.UtcNow,
-                Mode = mode.ToString().ToLowerInvariant(),
-                Deleted = report.DeletedCount,
-                TrashedBytes = report.TrashedBytes,
-                FreedBytes = report.FreedBytes,
-                Skipped = new Dictionary<SkipReason, int>(report.Skipped),
-                Items = entries.ToList()
-            };
-
-            File.AppendAllText(
-                path,
-                JsonSerializer.Serialize(payload, JournalJsonContext.Default.JournalPayload) + Environment.NewLine);
-        }
-        catch
-        {
-            // The journal is a convenience; losing it must never fail a cleanup.
         }
     }
 }

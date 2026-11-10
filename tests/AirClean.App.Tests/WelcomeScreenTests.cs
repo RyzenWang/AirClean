@@ -179,6 +179,234 @@ public sealed class FlowTests
     }
 
     [AvaloniaFact]
+    public void A_trash_cleanup_can_be_undone_from_the_completion_page()
+    {
+        var root = CreateFixture();
+
+        try
+        {
+            var trash = new FakeTrash();
+            var viewModel = CreateViewModel(
+                "en",
+                LoadRules(root),
+                volumes: [FixtureVolume(root)],
+                duplicateRoots: [root],
+                trash: trash);
+            var window = Show(viewModel);
+
+            viewModel.ScanCommand.Execute(null);
+            PumpUntil(() => viewModel.IsScanComplete);
+
+            viewModel.OpenConfirmCommand.Execute(null);
+            Pump();
+            viewModel.ConfirmCleanCommand.Execute(null);
+            PumpUntil(() => viewModel.Stage == AppStage.Completed);
+
+            Assert.True(viewModel.CanUndo);
+            Assert.True(viewModel.IsUndoVisible);
+
+            viewModel.UndoLastCleanCommand.Execute(null);
+            PumpUntil(() => viewModel.HasUndoMessage && !viewModel.IsUndoing);
+
+            Assert.NotEmpty(trash.Restored);
+            Assert.False(viewModel.CanUndo);
+            Assert.False(viewModel.CanOpenTrash);
+            Assert.Contains("Restored", viewModel.UndoMessage);
+
+            window.InvalidateVisual();
+            Save(window.CaptureRenderedFrame()!, "completed-undo-en.png");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public void The_welcome_page_lists_recent_cleanups_and_can_undo_them()
+    {
+        var root = CreateFixture();
+
+        try
+        {
+            var trash = new FakeTrash();
+            var viewModel = CreateViewModel(
+                "en",
+                LoadRules(root),
+                volumes: [FixtureVolume(root)],
+                duplicateRoots: [root],
+                trash: trash);
+            var window = Show(viewModel);
+
+            Assert.False(viewModel.HasRecentCleanups);
+            Assert.True(viewModel.HasNoRecentCleanups);
+
+            viewModel.ScanCommand.Execute(null);
+            PumpUntil(() => viewModel.IsScanComplete);
+
+            viewModel.OpenConfirmCommand.Execute(null);
+            Pump();
+            viewModel.ConfirmCleanCommand.Execute(null);
+            PumpUntil(() => viewModel.Stage == AppStage.Completed);
+
+            viewModel.DoneCommand.Execute(null);
+            Pump();
+
+            Assert.True(viewModel.HasRecentCleanups);
+            var item = Assert.Single(viewModel.RecentCleanups);
+            Assert.True(item.CanUndo);
+            Assert.Contains("files", item.SummaryText);
+
+            item.UndoCommand.Execute(null);
+            PumpUntil(() => !viewModel.RecentCleanups[0].CanUndo);
+
+            Assert.NotEmpty(trash.Restored);
+            Assert.False(viewModel.RecentCleanups[0].CanUndo);
+
+            window.InvalidateVisual();
+            Save(window.CaptureRenderedFrame()!, "welcome-recent-en.png");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Emptying_the_trash_after_cleanup_disables_undo()
+    {
+        var root = CreateFixture();
+
+        try
+        {
+            var trash = new FakeTrash { EmptyBytes = 2_048 };
+            var viewModel = CreateViewModel(
+                "en",
+                LoadRules(root),
+                volumes: [FixtureVolume(root)],
+                duplicateRoots: [root],
+                trash: trash);
+            var window = Show(viewModel);
+
+            viewModel.ScanCommand.Execute(null);
+            PumpUntil(() => viewModel.IsScanComplete);
+
+            viewModel.OpenConfirmCommand.Execute(null);
+            Pump();
+            viewModel.ConfirmCleanCommand.Execute(null);
+            PumpUntil(() => viewModel.Stage == AppStage.Completed);
+
+            Assert.True(viewModel.CanUndo);
+            Assert.True(viewModel.IsEmptyTrashVisible);
+
+            viewModel.OpenEmptyTrashConfirmCommand.Execute(null);
+            Assert.True(viewModel.IsEmptyTrashConfirmVisible);
+
+            viewModel.ConfirmEmptyTrashCommand.Execute(null);
+            PumpUntil(() => !viewModel.IsEmptyingTrash);
+
+            Assert.False(viewModel.IsEmptyTrashConfirmVisible);
+            Assert.False(viewModel.CanUndo);
+            Assert.False(viewModel.CanOpenTrash);
+            Assert.NotEmpty(trash.EmptiedRoots);
+            Assert.All(viewModel.RecentCleanups, item => Assert.False(item.CanUndo));
+
+            window.InvalidateVisual();
+            Save(window.CaptureRenderedFrame()!, "completed-empty-trash-en.png");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Cancelling_a_scan_keeps_the_categories_that_already_finished()
+    {
+        var root = CreateFixture();
+
+        try
+        {
+            var viewModel = CreateViewModel(
+                "en",
+                LoadRules(root),
+                volumes: [FixtureVolume(root)],
+                duplicateRoots: [root],
+                scanService: new CancelAfterFirstCategory());
+            var window = Show(viewModel);
+
+            viewModel.ScanCommand.Execute(null);
+            PumpUntil(() => viewModel.IsScanComplete);
+
+            Assert.Equal(AppStage.Results, viewModel.Stage);
+            Assert.True(viewModel.WasScanCanceled);
+
+            var finished = viewModel.Categories.First(category => category.Category == CleanCategory.SystemTemp);
+            Assert.True(finished.FileCount > 0);
+            Assert.False(finished.IsCanceled);
+
+            var unfinished = viewModel.Categories.First(category => category.Category == CleanCategory.AppCache);
+            Assert.True(unfinished.IsCanceled);
+            Assert.False(unfinished.IsScanning);
+            Assert.Contains("canceled", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+
+            window.InvalidateVisual();
+            Save(window.CaptureRenderedFrame()!, "results-canceled-en.png");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public void A_skipped_file_is_reported_and_can_be_exported()
+    {
+        var root = CreateFixture();
+
+        try
+        {
+            var exporter = new FakeReportExporter();
+            var viewModel = CreateViewModel(
+                "en",
+                LoadRules(root),
+                volumes: [FixtureVolume(root)],
+                duplicateRoots: [root],
+                reportExporter: exporter);
+            var window = Show(viewModel);
+
+            viewModel.ScanCommand.Execute(null);
+            PumpUntil(() => viewModel.IsScanComplete);
+
+            // Remove one scanned file so the cleanup has to skip it with a reason.
+            File.Delete(Path.Combine(root, "cache", "a.bin"));
+
+            viewModel.OpenConfirmCommand.Execute(null);
+            Pump();
+            viewModel.ConfirmCleanCommand.Execute(null);
+            PumpUntil(() => viewModel.Stage == AppStage.Completed);
+
+            Assert.True(viewModel.HasSkipped);
+            Assert.Contains(viewModel.SkipGroups, group => group.Reason == SkipReason.NotFound);
+            Assert.True(viewModel.CanExportSkipReport);
+
+            viewModel.ExportSkipReportCommand.Execute(null);
+            PumpUntil(() => exporter.Content is not null);
+
+            Assert.Contains("NotFound", exporter.Content);
+            Assert.Contains("a.bin", exporter.Content);
+            Assert.EndsWith(".csv", exporter.FileName);
+
+            window.InvalidateVisual();
+            Save(window.CaptureRenderedFrame()!, "completed-skip-report-en.png");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
     public void Welcome_page_lets_the_user_pick_a_drive_before_scanning()
     {
         var system = new VolumeInfo("C:\\", "System", "NTFS", 500_000_000_000, 40_000_000_000, IsSystem: true, IsRemovable: false);
@@ -410,17 +638,23 @@ public sealed class FlowTests
         RuleSet? rules,
         IReadOnlyList<VolumeInfo>? volumes = null,
         long threshold = LargeFileScanner.DefaultThresholdBytes,
-        IReadOnlyList<string>? duplicateRoots = null)
+        IReadOnlyList<string>? duplicateRoots = null,
+        FakeTrash? trash = null,
+        IVolumeScanService? scanService = null,
+        IReportExporter? reportExporter = null)
     {
         var settings = new AppSettings { Language = language };
         var localization = new LocalizationService();
         localization.Apply(language);
 
         var theme = new ThemeService(settings, () => { });
-        var trash = new FakeTrash();
+        var trashService = trash ?? new FakeTrash();
         var reveal = new FakeReveal();
-        var volumeScan = new VolumeScanService(rules ?? RuleSet.ForCurrentPlatform(), trash);
-        var journal = Path.Combine(Path.GetTempPath(), "airclean-shots", "journal");
+        var volumeScan = scanService ?? new VolumeScanService(rules ?? RuleSet.ForCurrentPlatform(), trashService);
+        var journal = Path.Combine(
+            Path.GetTempPath(),
+            "airclean-shots",
+            "journal-" + Guid.NewGuid().ToString("N"));
 
         return new MainWindowViewModel(
             settings,
@@ -428,12 +662,13 @@ public sealed class FlowTests
             theme,
             () => { },
             volumeScan,
-            new DeletionService(trash, journal),
-            trash,
+            new DeletionService(trashService, new JournalStore(journal)),
+            trashService,
             reveal,
             threshold,
             volumes,
-            duplicateRoots);
+            duplicateRoots,
+            reportExporter: reportExporter);
     }
 
     /// <summary>
@@ -525,20 +760,72 @@ public sealed class FlowTests
     {
         public TrashSample? Sample { get; set; }
 
+        public List<string> Restored { get; } = [];
+
+        public long EmptyBytes { get; set; }
+
+        public List<string?> EmptiedRoots { get; } = [];
+
         public bool IsSupported => true;
 
         public TrashSample? Probe(string? rootPath = null) => Sample;
 
-        public bool MoveToTrash(string path, out string? error)
+        public TrashMoveResult MoveToTrash(string path) => TrashMoveResult.Moved("trash/" + Path.GetFileName(path));
+
+        public bool TryRestore(string? trashPath, string originalPath, out string? error)
         {
             error = null;
+            Restored.Add(originalPath);
             return true;
         }
 
-        public long Empty(string? rootPath = null) => 0;
+        public long Empty(string? rootPath = null)
+        {
+            EmptiedRoots.Add(rootPath);
+            var bytes = Sample?.Bytes ?? EmptyBytes;
+            Sample = new TrashSample(0, 0);
+            return bytes;
+        }
 
         public void OpenTrash()
         {
+        }
+    }
+
+    private sealed class CancelAfterFirstCategory : IVolumeScanService
+    {
+        public async Task<ScanResult> ScanAsync(
+            VolumeScanRequest request,
+            IProgress<VolumeScanProgress>? progress,
+            IProgress<ScanUpdate>? updates,
+            CancellationToken cancellationToken)
+        {
+            var category = new CategoryScan
+            {
+                Category = CleanCategory.SystemTemp,
+                Safety = Safety.Safe
+            };
+            category.Add(new CleanItem(Path.Combine(Path.GetTempPath(), "fixture.tmp"), Path.GetTempPath(), 10, DateTime.UtcNow));
+
+            updates?.Report(new ScanUpdate(ScanStage.Caches, category, null));
+
+            // Let the posted update reach the UI thread before the cancellation surfaces.
+            await Task.Delay(100, cancellationToken);
+            throw new OperationCanceledException();
+        }
+    }
+
+    private sealed class FakeReportExporter : IReportExporter
+    {
+        public string? FileName { get; private set; }
+
+        public string? Content { get; private set; }
+
+        public Task<bool> SaveAsync(string suggestedFileName, string content)
+        {
+            FileName = suggestedFileName;
+            Content = content;
+            return Task.FromResult(true);
         }
     }
 

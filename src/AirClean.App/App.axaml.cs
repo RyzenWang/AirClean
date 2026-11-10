@@ -22,6 +22,9 @@ public partial class App : Application
     private SettingsService? _settingsService;
     private AppSettings? _settings;
 
+    /// <summary>Set by <see cref="Program"/> once the single-instance lock is held.</summary>
+    internal static SingleInstance? SharedInstance { get; set; }
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -31,6 +34,9 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            Dispatcher.UIThread.UnhandledException += (_, args) =>
+                CrashLog.Write("Dispatcher.UnhandledException", args.Exception);
+
             _settingsService = new SettingsService();
             var isFirstRun = !File.Exists(_settingsService.SettingsPath);
             _settings = _settingsService.Load();
@@ -50,7 +56,8 @@ public partial class App : Application
             var reveal = PlatformServices.CreateRevealService();
             var adminHelper = new AdminHelperClient();
             var volumeScan = new VolumeScanService(RuleSet.ForCurrentPlatform(), trash, adminHelper);
-            var deletion = new DeletionService(trash, adminCleanup: adminHelper);
+            var journal = new JournalStore();
+            var deletion = new DeletionService(trash, journal, adminCleanup: adminHelper);
 
             var viewModel = new MainWindowViewModel(
                 _settings,
@@ -61,7 +68,8 @@ public partial class App : Application
                 deletion,
                 trash,
                 reveal,
-                adminHelper: adminHelper);
+                adminHelper: adminHelper,
+                reportExporter: new FileReportExporter());
 
             var window = new MainWindow
             {
@@ -77,6 +85,20 @@ public partial class App : Application
 
             window.Closing += (_, _) => PersistWindow(window);
             desktop.MainWindow = window;
+
+            if (SharedInstance is { } instance)
+            {
+                instance.Activated += (_, _) => Dispatcher.UIThread.Post(() =>
+                {
+                    if (window.WindowState == WindowState.Minimized)
+                    {
+                        window.WindowState = WindowState.Normal;
+                    }
+
+                    window.Show();
+                    window.Activate();
+                });
+            }
 
             // Installed builds check the release channel shortly after startup; source and
             // portable runs are no-ops because Velopack reports them as not installed.

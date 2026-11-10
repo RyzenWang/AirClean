@@ -22,6 +22,18 @@ public sealed class DuplicateScanner
     private const int QuickHashBytes = 64 * 1024;
     private const int MaxDepth = 16;
 
+    private readonly int _maxGroups;
+
+    public DuplicateScanner(int maxGroups = MaxGroups)
+    {
+        if (maxGroups <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxGroups), "At least one group must be kept.");
+        }
+
+        _maxGroups = maxGroups;
+    }
+
     private static readonly StringComparer PathComparer = OperatingSystem.IsLinux()
         ? StringComparer.Ordinal
         : StringComparer.OrdinalIgnoreCase;
@@ -239,16 +251,20 @@ public sealed class DuplicateScanner
 
         var top = groups
             .OrderByDescending(group => group.RemovableBytes)
-            .Take(MaxGroups)
+            .Take(_maxGroups)
             .ToList();
+
+        var cappedByGroups = groups.Count > _maxGroups;
+        var matchedCount = groups.Sum(group => group.Removable.Count);
+        var matchedBytes = groups.Sum(group => group.RemovableBytes);
 
         var category = new CategoryScan
         {
             Category = CleanCategory.Duplicates,
             Safety = Safety.Caution,
             IsExplicitSelection = true,
-            MatchedCount = top.Sum(group => group.Removable.Count),
-            MatchedBytes = top.Sum(group => group.RemovableBytes)
+            MatchedCount = matchedCount,
+            MatchedBytes = matchedBytes
         };
 
         foreach (var group in top)
@@ -268,7 +284,9 @@ public sealed class DuplicateScanner
             Categories = [category],
             DuplicateGroups = top,
             Elapsed = stopwatch.Elapsed,
-            Limited = budgetExceeded
+            Limited = budgetExceeded || cappedByGroups,
+            LimitedByGroupCap = cappedByGroups,
+            DuplicateGroupCount = groups.Count
         };
     }
 

@@ -8,23 +8,40 @@ internal sealed class TestTrash : ITrashService
 
     public List<string> Moved { get; } = [];
 
+    public List<string> Restored { get; } = [];
+
     public bool FailMoves { get; set; }
+
+    public bool FailRestores { get; set; }
+
+    /// <summary>Optional mapping from original path to a fake trash path.</summary>
+    public Func<string, string?>? TrashPathFactory { get; set; }
 
     public bool IsSupported => true;
 
     public TrashSample? Probe(string? rootPath = null) => Sample;
 
-    public bool MoveToTrash(string path, out string? error)
+    public TrashMoveResult MoveToTrash(string path)
     {
-        error = null;
-
         if (FailMoves)
         {
-            error = "test failure";
-            return false;
+            return TrashMoveResult.Failed("test failure");
         }
 
         Moved.Add(path);
+        return TrashMoveResult.Moved(TrashPathFactory?.Invoke(path));
+    }
+
+    public bool TryRestore(string? trashPath, string originalPath, out string? error)
+    {
+        if (FailRestores)
+        {
+            error = "test restore failure";
+            return false;
+        }
+
+        error = null;
+        Restored.Add(originalPath);
         return true;
     }
 

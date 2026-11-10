@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:AirClean.App.ViewModels"
+        xmlns:views="using:AirClean.App.Views"
         x:Class="AirClean.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="AirClean"
@@ -170,6 +171,35 @@
                            FontSize="11"
                            MaxWidth="470"
                            TextWrapping="Wrap" />
+              </StackPanel>
+
+              <StackPanel Margin="0,16,0,0" Spacing="5">
+                <TextBlock Text="{DynamicResource L.RecentCleanups}" Classes="eyebrow" />
+                <ItemsControl ItemsSource="{Binding RecentCleanups}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RecentCleanupViewModel">
+                      <Grid ColumnDefinitions="*,Auto" Height="24">
+                        <TextBlock Text="{Binding SummaryText}"
+                                   FontSize="10.5"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                        <Button Grid.Column="1"
+                                Classes="soft"
+                                Content="{Binding UndoText}"
+                                Command="{Binding UndoCommand}"
+                                IsVisible="{Binding CanUndo}"
+                                MinHeight="20"
+                                Padding="8,1"
+                                FontSize="10" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{DynamicResource L.NoRecentCleanups}"
+                           IsVisible="{Binding HasNoRecentCleanups}"
+                           Classes="caption"
+                           FontSize="10.5" />
               </StackPanel>
 
               <TextBlock Text="{DynamicResource L.WelcomeMeta}"
@@ -452,6 +482,14 @@
                   <TextBlock Text="·" Classes="caption" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" />
                   <TextBlock Text="{Binding ScanElapsedText}" Classes="caption" FontSize="11" />
                 </StackPanel>
+                <TextBlock Text="{DynamicResource L.ScanCanceledNote}"
+                           IsVisible="{Binding WasScanCanceled}"
+                           Classes="caption"
+                           FontSize="10.5"
+                           Foreground="{DynamicResource CautionBrush}"
+                           TextWrapping="Wrap"
+                           MaxWidth="460"
+                           Margin="0,6,0,0" />
               </StackPanel>
 
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9" VerticalAlignment="Top" Margin="0,10,0,0">
@@ -560,14 +598,14 @@
                                        FontWeight="SemiBold"
                                        HorizontalAlignment="Right"
                                        VerticalAlignment="Center"
-                                       IsVisible="{Binding !IsScanning}" />
+                                       IsVisible="{Binding ShowCounts}" />
                             <TextBlock Grid.Column="4"
                                        Text="{Binding CountText}"
                                        FontSize="10.5"
                                        Foreground="{DynamicResource TextTertiaryBrush}"
                                        HorizontalAlignment="Right"
                                        VerticalAlignment="Center"
-                                       IsVisible="{Binding !IsScanning}" />
+                                       IsVisible="{Binding ShowCounts}" />
                             <TextBlock Grid.Column="3"
                                        Grid.ColumnSpan="2"
                                        Text="{DynamicResource L.Pending}"
@@ -576,6 +614,14 @@
                                        HorizontalAlignment="Right"
                                        VerticalAlignment="Center"
                                        IsVisible="{Binding IsScanning}" />
+                            <TextBlock Grid.Column="3"
+                                       Grid.ColumnSpan="2"
+                                       Text="{DynamicResource L.CategoryCanceled}"
+                                       FontSize="10.5"
+                                       Foreground="{DynamicResource TextTertiaryBrush}"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       IsVisible="{Binding IsCanceled}" />
                             <Button Grid.Column="5"
                                     Classes="chev"
                                     Command="{Binding ToggleExpandCommand}"
@@ -814,7 +860,7 @@
             </Border>
 
             <StackPanel Grid.Row="3" Spacing="6">
-              <TextBlock Text="{DynamicResource L.LimitedNote}"
+              <TextBlock Text="{Binding LimitedNote}"
                          Classes="caption"
                          FontSize="10.5"
                          Foreground="{DynamicResource CautionBrush}"
@@ -829,90 +875,7 @@
         </Grid>
 
         <!-- Completed -->
-        <ScrollViewer IsVisible="{Binding IsCompletedVisible}"
-                      HorizontalScrollBarVisibility="Disabled"
-                      VerticalScrollBarVisibility="Auto">
-          <Grid MaxWidth="760" Margin="46,36" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <StackPanel Spacing="0" Width="620" HorizontalAlignment="Center">
-              <Border Width="42" Height="42" CornerRadius="11" Background="{DynamicResource SafeSoftBrush}" HorizontalAlignment="Left">
-                <Path Data="{StaticResource IconCheck}"
-                      Stroke="{DynamicResource SafeBrush}"
-                      StrokeThickness="2"
-                      Width="20"
-                      Height="20"
-                      Stretch="Uniform"
-                      HorizontalAlignment="Center"
-                      VerticalAlignment="Center" />
-              </Border>
-
-              <TextBlock Text="{Binding CompletedTitle}"
-                         FontSize="31"
-                         FontWeight="SemiBold"
-                         LetterSpacing="-0.7"
-                         Margin="0,16,0,0" />
-
-              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                <TextBlock Text="{Binding CompletedSubTrash}" Classes="caption" FontSize="12" />
-                <TextBlock Text="·" Classes="caption" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}" IsVisible="{Binding ShowSubSeparator}" />
-                <TextBlock Text="{Binding CompletedSubFreed}" Classes="caption" FontSize="12" />
-              </StackPanel>
-
-              <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,20,0,0">
-                <Button Classes="primary" Content="{DynamicResource L.Done}" Command="{Binding DoneCommand}" />
-                <Button Classes="ghost"
-                        Content="{DynamicResource L.OpenTrash}"
-                        Command="{Binding OpenTrashCommand}"
-                        IsVisible="{Binding CanOpenTrash}" />
-              </StackPanel>
-
-              <Border Classes="card" Padding="6,10,16,8" Margin="0,26,0,0">
-                <StackPanel>
-                  <TextBlock Text="{DynamicResource L.CleanupDetails}" Classes="eyebrow" Margin="10,6,0,6" />
-                  <ItemsControl ItemsSource="{Binding CompletionItems}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:CategoryViewModel">
-                        <Grid ColumnDefinitions="*,Auto" Height="30" Margin="10,0">
-                          <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center" />
-                          <TextBlock Grid.Column="1"
-                                     Text="{Binding SizeText}"
-                                     FontSize="11.5"
-                                     FontWeight="SemiBold"
-                                     VerticalAlignment="Center" />
-                        </Grid>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </StackPanel>
-              </Border>
-
-              <Border IsVisible="{Binding HasTrashNote}"
-                      Background="{DynamicResource CautionSoftBrush}"
-                      BorderBrush="#EBD9BC"
-                      BorderThickness="1"
-                      CornerRadius="10"
-                      Padding="12,10"
-                      Margin="0,14,0,0">
-                <TextBlock Text="{Binding CompletedNote}"
-                           FontSize="10.5"
-                           Foreground="{DynamicResource CautionBrush}"
-                           TextWrapping="Wrap" />
-              </Border>
-
-              <Border IsVisible="{Binding HasSkipped}"
-                      Background="{DynamicResource SurfaceBrush}"
-                      BorderBrush="{DynamicResource BorderBrush}"
-                      BorderThickness="1"
-                      CornerRadius="12"
-                      Padding="14,12"
-                      Margin="0,12,0,0">
-                <StackPanel Spacing="3">
-                  <TextBlock Text="{Binding SkippedText}" FontSize="12" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding SkippedDetail}" Classes="caption" FontSize="10.5" />
-                </StackPanel>
-              </Border>
-            </StackPanel>
-          </Grid>
-        </ScrollViewer>
+        <views:CompletionView />
       </Panel>
 
       <!-- Status bar -->
@@ -1086,6 +1049,40 @@
                     HorizontalAlignment="Left"
                     Margin="0,16,0,0" />
           </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+
+    <!-- Empty Trash sheet -->
+    <Border IsVisible="{Binding IsEmptyTrashConfirmVisible}"
+            Background="{DynamicResource OverlayScrimBrush}">
+      <Border Width="460"
+              Background="{DynamicResource SurfaceBrush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="1"
+              CornerRadius="16"
+              Padding="24,20"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              BoxShadow="0 24 60 0 #40000000">
+        <StackPanel Spacing="0">
+          <TextBlock Text="{DynamicResource L.EmptyTrashTitle}" FontSize="17" FontWeight="SemiBold" />
+          <TextBlock Text="{DynamicResource L.EmptyTrashNote}"
+                     Classes="caption"
+                     FontSize="11"
+                     TextWrapping="Wrap"
+                     Margin="0,10,0,0" />
+          <Grid ColumnDefinitions="*,Auto" Margin="0,18,0,0">
+            <Button Classes="quiet"
+                    Content="{DynamicResource L.Cancel}"
+                    Command="{Binding CancelEmptyTrashConfirmCommand}"
+                    HorizontalAlignment="Left" />
+            <Button Grid.Column="1"
+                    Classes="primary"
+                    Content="{DynamicResource L.EmptyTrashConfirm}"
+                    Command="{Binding ConfirmEmptyTrashCommand}"
+                    IsEnabled="{Binding !IsEmptyingTrash}" />
+          </Grid>
         </StackPanel>
       </Border>
     </Border>
