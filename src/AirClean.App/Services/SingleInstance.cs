@@ -1,34 +1,35 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using AirClean.Core.Services;
 
 namespace AirClean.App.Services;
 
 /// <summary>
-/// One instance per user session. The first process owns a named mutex and waits on a
-/// named event; a later launch signals the event and exits, and the first process brings
-/// its window back. Object names are scoped to the session (<c>Local\</c>) and include a
-/// hash of the user profile, so two users never block each other.
+/// One instance per user, implemented with two small files in the user's config folder:
+/// a lock file holding the owner's process id, and a signal file the second launch
+/// writes. The first process polls the signal file and brings its window back. File-based
+/// state is used instead of named mutexes/events because their behaviour differs across
+/// Windows, macOS and Linux; this works the same everywhere and a crashed process only
+/// leaves a lock file that the next launch can reclaim.
 /// </summary>
 internal sealed class SingleInstance : IDisposable
 {
-    private readonly Mutex? _mutex;
-    private readonly EventWaitHandle? _activate;
-    private readonly RegisteredWaitHandle? _registration;
+    private readonly string? _lockPath;
+    private readonly string? _signalPath;
+    private readonly Timer? _timer;
 
-    private SingleInstance(Mutex? mutex, EventWaitHandle? activate, bool isFirst)
+    private SingleInstance(string? lockPath, string? signalPath, bool isFirst)
     {
-        _mutex = mutex;
-        _activate = activate;
+        _lockPath = lockPath;
+        _signalPath = signalPath;
         IsFirst = isFirst;
 
-        if (isFirst && activate is not null)
+        if (isFirst && signalPath is not null)
         {
-            _registration = ThreadPool.RegisterWaitForSingleObject(
-                activate,
-                (_, _) => Activated?.Invoke(this, EventArgs.Empty),
-                state: null,
-                Timeout.Infinite,
-                executeOnlyOnce: false);
+            // A stale signal from a previous run must not pop the window immediately.
+            TryDelete(signalPath);
+            _timer = new Timer(_ => PollSignal(), state: null, dueTime: 200, period: 200);
         }
     }
 
@@ -40,33 +41,46 @@ internal sealed class SingleInstance : IDisposable
     public static SingleInstance Acquire(string? keyOverride = null)
     {
         var key = keyOverride ?? UserKey();
-        var mutexName = $@"Local\AirClean.{key}.SingleInstance";
-        var activateName = $@"Local\AirClean.{key}.Activate";
-
-        Mutex? mutex = null;
-        EventWaitHandle? activate = null;
+        var directory = SettingsService.GetDefaultDirectory();
+        var lockPath = Path.Combine(directory, $"single-instance-{key}.lock");
+        var signalPath = Path.Combine(directory, $"activate-{key}.signal");
 
         try
         {
-            mutex = new Mutex(initiallyOwned: true, mutexName, out var isFirst);
-            activate = new EventWaitHandle(false, EventResetMode.AutoReset, activateName);
-            return new SingleInstance(mutex, activate, isFirst);
+            Directory.CreateDirectory(directory);
         }
         catch
         {
-            // If the OS refuses the named objects, start normally rather than refusing to
-            // run; the worst case is the old behaviour (two instances).
-            mutex?.Dispose();
-            activate?.Dispose();
-            return new SingleInstance(null, null, isFirst: true);
+            // If the folder is not writable, fall through and run as a single process.
         }
+
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            if (TryWriteLock(lockPath))
+            {
+                return new SingleInstance(lockPath, signalPath, isFirst: true);
+            }
+
+            if (IsLockAlive(lockPath))
+            {
+                return new SingleInstance(lockPath, signalPath, isFirst: false);
+            }
+
+            // The previous owner crashed or left an empty file; reclaim it.
+            TryDelete(lockPath);
+        }
+
+        return new SingleInstance(null, null, isFirst: true);
     }
 
     public void SignalExisting()
     {
         try
         {
-            _activate?.Set();
+            if (_signalPath is not null)
+            {
+                File.WriteAllText(_signalPath, DateTimeOffset.UtcNow.ToString("O"));
+            }
         }
         catch
         {
@@ -76,26 +90,88 @@ internal sealed class SingleInstance : IDisposable
 
     public void Dispose()
     {
-        _registration?.Unregister(null);
+        _timer?.Dispose();
 
-        if (_mutex is not null)
+        if (IsFirst)
         {
-            if (IsFirst)
+            TryDelete(_signalPath);
+            TryDelete(_lockPath);
+        }
+    }
+
+    private void PollSignal()
+    {
+        try
+        {
+            if (_signalPath is null || !File.Exists(_signalPath))
             {
-                try
-                {
-                    _mutex.ReleaseMutex();
-                }
-                catch
-                {
-                    // Released by process exit anyway.
-                }
+                return;
             }
 
-            _mutex.Dispose();
+            File.Delete(_signalPath);
+            Activated?.Invoke(this, EventArgs.Empty);
+        }
+        catch
+        {
+            // A transient file error only delays activation to the next tick.
+        }
+    }
+
+    private static bool TryWriteLock(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+            using var writer = new StreamWriter(stream);
+            writer.Write(Environment.ProcessId);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsLockAlive(string path)
+    {
+        try
+        {
+            var text = File.ReadAllText(path).Trim();
+            if (!int.TryParse(text, out var pid) || pid <= 0)
+            {
+                return false;
+            }
+
+            using var process = Process.GetProcessById(pid);
+            return !process.HasExited;
+        }
+        catch (ArgumentException)
+        {
+            // No process with that id: the previous owner is gone.
+            return false;
+        }
+        catch
+        {
+            // Unreadable for another reason: assume alive rather than allow two windows.
+            return true;
+        }
+    }
+
+    private static void TryDelete(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
         }
 
-        _activate?.Dispose();
+        try
+        {
+            File.Delete(path);
+        }
+        catch
+        {
+            // Best effort.
+        }
     }
 
     private static string UserKey()
