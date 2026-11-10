@@ -12,25 +12,26 @@
 | --- | --- | --- |
 | AC-301 | ✅ | `TrashMoveResult` + `TryRestore` 契约；Windows 返回空路径、Unix 返回目标路径；`TestTrash` / `FakeTrash` 已更新。 |
 | AC-302 | ✅ | `JournalStore` v2：每批一个 JSON 文件、原子写、30 天 / 200 批裁剪、v1 JSONL 只读；新增 11 个 Core 测试。 |
-| AC-303 | ✅ | Linux：按 journal 路径恢复，缺失时回退 `.trashinfo` 查找；新增 2 个 Linux 守卫测试（CI 上执行）。 |
+| AC-303 | ✅ | Linux：按 journal 路径恢复，缺失时回退 `.trashinfo` 查找；2 个 Linux 守卫测试已在 CI 通过。 |
 | AC-304 | ✅ | Windows：`$I` v1/v2 解析器（Core，11 个单测）、按原路径定位 `$R`、长路径前缀、删除 `$I`；本机回收站往返测试通过。 |
-| AC-305 | 🚧 | macOS：journal 路径恢复已可用（主卷 `~/.Trash`）；`NSFileManager` 移入、外置卷 `.Trashes`、Finder 元数据仍待补。 |
 | AC-300 | ✅ | 完成页抽成 `Views/CompletionView.axaml`，`MainWindow.axaml` 缩减约 85 行，现有截图流程无回归。 |
 | AC-306 | ✅ | 完成页“撤销本次清理”：逐项恢复、部分失败逐条说明、扣减已移入体积、清空后入口消失；新增 Headless 流程测试。 |
 | AC-307 | ✅ | 欢迎页最近 3 批（时间 / 文件数 / 体积），行内撤销；无记录显示空状态；新增 Headless 测试与截图。 |
 | AC-309 | ✅ | 完成页“清空废纸篓”：独立确认层、后台清空、报告更新、journal 标记 `trashEmptied`，撤销与最近清理同步失效；新增 journal 单测与 Headless 测试。 |
 | AC-310 | ✅ | `CrashLog`：AppDomain / TaskScheduler / ProcessExit / Dispatcher 四类钩子，512 KB 滚动，仅本地；新增写入与轮转测试。 |
-| AC-311 | ✅ | 单实例：`Local\` 命名互斥体 + 事件唤醒，第二个进程退出码 0；新增同进程双实例测试。 |
+| AC-311 | ✅ | 单实例：PID 锁文件 + 信号文件 + 轮询唤醒，跨平台一致；第二个进程退出码 0；双实例测试已过三平台 CI。 |
 | AC-312 | ✅ | 取消扫描保留已完成分类：新增 `IVolumeScanService`、结果页提示、分类“未完成”状态；新增 fake 扫描器测试。 |
 | AC-313 | ✅ | 重复组截断：`DuplicateScanner(maxGroups)`、`LimitedByGroupCap`、`DuplicateGroupCount`，UI 区分预算/组数上限；新增 2 个 Core 测试。 |
 | AC-308 | ✅ | 跳过报告：`SkippedItem` 样本（上限 500）、按原因分组展开、CSV 导出（UTF-8 BOM）、截断提示；新增 CSV/报告测试与 Headless 导出测试。 |
 | AC-314 | ✅ | 截图（撤销 / 跳过报告 / 最近清理 / 取消扫描 / 清空废纸篓）、[VERIFICATION-0.3.md](VERIFICATION-0.3.md)、README 中英文与 DESIGN 同步。 |
-| AC-305 | ✅ | macOS：`NSFileManager.trashItemAtURL` 已接入（objc 桥，失败自动回退到 `~/.Trash`），恢复按返回 URL；真机/CI 行为未验证。 |
-| AC-314 | ✅ | 截图（撤销 / 跳过报告 / 最近清理 / 取消扫描 / 清空废纸篓）、[VERIFICATION-0.3.md](VERIFICATION-0.3.md)、README 中英文与 DESIGN 同步。 |
+| AC-305 | ✅ | macOS：`NSFileManager.trashItemAtURL` 已接入（objc 桥，失败自动回退到 `~/.Trash`）；主卷恢复守卫测试已在 macOS CI 通过，外置卷与 Finder 交互未验证。 |
+| AC-314 | ✅ | 截图（撤销 / 跳过报告）、[VERIFICATION-0.3.md](VERIFICATION-0.3.md)、README 中英文与 DESIGN 同步。 |
 
 > 实现状态：**15/15 个 issue 完成**；构建零警告，测试 66 → **107**（Core 77 + App 30）。
-> 验证缺口（macOS / Linux 真机、真实文件选择器、真实废纸篓清空、真实崩溃）记录在
-> [VERIFICATION-0.3.md](VERIFICATION-0.3.md)，不阻塞代码完成，但发布前必须补跑。
+> 三平台 CI 全绿（run 42794759063，提交 `de476cf`），Linux/macOS 的恢复守卫测试已在
+> 真实 runner 上执行。剩余缺口是交互式真机项（macOS 外置卷 / Finder、Linux `xdg-open`、
+> Windows 真实文件选择器 / 真实清空回收站 / 真实崩溃 / 双进程手测），见
+> [VERIFICATION-0.3.md](VERIFICATION-0.3.md)。
 
 > 状态标记：✅ 已完成并通过构建/测试；🚧 进行中；⬜ 未开始。
 

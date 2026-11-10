@@ -7,10 +7,10 @@
 
 | 项目 | 值 |
 | --- | --- |
-| 版本 | 0.3.0（工作区） |
+| 版本 | 0.3.0（提交 `de476cf`） |
 | Windows | Windows 10 22H2，x64，.NET SDK 10.0.403 |
-| macOS | 未在真机执行（仅 CI `macos-latest` 构建与守卫测试） |
-| Linux | 未在真机执行（仅 CI `ubuntu-22.04` 构建与守卫测试） |
+| macOS | CI `macos-latest` 全绿（2026-11-10，run 42794759063）；未做交互式真机测试 |
+| Linux | CI `ubuntu-22.04` 全绿（2026-11-10，run 42794759063）；未做交互式真机测试 |
 
 ## 自动化
 
@@ -18,10 +18,11 @@
 | --- | --- | --- |
 | `dotnet build AirClean.sln -c Debug` | 通过 | 0 警告 / 0 错误 |
 | `dotnet test AirClean.sln` | 通过 | Core 77 + App 30 = 107 |
+| CI（三平台） | 通过 | windows-latest / macos-latest / ubuntu-22.04，含 AOT 门禁 |
 | Windows 回收站往返 | 通过 | 本机 App.Tests：回收 → 恢复 → 内容一致 |
-| Linux Trash 往返 | 未验证 | 守卫测试已写，需 Linux CI/真机跑 |
-| macOS 废纸篓往返 | 未验证 | `NSFileManager` 桥 + 回退已实现，守卫测试需 macOS CI/真机 |
-| 多实例 | 通过（进程内） | 双实例互斥 + 事件唤醒；未做真实双进程手测 |
+| Linux Trash 往返 | 通过（CI） | `ubuntu-22.04` 上执行移入 / 恢复守卫测试 |
+| macOS 废纸篓往返 | 通过（CI） | `macos-latest` 上执行 `NSFileManager` 移入 / 恢复守卫测试 |
+| 多实例 | 通过（CI 三平台） | 锁文件与信号文件路径；真实双进程手测仍未做 |
 | 崩溃日志 | 通过（单测） | 写入与 512 KB 轮转；未做真实崩溃手测 |
 
 ## 手动验收清单
@@ -45,29 +46,31 @@
 
 | # | 项目 | 结果 | 备注 |
 | --- | --- | --- | --- |
-| 1 | 构建与 Headless 测试 | 未验证 | CI 矩阵已配置 |
-| 2 | 主卷 `~/.Trash` 移入 / 恢复 | 未验证 | 守卫测试待 macOS CI |
-| 3 | 外置卷 `.Trashes` | 未验证 | `NSFileManager` 已接入，失败会回退到 `~/.Trash` |
+| 1 | 构建与 Headless 测试 | 通过（CI） | `macos-latest` 全绿 |
+| 2 | 主卷 `~/.Trash` 移入 / 恢复 | 通过（CI） | `NSFileManager` 守卫测试在 CI 上通过 |
+| 3 | 外置卷 `.Trashes` | 未验证 | `NSFileManager` 已接入，CI 只覆盖主卷临时文件 |
 | 4 | 窗口、主题、回收站、在文件夹中显示 | 未验证 | 需真机 |
 
 ### Linux
 
 | # | 项目 | 结果 | 备注 |
 | --- | --- | --- | --- |
-| 1 | 构建与 Headless 测试 | 未验证 | CI 矩阵已配置 |
-| 2 | freedesktop Trash 移入 / 恢复 | 未验证 | 守卫测试待 Linux CI |
+| 1 | 构建与 Headless 测试 | 通过（CI） | `ubuntu-22.04` 全绿 |
+| 2 | freedesktop Trash 移入 / 恢复 | 通过（CI） | 两种守卫测试均在 CI 上通过 |
 | 3 | 托盘（0.4 范围） | 不适用 | — |
 | 4 | `xdg-open` 打开回收站 | 未验证 | 需真机 |
 
 ## 已知限制（0.3）
 
 - Windows 删除仍走 `SHFileOperation`，超过 MAX_PATH 的路径不支持；恢复用 `\\?\`。
-- macOS 外置卷移入仍落到 `~/.Trash`；`NSFileManager.trashItemAtURL` 尚未接入。
+- macOS 已接入 `NSFileManager.trashItemAtURL`；外置卷与交互式 Finder 行为未验证。
 - Linux 跨设备恢复直接报错，不做复制删除。
 - 清空废纸篓会删除该卷所有批次（含其他应用的文件），确认层已明确说明；Unix 为全局废纸篓。
 - 跳过报告只保留前 500 条样本，界面会提示截断。
 
 ## 结论
 
-Windows 上的核心链路（清理 → 撤销 / 清空 / 跳过报告 / 最近清理）有自动化证据；
-macOS 与 Linux 的恢复路径已实现但**没有真机/CI 执行记录**，发布前必须补跑并回填本表。
+三平台 CI（run 42794759063，提交 `de476cf`）全绿，Linux/macOS 的废纸篓恢复测试已在
+真实 runner 上执行；Windows 核心链路另有本机自动化证据。仍缺的是交互式真机检查：
+macOS 外置卷、Finder 行为，Linux 的 `xdg-open`，以及 Windows 的真实文件选择器、
+真实清空回收站、真实崩溃与双进程手测。发布前应补跑这些项并回填本表。
