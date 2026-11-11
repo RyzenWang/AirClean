@@ -66,24 +66,10 @@
                 <Path Classes="icon" Data="{StaticResource IconSun}" IsVisible="{Binding IsDarkTheme}" />
               </Panel>
             </Button>
-            <Button x:Name="SettingsButton" Classes="icon" ToolTip.Tip="{DynamicResource L.Settings}">
-              <Button.Flyout>
-                <MenuFlyout Placement="BottomEdgeAlignedRight">
-                  <MenuItem Header="{DynamicResource L.ThemeSystem}" Click="OnThemeSystem" />
-                  <MenuItem Header="{DynamicResource L.ThemeLight}" Click="OnThemeLight" />
-                  <MenuItem Header="{DynamicResource L.ThemeDark}" Click="OnThemeDark" />
-                  <Separator />
-                  <MenuItem Header="English" Click="OnLanguageEnglish" />
-                  <MenuItem Header="简体中文" Click="OnLanguageChinese" />
-                  <Separator />
-                  <MenuItem Header="{DynamicResource L.UseAdminHelper}"
-                            ToggleType="CheckBox"
-                            IsChecked="{Binding UseAdminHelper, Mode=TwoWay}"
-                            IsVisible="{Binding IsAdminHelperAvailable}" />
-                  <Separator />
-                  <MenuItem Header="{DynamicResource L.MoreSettingsLater}" IsEnabled="False" />
-                </MenuFlyout>
-              </Button.Flyout>
+            <Button x:Name="SettingsButton"
+                    Classes="icon"
+                    Command="{Binding OpenSettingsCommand}"
+                    ToolTip.Tip="{DynamicResource L.Settings}">
               <Path Classes="icon" Data="{StaticResource IconSettings}" />
             </Button>
           </StackPanel>

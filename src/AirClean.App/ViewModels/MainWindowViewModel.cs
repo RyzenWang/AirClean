@@ -179,6 +179,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<CategoryViewModel> Categories { get; } = [];
 
+    /// <summary>Raised when the gear button asks the window to open settings.</summary>
+    public event EventHandler? SettingsRequested;
+
+    internal AppSettings Settings => _settings;
+
+    internal LocalizationService Localization => _localization;
+
+    internal ThemeService Theme => _theme;
+
+    internal Action Persist => _persist;
+
     public ObservableCollection<RecentCleanupViewModel> RecentCleanups { get; } = [];
 
     public bool HasRecentCleanups => RecentCleanups.Count > 0;
@@ -212,7 +223,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>One line under the drive chips on the welcome page.</summary>
     public string WelcomeScanHint => SelectedVolume is { } volume
         ? _localization.Format(
-            volume.IsSystem ? "L.WelcomeScopeSystem" : "L.WelcomeScopeVolume",
+            volume.IsSystem
+                ? (IsQuickScan ? "L.WelcomeScopeQuick" : "L.WelcomeScopeSystem")
+                : (IsQuickScan ? "L.WelcomeScopeVolumeQuick" : "L.WelcomeScopeVolume"),
             volume.Name,
             volume.FreeText)
         : string.Empty;
@@ -238,6 +251,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public bool IsVolumeMode => SelectedVolume is { IsSystem: false };
+
+    /// <summary>True when the configured scan is the fast cache/log/trash pass.</summary>
+    public bool IsQuickScan => string.Equals(_settings.ScanMode, "Quick", StringComparison.OrdinalIgnoreCase);
 
     public bool CanSwitchVolume => Stage != AppStage.Scanning;
 
@@ -363,7 +379,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public string DiskTotalSummary => _localization.T("L.DiskTotal") + " " + _diskTotalValue;
 
-    public string ScanScopeText => _localization.T(IsVolumeMode ? "L.ScanScopeVolume" : "L.ScanScope");
+    public string ScanScopeText => IsVolumeMode
+        ? _localization.T("L.ScanScopeVolume")
+        : _localization.T(IsQuickScan ? "L.ScanScopeQuick" : "L.ScanScopeFull");
 
     // ---- scan ----
 
@@ -604,6 +622,23 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private Task RescanAsync() => RunScanAsync();
 
+    [RelayCommand]
+    private void OpenSettings() => SettingsRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Re-reads fields the settings window can change while the app is open.</summary>
+    public void RefreshSettings()
+    {
+        if (_adminHelper is not null)
+        {
+            _adminHelper.Enabled = _settings.UseAdminHelper;
+        }
+
+        OnPropertyChanged(nameof(UseAdminHelper));
+        OnPropertyChanged(nameof(IsQuickScan));
+        OnPropertyChanged(nameof(ScanScopeText));
+        OnPropertyChanged(nameof(WelcomeScanHint));
+    }
+
     private async Task RunScanAsync()
     {
         if (Stage == AppStage.Scanning || SelectedVolume is not { } volume)
@@ -638,12 +673,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SetScanElapsed(TimeSpan.Zero);
         _scanTimer.Start();
 
+        var quick = IsQuickScan;
         var request = new VolumeScanRequest(
             volume.Info,
             volume.IsSystem ? ContentRoots() : [volume.Root],
             IncludeCaches: volume.IsSystem,
-            IncludeLargeFiles: true,
-            IncludeDuplicates: true,
+            // Quick scans skip large files and duplicates on the system drive. A data
+            // drive in quick mode still lists large files, because otherwise the scan
+            // would only probe the trash and report nothing useful.
+            IncludeLargeFiles: !quick || !volume.IsSystem,
+            IncludeDuplicates: !quick,
             _largeFileThreshold,
             // A whole data drive can hold terabytes of candidates; cap the hashing so the
             // scan stays usable, and say so when the cap is reached.
@@ -715,6 +754,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>Says which categories this volume will produce before anything is read.</summary>
     private void MarkPending(VolumeItemViewModel volume)
     {
+        var quick = IsQuickScan;
+
         foreach (var category in Categories)
         {
             var adminCategory = category.Category is CleanCategory.SystemUpdates or CleanCategory.SystemLogs;
@@ -725,8 +766,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
             category.IsApplicable = adminCategory
                 ? volume.IsSystem && adminRuleAvailable && IsAdminHelperAvailable && UseAdminHelper
                 : volume.IsSystem
-                    ? category.Category != CleanCategory.LargeFiles
-                    : category.Category is CleanCategory.LargeFiles or CleanCategory.Trash or CleanCategory.Duplicates;
+                    ? category.Category != CleanCategory.LargeFiles &&
+                      (category.Category != CleanCategory.Duplicates || !quick)
+                    : category.Category is CleanCategory.LargeFiles or CleanCategory.Trash ||
+                      (category.Category == CleanCategory.Duplicates && !quick);
 
             category.IsScanning = category.IsApplicable;
         }

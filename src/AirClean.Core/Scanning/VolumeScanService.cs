@@ -142,14 +142,21 @@ public sealed class VolumeScanService(
 
             foreach (var category in largeResult.Categories)
             {
-                // The large-file scanner also reports the volume trash; keep it either way.
+                // The cache rules already report the trash on a system volume; do not add
+                // a second row for the same recycle bin.
+                if (category.Category == CleanCategory.Trash &&
+                    categories.Any(existing => existing.Category == CleanCategory.Trash))
+                {
+                    continue;
+                }
+
                 categories.Add(category);
                 updates?.Report(new ScanUpdate(ScanStage.LargeFiles, category, null));
             }
 
             skipped += largeResult.SkippedPermission;
         }
-        else if (!request.Volume.IsSystem)
+        else if (!categories.Any(category => category.Category == CleanCategory.Trash))
         {
             var trashScan = new CategoryScan
             {

@@ -46,6 +46,7 @@ public partial class MainWindow : Window
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _viewModel.SettingsRequested -= OnSettingsRequested;
         }
 
         base.OnDataContextChanged(e);
@@ -55,8 +56,26 @@ public partial class MainWindow : Window
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            _viewModel.SettingsRequested += OnSettingsRequested;
             RingArc.Data = BuildRingArc(_viewModel.DiskUsedRatio);
         }
+    }
+
+    private async void OnSettingsRequested(object? sender, EventArgs e)
+    {
+        if (_viewModel is not { } viewModel)
+        {
+            return;
+        }
+
+        var window = new SettingsWindow(
+            viewModel.Settings,
+            viewModel.Theme,
+            viewModel.Localization,
+            viewModel.Persist);
+
+        await window.ShowDialog(this);
+        viewModel.RefreshSettings();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

@@ -97,7 +97,8 @@ public sealed class SettingsService
         }
     }
 
-    private static AppSettings Normalize(AppSettings settings)
+    /// <summary>Repairs values that came from disk (or from a settings draft).</summary>
+    public static AppSettings Normalize(AppSettings settings)
     {
         settings.SchemaVersion = AppSettings.CurrentSchemaVersion;
 

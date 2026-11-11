@@ -407,6 +407,70 @@ public sealed class FlowTests
     }
 
     [AvaloniaFact]
+    public void Scan_mode_controls_which_stages_run()
+    {
+        var scan = new CapturingScanService();
+        var viewModel = CreateViewModel("en", null, scanService: scan, scanMode: "Quick");
+        var window = Show(viewModel);
+
+        viewModel.ScanCommand.Execute(null);
+        PumpUntil(() => viewModel.IsScanComplete);
+
+        Assert.NotNull(scan.Request);
+        Assert.False(scan.Request!.IncludeLargeFiles);
+        Assert.False(scan.Request.IncludeDuplicates);
+        Assert.True(scan.Request.IncludeCaches);
+
+        viewModel.Settings.ScanMode = "Full";
+        viewModel.RefreshSettings();
+
+        viewModel.ScanCommand.Execute(null);
+        PumpUntil(() => viewModel.IsScanComplete);
+
+        Assert.True(scan.Request.IncludeLargeFiles);
+        Assert.True(scan.Request.IncludeDuplicates);
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Settings_window_loads_and_applies_a_draft()
+    {
+        var settings = new AppSettings();
+        var localization = new LocalizationService();
+        localization.Apply("en");
+        var theme = new ThemeService(settings, () => { });
+        var window = new SettingsWindow(settings, theme, localization, () => { });
+        window.Show();
+        Pump();
+
+        var viewModel = Assert.IsType<SettingsViewModel>(window.DataContext);
+        viewModel.ThemeIndex = 2;
+        viewModel.LanguageIndex = 1;
+        viewModel.IsFullScan = true;
+        viewModel.LargeFileThresholdMb = 250;
+        viewModel.LargeFileLimit = 50;
+        viewModel.DuplicateMinSizeMb = 4;
+        viewModel.DuplicateGroupLimit = 25;
+        viewModel.HashBudgetGb = 16;
+        viewModel.AddExclusion(@"C:\Temp\keep");
+        viewModel.Apply();
+
+        Assert.Equal("Dark", settings.Theme);
+        Assert.Equal("zh-CN", settings.Language);
+        Assert.Equal("Full", settings.ScanMode);
+        Assert.Equal(250, settings.LargeFileThresholdMb);
+        Assert.Equal(50, settings.LargeFileLimit);
+        Assert.Equal(4, settings.DuplicateMinSizeMb);
+        Assert.Equal(25, settings.DuplicateGroupLimit);
+        Assert.Equal(16, settings.HashBudgetGb);
+        Assert.Contains(@"C:\Temp\keep", settings.Exclusions);
+        Assert.Equal(AppSettings.CurrentSchemaVersion, settings.SchemaVersion);
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Welcome_page_lets_the_user_pick_a_drive_before_scanning()
     {
         var system = new VolumeInfo("C:\\", "System", "NTFS", 500_000_000_000, 40_000_000_000, IsSystem: true, IsRemovable: false);
@@ -459,20 +523,25 @@ public sealed class FlowTests
     }
 
     [AvaloniaFact]
-    public void Compact_window_and_settings_menu_do_not_break()
+    public void Compact_window_and_settings_button_do_not_break()
     {
         var viewModel = CreateViewModel("en", null);
+
+        // Exercised before the window subscribes: at window level the command opens a
+        // modal settings dialog, which a headless test must not leave waiting.
+        var requested = false;
+        viewModel.SettingsRequested += (_, _) => requested = true;
+        viewModel.OpenSettingsCommand.Execute(null);
+        Assert.True(requested);
+
         var window = Show(viewModel, width: 920, height: 620);
 
         Save(window.CaptureRenderedFrame()!, "welcome-compact.png");
 
         var settingsButton = window.FindControl<Button>("SettingsButton");
         Assert.NotNull(settingsButton);
-        Assert.NotNull(settingsButton!.Flyout);
-
-        settingsButton.Flyout!.ShowAt(settingsButton);
-        Pump();
-        settingsButton.Flyout.Hide();
+        Assert.Null(settingsButton!.Flyout);
+        Assert.NotNull(settingsButton.Command);
     }
 
     [AvaloniaFact]
@@ -641,9 +710,10 @@ public sealed class FlowTests
         IReadOnlyList<string>? duplicateRoots = null,
         FakeTrash? trash = null,
         IVolumeScanService? scanService = null,
-        IReportExporter? reportExporter = null)
+        IReportExporter? reportExporter = null,
+        string scanMode = "Full")
     {
-        var settings = new AppSettings { Language = language };
+        var settings = new AppSettings { Language = language, ScanMode = scanMode };
         var localization = new LocalizationService();
         localization.Apply(language);
 
@@ -812,6 +882,25 @@ public sealed class FlowTests
             // Let the posted update reach the UI thread before the cancellation surfaces.
             await Task.Delay(100, cancellationToken);
             throw new OperationCanceledException();
+        }
+    }
+
+    private sealed class CapturingScanService : IVolumeScanService
+    {
+        public VolumeScanRequest? Request { get; private set; }
+
+        public Task<ScanResult> ScanAsync(
+            VolumeScanRequest request,
+            IProgress<VolumeScanProgress>? progress,
+            IProgress<ScanUpdate>? updates,
+            CancellationToken cancellationToken)
+        {
+            Request = request;
+            return Task.FromResult(new ScanResult
+            {
+                Categories = [],
+                Elapsed = TimeSpan.Zero
+            });
         }
     }
 
