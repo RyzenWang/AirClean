@@ -46,6 +46,7 @@ public sealed class AdminHelperClient(string? helperPath = null) : IAdminHelper,
     public LargeFileScanResult? TryScan(
         VolumeInfo volume,
         long thresholdBytes,
+        int maxItems,
         IProgress<ScanProgress>? progress,
         CancellationToken cancellationToken)
     {
@@ -69,7 +70,8 @@ public sealed class AdminHelperClient(string? helperPath = null) : IAdminHelper,
             {
                 Command = AdminHelperHost.ScanLargeFilesCommand,
                 VolumeRoot = volume.Root,
-                ThresholdBytes = thresholdBytes
+                ThresholdBytes = thresholdBytes,
+                MaxItems = maxItems
             },
             progress is null
                 ? null

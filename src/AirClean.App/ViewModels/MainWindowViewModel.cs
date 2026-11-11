@@ -8,6 +8,7 @@ using AirClean.Core.Formatting;
 using AirClean.Core.Models;
 using AirClean.Core.Platform;
 using AirClean.Core.Scanning;
+using AirClean.Core.Security;
 using AirClean.Core.Trash;
 using AirClean.Core.Volumes;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -36,6 +37,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly ITrashService _trash;
     private readonly IAdminHelper? _adminHelper;
     private readonly IReportExporter? _reportExporter;
+    private readonly ExclusionSet _exclusions;
     private readonly long _largeFileThreshold;
     private readonly IReadOnlyList<string>? _duplicateRoots;
 
@@ -91,11 +93,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         DeletionService deletion,
         ITrashService trash,
         IRevealService reveal,
-        long largeFileThreshold = LargeFileScanner.DefaultThresholdBytes,
+        long largeFileThreshold = 0,
         IReadOnlyList<VolumeInfo>? volumes = null,
         IReadOnlyList<string>? duplicateRoots = null,
         IAdminHelper? adminHelper = null,
-        IReportExporter? reportExporter = null)
+        IReportExporter? reportExporter = null,
+        ExclusionSet? exclusions = null)
     {
         _settings = settings;
         _localization = localization;
@@ -107,6 +110,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _trash = trash;
         _adminHelper = adminHelper;
         _reportExporter = reportExporter;
+        _exclusions = exclusions ?? new ExclusionSet(_settings.Exclusions);
         _largeFileThreshold = largeFileThreshold;
         _duplicateRoots = duplicateRoots;
 
@@ -633,6 +637,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _adminHelper.Enabled = _settings.UseAdminHelper;
         }
 
+        _exclusions.Replace(_settings.Exclusions);
+
         OnPropertyChanged(nameof(UseAdminHelper));
         OnPropertyChanged(nameof(IsQuickScan));
         OnPropertyChanged(nameof(ScanScopeText));
@@ -674,6 +680,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _scanTimer.Start();
 
         var quick = IsQuickScan;
+        var thresholdBytes = _largeFileThreshold > 0
+            ? _largeFileThreshold
+            : Math.Max(1, _settings.LargeFileThresholdMb) * 1024L * 1024L;
+        var hashBudgetBytes = Math.Max(1, _settings.HashBudgetGb) * 1024L * 1024L * 1024L;
         var request = new VolumeScanRequest(
             volume.Info,
             volume.IsSystem ? ContentRoots() : [volume.Root],
@@ -683,10 +693,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
             // would only probe the trash and report nothing useful.
             IncludeLargeFiles: !quick || !volume.IsSystem,
             IncludeDuplicates: !quick,
-            _largeFileThreshold,
-            // A whole data drive can hold terabytes of candidates; cap the hashing so the
-            // scan stays usable, and say so when the cap is reached.
-            volume.IsSystem ? DuplicateScanner.DefaultHashBudgetBytes : 2L * 1024 * 1024 * 1024);
+            thresholdBytes,
+            hashBudgetBytes,
+            LargeFileLimit: _settings.LargeFileLimit,
+            DuplicateMinSizeBytes: Math.Max(1, _settings.DuplicateMinSizeMb) * 1024L * 1024L,
+            DuplicateGroupLimit: _settings.DuplicateGroupLimit);
 
         var progress = new Progress<VolumeScanProgress>(OnVolumeProgress);
         var updates = new Progress<ScanUpdate>(OnScanUpdate);

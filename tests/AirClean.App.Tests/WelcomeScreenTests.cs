@@ -7,6 +7,7 @@ using AirClean.Core.Deleting;
 using AirClean.Core.Models;
 using AirClean.Core.Rules;
 using AirClean.Core.Scanning;
+using AirClean.Core.Security;
 using AirClean.Core.Platform;
 using AirClean.Core.Trash;
 using AirClean.Core.Volumes;
@@ -422,6 +423,11 @@ public sealed class FlowTests
         Assert.True(scan.Request.IncludeCaches);
 
         viewModel.Settings.ScanMode = "Full";
+        viewModel.Settings.LargeFileThresholdMb = 250;
+        viewModel.Settings.HashBudgetGb = 3;
+        viewModel.Settings.LargeFileLimit = 50;
+        viewModel.Settings.DuplicateMinSizeMb = 4;
+        viewModel.Settings.DuplicateGroupLimit = 25;
         viewModel.RefreshSettings();
 
         viewModel.ScanCommand.Execute(null);
@@ -429,8 +435,29 @@ public sealed class FlowTests
 
         Assert.True(scan.Request.IncludeLargeFiles);
         Assert.True(scan.Request.IncludeDuplicates);
+        Assert.Equal(250L * 1024 * 1024, scan.Request.LargeFileThreshold);
+        Assert.Equal(3L * 1024 * 1024 * 1024, scan.Request.DuplicateHashBudget);
+        Assert.Equal(50, scan.Request.LargeFileLimit);
+        Assert.Equal(4L * 1024 * 1024, scan.Request.DuplicateMinSizeBytes);
+        Assert.Equal(25, scan.Request.DuplicateGroupLimit);
 
         window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Refreshing_settings_updates_the_shared_exclusion_set()
+    {
+        var exclusions = new ExclusionSet();
+        var path = Path.Combine(Path.GetTempPath(), "airclean-excluded");
+        var viewModel = CreateViewModel("en", null, exclusions: exclusions);
+
+        viewModel.Settings.Exclusions.Add(path);
+        viewModel.RefreshSettings();
+
+        Assert.True(exclusions.Contains(Path.GetFullPath(path)));
+        viewModel.Settings.Exclusions.Clear();
+        viewModel.RefreshSettings();
+        Assert.False(exclusions.Contains(Path.GetFullPath(path)));
     }
 
     [AvaloniaFact]
@@ -706,12 +733,13 @@ public sealed class FlowTests
         string language,
         RuleSet? rules,
         IReadOnlyList<VolumeInfo>? volumes = null,
-        long threshold = LargeFileScanner.DefaultThresholdBytes,
+        long threshold = 0,
         IReadOnlyList<string>? duplicateRoots = null,
         FakeTrash? trash = null,
         IVolumeScanService? scanService = null,
         IReportExporter? reportExporter = null,
-        string scanMode = "Full")
+        string scanMode = "Full",
+        ExclusionSet? exclusions = null)
     {
         var settings = new AppSettings { Language = language, ScanMode = scanMode };
         var localization = new LocalizationService();
@@ -738,7 +766,8 @@ public sealed class FlowTests
             threshold,
             volumes,
             duplicateRoots,
-            reportExporter: reportExporter);
+            reportExporter: reportExporter,
+            exclusions: exclusions);
     }
 
     /// <summary>

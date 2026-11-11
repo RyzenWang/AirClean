@@ -90,7 +90,7 @@ public sealed class MftScannerTests
             [24] = Entry(24, 23, "inside.bin", size: 500_000_000)
         };
 
-        var result = new MftIndex(entries).FindLargeFiles(volume, 100_000_000, CancellationToken.None);
+        var result = new MftIndex(entries).FindLargeFiles(volume, 100_000_000, 200, CancellationToken.None);
 
         Assert.Equal(2, result.MatchedCount);
         Assert.Equal(350_000_000, result.MatchedBytes);
@@ -123,7 +123,7 @@ public sealed class MftScannerTests
             entries[16 + index] = Entry(16 + index, 5, $"file-{index}.bin", size: 100_000_000);
         }
 
-        var result = new MftIndex(entries).FindLargeFiles(volume, 50_000_000, CancellationToken.None);
+        var result = new MftIndex(entries).FindLargeFiles(volume, 50_000_000, 200, CancellationToken.None);
 
         Assert.Equal(205, result.MatchedCount);
         Assert.Equal(20_500_000_000, result.MatchedBytes);

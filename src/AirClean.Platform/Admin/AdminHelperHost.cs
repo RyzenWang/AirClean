@@ -138,6 +138,7 @@ public static class AdminHelperHost
         var usedMft = MftLargeFileScanner.TryScan(
             volume,
             Math.Max(0, request.ThresholdBytes),
+            Math.Clamp(request.MaxItems, 1, 2_000),
             progress,
             CancellationToken.None,
             out var result);

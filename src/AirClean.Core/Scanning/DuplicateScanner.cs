@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using AirClean.Core.Models;
+using AirClean.Core.Security;
 
 namespace AirClean.Core.Scanning;
 
@@ -23,8 +24,13 @@ public sealed class DuplicateScanner
     private const int MaxDepth = 16;
 
     private readonly int _maxGroups;
+    private readonly ExclusionSet _exclusions;
+    private readonly long _minFileSize;
 
-    public DuplicateScanner(int maxGroups = MaxGroups)
+    public DuplicateScanner(
+        int maxGroups = MaxGroups,
+        ExclusionSet? exclusions = null,
+        long minFileSize = MinFileSize)
     {
         if (maxGroups <= 0)
         {
@@ -32,6 +38,8 @@ public sealed class DuplicateScanner
         }
 
         _maxGroups = maxGroups;
+        _exclusions = exclusions ?? new ExclusionSet();
+        _minFileSize = minFileSize > 0 ? minFileSize : MinFileSize;
     }
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsLinux()
@@ -68,7 +76,7 @@ public sealed class DuplicateScanner
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (!Directory.Exists(root))
+            if (!Directory.Exists(root) || _exclusions.Contains(root))
             {
                 continue;
             }
@@ -105,11 +113,17 @@ public sealed class DuplicateScanner
                         {
                             if (depth < MaxDepth &&
                                 !string.Equals(entry.Name, "node_modules", StringComparison.OrdinalIgnoreCase) &&
-                                !string.Equals(entry.Name, ".git", StringComparison.OrdinalIgnoreCase))
+                                !string.Equals(entry.Name, ".git", StringComparison.OrdinalIgnoreCase) &&
+                                !_exclusions.Contains(entry.FullName))
                             {
                                 pending.Push((entry.FullName, depth + 1));
                             }
 
+                            continue;
+                        }
+
+                        if (_exclusions.Contains(entry.FullName))
+                        {
                             continue;
                         }
 
@@ -125,7 +139,7 @@ public sealed class DuplicateScanner
                             continue;
                         }
 
-                        if (length < MinFileSize || !seen.Add(entry.FullName))
+                        if (length < _minFileSize || !seen.Add(entry.FullName))
                         {
                             continue;
                         }

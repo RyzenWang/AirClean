@@ -1,6 +1,7 @@
 using AirClean.Core.Deleting;
 using AirClean.Core.Models;
 using AirClean.Core.Scanning;
+using AirClean.Core.Security;
 using AirClean.Core.Trash;
 using Xunit;
 
@@ -172,6 +173,22 @@ public sealed class DeletionServiceTests : IDisposable
         Assert.True(report.Aborted);
         Assert.True(report.DiskFull);
         Assert.Equal(1, report.Skipped[SkipReason.DeleteFailed]);
+    }
+
+    [Fact]
+    public void Excluded_paths_are_refused()
+    {
+        var file = Write(_root, "keep-me.bin", 64);
+
+        var report = new DeletionService(
+                new TestTrash(),
+                new JournalStore(_journal),
+                exclusions: new ExclusionSet([_root]))
+            .Delete([BuildCategory((file, _root))], DeleteMode.Permanent, null, CancellationToken.None);
+
+        Assert.True(File.Exists(file));
+        Assert.Equal(0, report.DeletedCount);
+        Assert.Equal(1, report.Skipped[SkipReason.Excluded]);
     }
 
     [Fact]

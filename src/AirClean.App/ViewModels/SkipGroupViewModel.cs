@@ -49,6 +49,7 @@ public sealed partial class SkipGroupViewModel : ObservableObject
         SkipReason.Protected => "L.SkippedProtected",
         SkipReason.ReparsePoint => "L.SkippedReparse",
         SkipReason.DeleteFailed => "L.SkippedDeleteFailed",
+        SkipReason.Excluded => "L.SkippedExcluded",
         _ => "L.SkippedInUse"
     };
 }

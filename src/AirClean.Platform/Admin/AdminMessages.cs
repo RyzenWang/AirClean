@@ -18,6 +18,8 @@ internal sealed class AdminRequest
 
     public long ThresholdBytes { get; set; }
 
+    public int MaxItems { get; set; }
+
     public string? RuleId { get; set; }
 }
 

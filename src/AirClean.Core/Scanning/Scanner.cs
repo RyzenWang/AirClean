@@ -12,9 +12,11 @@ namespace AirClean.Core.Scanning;
 /// reparse points, never leaves a rule root, and de-duplicates paths so overlapping rules
 /// cannot double count.
 /// </summary>
-public sealed class Scanner(RuleSet ruleSet, ITrashService trash)
+public sealed class Scanner(RuleSet ruleSet, ITrashService trash, ExclusionSet? exclusions = null)
 {
     public const int MaxItems = 200_000;
+
+    private readonly ExclusionSet _exclusions = exclusions ?? new ExclusionSet();
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsLinux()
         ? StringComparer.Ordinal
@@ -57,6 +59,11 @@ public sealed class Scanner(RuleSet ruleSet, ITrashService trash)
                     cancellationToken.ThrowIfCancellationRequested();
 
                     if (PathGuard.IsProtected(root) || !Directory.Exists(root))
+                    {
+                        continue;
+                    }
+
+                    if (_exclusions.Contains(root))
                     {
                         continue;
                     }
@@ -167,11 +174,16 @@ public sealed class Scanner(RuleSet ruleSet, ITrashService trash)
 
                     if (entry is DirectoryInfo)
                     {
-                        if (depth < rule.MaxDepth)
+                        if (depth < rule.MaxDepth && !_exclusions.Contains(entry.FullName))
                         {
                             pending.Push((entry.FullName, depth + 1));
                         }
 
+                        continue;
+                    }
+
+                    if (_exclusions.Contains(entry.FullName))
+                    {
                         continue;
                     }
 

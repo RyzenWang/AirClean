@@ -11,10 +11,17 @@ namespace AirClean.Core.Scanning;
 /// Finds the largest files on one volume. Unlike cache rules this deliberately looks inside
 /// user folders, because the user picks the files themselves — nothing is pre-selected.
 /// </summary>
-public sealed class LargeFileScanner(ITrashService trash, IPrivilegedLargeFileScanner? privileged = null)
+public sealed class LargeFileScanner(
+    ITrashService trash,
+    IPrivilegedLargeFileScanner? privileged = null,
+    ExclusionSet? exclusions = null,
+    int maxItems = 200)
 {
     public const long DefaultThresholdBytes = 100L * 1024 * 1024;
     public const int MaxItems = 200;
+
+    private readonly ExclusionSet _exclusions = exclusions ?? new ExclusionSet();
+    private readonly int _maxItems = maxItems > 0 ? maxItems : MaxItems;
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsLinux()
         ? StringComparer.Ordinal
@@ -56,14 +63,23 @@ public sealed class LargeFileScanner(ITrashService trash, IPrivilegedLargeFileSc
         // NTFS exposes the whole file index without walking directories. It needs raw
         // volume access (elevation); when that is unavailable this returns false silently
         // and the normal walk below takes over.
-        if (MftLargeFileScanner.TryScan(volume, thresholdBytes, progress, cancellationToken, out var mft) &&
+        if (MftLargeFileScanner.TryScan(volume, thresholdBytes, _maxItems, progress, cancellationToken, out var mft) &&
             mft is not null)
         {
             stopwatch.Stop();
+            var items = _exclusions.IsEmpty
+                ? mft.Items
+                : mft.Items.Where(item => !_exclusions.Contains(item.Path)).ToArray();
+            var reportedBytes = _exclusions.IsEmpty ? mft.MatchedBytes : items.Sum(item => item.Size);
+            var reportedCount = _exclusions.IsEmpty ? mft.MatchedCount : items.Count;
 
             return new ScanResult
             {
-                Categories = [CreateLargeCategory(mft.Items, mft.MatchedBytes, mft.MatchedCount), ScanTrash(volume)],
+                Categories =
+                [
+                    CreateLargeCategory(items, reportedBytes, reportedCount),
+                    ScanTrash(volume)
+                ],
                 Elapsed = stopwatch.Elapsed
             };
         }
@@ -71,15 +87,20 @@ public sealed class LargeFileScanner(ITrashService trash, IPrivilegedLargeFileSc
         // The app itself never runs elevated. If the user opted in, ask the helper process
         // to run the same read-only MFT scan with administrator rights. A declined UAC
         // prompt simply returns null and the ordinary walk continues.
-        if (privileged?.TryScan(volume, thresholdBytes, progress, cancellationToken) is { } elevated)
+        if (privileged?.TryScan(volume, thresholdBytes, _maxItems, progress, cancellationToken) is { } elevated)
         {
             stopwatch.Stop();
+            var items = _exclusions.IsEmpty
+                ? elevated.Items
+                : elevated.Items.Where(item => !_exclusions.Contains(item.Path)).ToArray();
+            var reportedBytes = _exclusions.IsEmpty ? elevated.MatchedBytes : items.Sum(item => item.Size);
+            var reportedCount = _exclusions.IsEmpty ? elevated.MatchedCount : items.Count;
 
             return new ScanResult
             {
                 Categories =
                 [
-                    CreateLargeCategory(elevated.Items, elevated.MatchedBytes, elevated.MatchedCount),
+                    CreateLargeCategory(items, reportedBytes, reportedCount),
                     ScanTrash(volume)
                 ],
                 Elapsed = stopwatch.Elapsed
@@ -101,6 +122,11 @@ public sealed class LargeFileScanner(ITrashService trash, IPrivilegedLargeFileSc
             cancellationToken.ThrowIfCancellationRequested();
             var (directory, depth) = pending.Pop();
             current = directory;
+
+            if (_exclusions.Contains(directory))
+            {
+                continue;
+            }
 
             if (depth > 24)
             {
@@ -140,11 +166,17 @@ public sealed class LargeFileScanner(ITrashService trash, IPrivilegedLargeFileSc
                     if (entry is DirectoryInfo)
                     {
                         if (!SkippedDirectoryNames.Contains(entry.Name) &&
-                            !PathGuard.IsSystemProtected(entry.FullName))
+                            !PathGuard.IsSystemProtected(entry.FullName) &&
+                            !_exclusions.Contains(entry.FullName))
                         {
                             pending.Push((entry.FullName, depth + 1));
                         }
 
+                        continue;
+                    }
+
+                    if (_exclusions.Contains(entry.FullName))
+                    {
                         continue;
                     }
 
@@ -184,7 +216,7 @@ public sealed class LargeFileScanner(ITrashService trash, IPrivilegedLargeFileSc
 
         var top = candidates
             .OrderByDescending(item => item.Size)
-            .Take(MaxItems)
+            .Take(_maxItems)
             .ToList();
 
         progress?.Report(new ScanProgress(filesSeen, matchedBytes, candidates.Count, current));

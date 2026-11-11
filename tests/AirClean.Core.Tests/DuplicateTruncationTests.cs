@@ -54,6 +54,26 @@ public sealed class DuplicateTruncationTests : IDisposable
         Assert.Equal(1, result.DuplicateGroupCount);
     }
 
+    [Fact]
+    public async Task The_minimum_size_can_raise_the_participation_threshold()
+    {
+        Directory.CreateDirectory(_root);
+
+        var small = Encoding.UTF8.GetBytes(new string('s', 1024 * 1024));
+        var large = Encoding.UTF8.GetBytes(new string('l', 2 * 1024 * 1024));
+
+        await File.WriteAllBytesAsync(Path.Combine(_root, "small-1.bin"), small);
+        await File.WriteAllBytesAsync(Path.Combine(_root, "small-2.bin"), small);
+        await File.WriteAllBytesAsync(Path.Combine(_root, "large-1.bin"), large);
+        await File.WriteAllBytesAsync(Path.Combine(_root, "large-2.bin"), large);
+
+        var result = await new DuplicateScanner(maxGroups: 10, minFileSize: 2 * 1024 * 1024)
+            .ScanAsync([_root], 1_000_000_000, null, CancellationToken.None);
+
+        var group = Assert.Single(result.DuplicateGroups!);
+        Assert.Equal(2L * 1024 * 1024, group.FileSize);
+    }
+
     public void Dispose()
     {
         try

@@ -63,6 +63,21 @@ public sealed class LargeFileScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task Caps_the_list_at_the_configured_limit()
+    {
+        for (var index = 0; index < 6; index++)
+        {
+            Write($"limited-{index}.bin", 30 + index);
+        }
+
+        var result = await new LargeFileScanner(new TestTrash(), maxItems: 3)
+            .ScanAsync(Volume(_root), thresholdBytes: 10, progress: null, CancellationToken.None);
+
+        var large = Assert.Single(result.Categories, category => category.Category == CleanCategory.LargeFiles);
+        Assert.Equal(3, large.Items.Count);
+    }
+
+    [Fact]
     public async Task Caps_the_list_at_two_hundred_entries()
     {
         for (var index = 0; index < 210; index++)
@@ -87,6 +102,7 @@ public sealed class LargeFileScannerTests : IDisposable
         public LargeFileScanResult? TryScan(
             VolumeInfo volume,
             long thresholdBytes,
+            int maxItems,
             IProgress<ScanProgress>? progress,
             CancellationToken cancellationToken)
         {

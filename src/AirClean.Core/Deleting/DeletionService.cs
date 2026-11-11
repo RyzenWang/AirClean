@@ -14,7 +14,8 @@ public sealed class DeletionService(
     ITrashService trash,
     JournalStore? journal = null,
     IAdminCleanup? adminCleanup = null,
-    Func<string, long?>? freeSpaceProbe = null)
+    Func<string, long?>? freeSpaceProbe = null,
+    ExclusionSet? exclusions = null)
 {
     private const int MaxJournalEntries = 20_000;
     private const int MaxSkippedSamples = 500;
@@ -23,6 +24,7 @@ public sealed class DeletionService(
 
     private readonly JournalStore _journal = journal ?? new JournalStore();
     private readonly Func<string, long?> _freeSpace = freeSpaceProbe ?? DefaultFreeSpace;
+    private readonly ExclusionSet _exclusions = exclusions ?? new ExclusionSet();
 
     public JournalStore Journal => _journal;
 
@@ -116,6 +118,12 @@ public sealed class DeletionService(
                     if (cancellationToken.IsCancellationRequested)
                     {
                         throw new OperationCanceledException(cancellationToken);
+                    }
+
+                    if (_exclusions.Contains(item.Path))
+                    {
+                        Skip(skipped, skippedSamples, SkipReason.Excluded, item.Path);
+                        continue;
                     }
 
                     var blocked = category.IsExplicitSelection

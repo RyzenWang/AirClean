@@ -39,5 +39,6 @@ public enum SkipReason
     NotFound,
     Protected,
     ReparsePoint,
-    DeleteFailed
+    DeleteFailed,
+    Excluded
 }

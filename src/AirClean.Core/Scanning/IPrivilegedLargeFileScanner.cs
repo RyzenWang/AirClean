@@ -12,6 +12,7 @@ public interface IPrivilegedLargeFileScanner
     LargeFileScanResult? TryScan(
         VolumeInfo volume,
         long thresholdBytes,
+        int maxItems,
         IProgress<ScanProgress>? progress,
         CancellationToken cancellationToken);
 }

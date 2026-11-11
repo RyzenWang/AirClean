@@ -1,5 +1,6 @@
 using AirClean.Core.Models;
 using AirClean.Core.Rules;
+using AirClean.Core.Security;
 using AirClean.Core.Trash;
 using AirClean.Core.Volumes;
 
@@ -32,7 +33,10 @@ public sealed record VolumeScanRequest(
     bool IncludeLargeFiles = true,
     bool IncludeDuplicates = true,
     long LargeFileThreshold = LargeFileScanner.DefaultThresholdBytes,
-    long DuplicateHashBudget = DuplicateScanner.DefaultHashBudgetBytes);
+    long DuplicateHashBudget = DuplicateScanner.DefaultHashBudgetBytes,
+    int LargeFileLimit = LargeFileScanner.MaxItems,
+    long DuplicateMinSizeBytes = DuplicateScanner.MinFileSize,
+    int DuplicateGroupLimit = DuplicateScanner.MaxGroups);
 
 /// <summary>
 /// One scan per volume that produces every applicable category: cache rules on the system
@@ -43,11 +47,10 @@ public sealed record VolumeScanRequest(
 public sealed class VolumeScanService(
     RuleSet ruleSet,
     ITrashService trash,
-    IAdminHelper? adminHelper = null) : IVolumeScanService
+    IAdminHelper? adminHelper = null,
+    ExclusionSet? exclusions = null) : IVolumeScanService
 {
-    private readonly Scanner _rules = new(ruleSet, trash);
-    private readonly LargeFileScanner _largeFiles = new(trash, adminHelper);
-    private readonly DuplicateScanner _duplicates = new();
+    private readonly Scanner _rules = new(ruleSet, trash, exclusions);
     private readonly IAdminCleanup? _adminCleanup = adminHelper;
 
     public async Task<ScanResult> ScanAsync(
@@ -134,7 +137,8 @@ public sealed class VolumeScanService(
             var stageProgress = new Progress<ScanProgress>(value => progress?.Report(
                 new VolumeScanProgress(ScanStage.LargeFiles, value.FilesSeen, value.BytesFound, value.ItemsFound, value.CurrentTarget)));
 
-            var largeResult = await _largeFiles.ScanAsync(
+            var largeFiles = new LargeFileScanner(trash, adminHelper, exclusions, request.LargeFileLimit);
+            var largeResult = await largeFiles.ScanAsync(
                 request.Volume,
                 request.LargeFileThreshold,
                 stageProgress,
@@ -181,7 +185,11 @@ public sealed class VolumeScanService(
             var stageProgress = new Progress<DuplicateScanProgress>(value => progress?.Report(
                 new VolumeScanProgress(ScanStage.Duplicates, value.FilesSeen, value.BytesHashed, value.GroupsFound, value.CurrentPath)));
 
-            var duplicateResult = await _duplicates.ScanAsync(
+            var duplicates = new DuplicateScanner(
+                request.DuplicateGroupLimit,
+                exclusions,
+                request.DuplicateMinSizeBytes);
+            var duplicateResult = await duplicates.ScanAsync(
                 request.DuplicateRoots,
                 request.DuplicateHashBudget,
                 stageProgress,

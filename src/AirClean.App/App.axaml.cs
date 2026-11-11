@@ -6,6 +6,7 @@ using AirClean.Core.Deleting;
 using AirClean.Core.Models;
 using AirClean.Core.Rules;
 using AirClean.Core.Scanning;
+using AirClean.Core.Security;
 using AirClean.Core.Services;
 using AirClean.Platform;
 using AirClean.Platform.Admin;
@@ -55,9 +56,10 @@ public partial class App : Application
             var trash = PlatformServices.CreateTrashService();
             var reveal = PlatformServices.CreateRevealService();
             var adminHelper = new AdminHelperClient();
-            var volumeScan = new VolumeScanService(RuleSet.ForCurrentPlatform(), trash, adminHelper);
+            var exclusions = new ExclusionSet(_settings.Exclusions);
+            var volumeScan = new VolumeScanService(RuleSet.ForCurrentPlatform(), trash, adminHelper, exclusions);
             var journal = new JournalStore();
-            var deletion = new DeletionService(trash, journal, adminCleanup: adminHelper);
+            var deletion = new DeletionService(trash, journal, adminHelper, exclusions: exclusions);
 
             var viewModel = new MainWindowViewModel(
                 _settings,
@@ -69,7 +71,8 @@ public partial class App : Application
                 trash,
                 reveal,
                 adminHelper: adminHelper,
-                reportExporter: new FileReportExporter());
+                reportExporter: new FileReportExporter(),
+                exclusions: exclusions);
 
             var window = new MainWindow
             {

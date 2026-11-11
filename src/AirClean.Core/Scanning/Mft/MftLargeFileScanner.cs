@@ -24,11 +24,30 @@ internal static class MftLargeFileScanner
         IProgress<ScanProgress>? progress,
         CancellationToken cancellationToken,
         out MftLargeFileResult? result) =>
-        TryScan(volume, thresholdBytes, progress, cancellationToken, out result, out _);
+        TryScan(volume, thresholdBytes, LargeFileScanner.MaxItems, progress, cancellationToken, out result, out _);
 
     public static bool TryScan(
         VolumeInfo volume,
         long thresholdBytes,
+        IProgress<ScanProgress>? progress,
+        CancellationToken cancellationToken,
+        out MftLargeFileResult? result,
+        out MftScanStats? stats) =>
+        TryScan(volume, thresholdBytes, LargeFileScanner.MaxItems, progress, cancellationToken, out result, out stats);
+
+    public static bool TryScan(
+        VolumeInfo volume,
+        long thresholdBytes,
+        int maxItems,
+        IProgress<ScanProgress>? progress,
+        CancellationToken cancellationToken,
+        out MftLargeFileResult? result) =>
+        TryScan(volume, thresholdBytes, maxItems, progress, cancellationToken, out result, out _);
+
+    public static bool TryScan(
+        VolumeInfo volume,
+        long thresholdBytes,
+        int maxItems,
         IProgress<ScanProgress>? progress,
         CancellationToken cancellationToken,
         out MftLargeFileResult? result,
@@ -136,7 +155,7 @@ internal static class MftLargeFileScanner
             }
 
             var indexWatch = Stopwatch.StartNew();
-            result = new MftIndex(entries).FindLargeFiles(volume, thresholdBytes, cancellationToken);
+            result = new MftIndex(entries).FindLargeFiles(volume, thresholdBytes, maxItems, cancellationToken);
             indexWatch.Stop();
 
             stats = new MftScanStats(

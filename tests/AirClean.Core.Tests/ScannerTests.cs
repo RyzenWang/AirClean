@@ -2,6 +2,7 @@ using System.Text;
 using AirClean.Core.Models;
 using AirClean.Core.Rules;
 using AirClean.Core.Scanning;
+using AirClean.Core.Security;
 using AirClean.Core.Trash;
 using Xunit;
 
@@ -39,6 +40,23 @@ public sealed class ScannerTests : IDisposable
 
         // Depth 0 is the root itself; depth 1 is "a". "a/b" is beyond the limit.
         Assert.Equal(2, result.Categories[0].FileCount);
+    }
+
+    [Fact]
+    public async Task An_excluded_directory_is_not_scanned()
+    {
+        Write("keep.tmp", 10, daysAgo: 5);
+        Write(Path.Combine("skip", "inside.tmp"), 20, daysAgo: 5);
+
+        var scanner = new Scanner(
+            BuildRules(minAgeDays: 0, maxDepth: 4),
+            new TestTrash(),
+            new ExclusionSet([Path.Combine(_root, "skip")]));
+
+        var result = await scanner.ScanAsync(null, CancellationToken.None);
+
+        var item = Assert.Single(result.Categories[0].Items);
+        Assert.EndsWith("keep.tmp", item.Path, StringComparison.Ordinal);
     }
 
     [Fact]

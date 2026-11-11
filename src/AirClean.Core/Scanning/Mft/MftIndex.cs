@@ -47,6 +47,7 @@ internal sealed class MftIndex
     public MftLargeFileResult FindLargeFiles(
         VolumeInfo volume,
         long thresholdBytes,
+        int maxItems,
         CancellationToken cancellationToken)
     {
         var root = EnsureTrailingSeparator(volume.Root);
@@ -85,7 +86,7 @@ internal sealed class MftIndex
         var top = matches
             .OrderByDescending(item => item.Size)
             .ThenBy(item => item.Path, StringComparer.OrdinalIgnoreCase)
-            .Take(LargeFileScanner.MaxItems)
+            .Take(maxItems)
             .ToList();
 
         return new MftLargeFileResult(top, matchedBytes, matchedCount);
