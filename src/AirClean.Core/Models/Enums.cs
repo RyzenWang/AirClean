@@ -38,5 +38,6 @@ public enum SkipReason
     ChangedSinceScan,
     NotFound,
     Protected,
-    ReparsePoint
+    ReparsePoint,
+    DeleteFailed
 }

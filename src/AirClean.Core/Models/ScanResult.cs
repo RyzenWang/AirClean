@@ -93,7 +93,9 @@ public sealed record DeletionReport(
     bool TrashEmptied,
     bool Canceled = false,
     IReadOnlyList<SkippedItem>? SkippedItems = null,
-    bool SkippedTruncated = false)
+    bool SkippedTruncated = false,
+    bool Aborted = false,
+    bool DiskFull = false)
 {
     public long TotalBytes => TrashedBytes + FreedBytes;
 

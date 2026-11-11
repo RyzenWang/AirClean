@@ -477,6 +477,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool HasSkipped { get; private set; }
 
+    public bool HasAbortNote => _lastReport is { Aborted: true };
+
+    public string AbortNote => _lastReport is { DiskFull: true }
+        ? _localization.T("L.AbortDiskFull")
+        : _localization.T("L.AbortFailureRate");
+
     /// <summary>Hidden once the whole batch has been restored; the category sizes would lie.</summary>
     public bool HasCleanupDetails =>
         !(_undoRestoredCount > 0 && _lastReport is { TrashedBytes: 0, FreedBytes: 0 });
@@ -1390,6 +1396,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(HasSkipGroups));
             OnPropertyChanged(nameof(SkippedTruncated));
             OnPropertyChanged(nameof(CanExportSkipReport));
+            OnPropertyChanged(nameof(HasAbortNote));
+            OnPropertyChanged(nameof(AbortNote));
             return;
         }
 
@@ -1435,6 +1443,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(IsUndoVisible));
         OnPropertyChanged(nameof(HasCleanupDetails));
+        OnPropertyChanged(nameof(HasAbortNote));
+        OnPropertyChanged(nameof(AbortNote));
     }
 
     private void RefreshSkipGroups(DeletionReport report)

@@ -13,12 +13,16 @@ namespace AirClean.Core.Deleting;
 public sealed class DeletionService(
     ITrashService trash,
     JournalStore? journal = null,
-    IAdminCleanup? adminCleanup = null)
+    IAdminCleanup? adminCleanup = null,
+    Func<string, long?>? freeSpaceProbe = null)
 {
     private const int MaxJournalEntries = 20_000;
     private const int MaxSkippedSamples = 500;
+    private const int FailureRateMinimum = 10;
+    private const int FailureRatePercent = 30;
 
     private readonly JournalStore _journal = journal ?? new JournalStore();
+    private readonly Func<string, long?> _freeSpace = freeSpaceProbe ?? DefaultFreeSpace;
 
     public JournalStore Journal => _journal;
 
@@ -43,12 +47,31 @@ public sealed class DeletionService(
         long freedBytes = 0;
         var trashEmptied = false;
         var canceled = false;
+        var aborted = false;
+        var diskFull = false;
+        var attempted = 0;
+        var failed = 0;
+
+        void RecordFailure()
+        {
+            failed++;
+
+            if (attempted >= FailureRateMinimum && failed * 100 > attempted * FailureRatePercent)
+            {
+                aborted = true;
+            }
+        }
 
         try
         {
             foreach (var category in categories)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+
+                if (aborted)
+                {
+                    break;
+                }
 
                 if (category.Category == CleanCategory.Trash)
                 {
@@ -85,6 +108,11 @@ public sealed class DeletionService(
 
                 foreach (var item in category.Items)
                 {
+                    if (aborted)
+                    {
+                        break;
+                    }
+
                     if (cancellationToken.IsCancellationRequested)
                     {
                         throw new OperationCanceledException(cancellationToken);
@@ -139,15 +167,30 @@ public sealed class DeletionService(
                                 info.Attributes &= ~FileAttributes.ReadOnly;
                             }
 
+                            attempted++;
                             info.Delete();
                             freedBytes += item.Size;
                         }
                         else
                         {
+                            attempted++;
                             var moved = trash.MoveToTrash(item.Path);
                             if (!moved.Success)
                             {
-                                Skip(skipped, skippedSamples, SkipReason.Permission, item.Path);
+                                RecordFailure();
+                                Skip(skipped, skippedSamples, SkipReason.DeleteFailed, item.Path);
+
+                                if (IsDiskFull(item.Path, item.Size))
+                                {
+                                    diskFull = true;
+                                    aborted = true;
+                                }
+
+                                if (aborted)
+                                {
+                                    break;
+                                }
+
                                 continue;
                             }
 
@@ -168,11 +211,18 @@ public sealed class DeletionService(
                     }
                     catch (UnauthorizedAccessException)
                     {
+                        RecordFailure();
                         Skip(skipped, skippedSamples, SkipReason.Permission, item.Path);
                     }
                     catch (IOException)
                     {
+                        RecordFailure();
                         Skip(skipped, skippedSamples, SkipReason.InUse, item.Path);
+                    }
+
+                    if (aborted)
+                    {
+                        break;
                     }
 
                     done++;
@@ -203,9 +253,42 @@ public sealed class DeletionService(
             trashEmptied,
             canceled,
             skippedSamples,
-            skippedTotal > skippedSamples.Count);
+            skippedTotal > skippedSamples.Count,
+            aborted,
+            diskFull);
         _journal.Append(report, mode, entries);
         return report;
+    }
+
+    private bool IsDiskFull(string path, long size)
+    {
+        try
+        {
+            var root = Path.GetPathRoot(path);
+            if (string.IsNullOrEmpty(root))
+            {
+                return false;
+            }
+
+            var free = _freeSpace(root);
+            return free is >= 0 && free < size;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static long? DefaultFreeSpace(string root)
+    {
+        try
+        {
+            return new DriveInfo(root).AvailableFreeSpace;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private long EmptyTrash(string? rootPath)

@@ -84,6 +84,7 @@ public sealed class SettingsService
             try
             {
                 System.IO.Directory.CreateDirectory(SettingsDirectory);
+                settings.SchemaVersion = AppSettings.CurrentSchemaVersion;
                 var temporaryPath = SettingsPath + ".tmp";
                 File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings, SettingsJsonContext.Default.AppSettings));
                 File.Move(temporaryPath, SettingsPath, overwrite: true);
@@ -98,6 +99,8 @@ public sealed class SettingsService
 
     private static AppSettings Normalize(AppSettings settings)
     {
+        settings.SchemaVersion = AppSettings.CurrentSchemaVersion;
+
         if (double.IsNaN(settings.WindowWidth) || settings.WindowWidth < MinimumWindowWidth)
         {
             settings.WindowWidth = 1240;
@@ -108,16 +111,42 @@ public sealed class SettingsService
             settings.WindowHeight = 860;
         }
 
-        if (string.IsNullOrWhiteSpace(settings.Theme))
+        settings.Theme = settings.Theme switch
         {
-            settings.Theme = "System";
-        }
+            "Light" => "Light",
+            "Dark" => "Dark",
+            _ => "System"
+        };
 
-        if (string.IsNullOrWhiteSpace(settings.Language))
+        settings.Language = settings.Language switch
         {
-            settings.Language = "en";
-        }
+            "zh-CN" => "zh-CN",
+            _ => "en"
+        };
+
+        settings.ScanMode = settings.ScanMode switch
+        {
+            "Full" => "Full",
+            _ => "Quick"
+        };
+
+        settings.Exclusions = (settings.Exclusions ?? [])
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path.Trim())
+            .Distinct(OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase)
+            .Take(200)
+            .ToList();
+
+        settings.LargeFileThresholdMb = InRange(settings.LargeFileThresholdMb, 1, 10_240, 100);
+        settings.LargeFileLimit = InRange(settings.LargeFileLimit, 10, 2_000, 200);
+        settings.DuplicateMinSizeMb = InRange(settings.DuplicateMinSizeMb, 1, 1_024, 1);
+        settings.DuplicateGroupLimit = InRange(settings.DuplicateGroupLimit, 10, 2_000, 200);
+        settings.HashBudgetGb = InRange(settings.HashBudgetGb, 1, 64, 8);
+        settings.ReminderIntervalDays = InRange(settings.ReminderIntervalDays, 1, 365, 7);
 
         return settings;
     }
+
+    private static int InRange(int value, int minimum, int maximum, int fallback) =>
+        value < minimum || value > maximum ? fallback : value;
 }

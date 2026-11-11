@@ -128,6 +128,53 @@ public sealed class DeletionServiceTests : IDisposable
     }
 
     [Fact]
+    public void A_batch_aborts_when_more_than_thirty_percent_of_deletes_fail()
+    {
+        var files = Enumerable.Range(0, 12)
+            .Select(index => Write(_root, $"fail-{index}.bin", 32))
+            .ToArray();
+        var trash = new TestTrash { FailMoves = true };
+
+        var report = Delete([BuildCategory(files.Select(path => (path, _root)).ToArray())], DeleteMode.Trash, trash);
+
+        Assert.True(report.Aborted);
+        Assert.False(report.DiskFull);
+        Assert.Equal(0, report.DeletedCount);
+        Assert.Equal(10, report.Skipped[SkipReason.DeleteFailed]);
+        Assert.Equal(10, report.Items.Count);
+    }
+
+    [Fact]
+    public void A_small_batch_does_not_abort_on_a_few_failures()
+    {
+        var files = Enumerable.Range(0, 5)
+            .Select(index => Write(_root, $"few-{index}.bin", 32))
+            .ToArray();
+        var trash = new TestTrash { FailMoves = true };
+
+        var report = Delete([BuildCategory(files.Select(path => (path, _root)).ToArray())], DeleteMode.Trash, trash);
+
+        Assert.False(report.Aborted);
+        Assert.Equal(5, report.Skipped[SkipReason.DeleteFailed]);
+    }
+
+    [Fact]
+    public void A_disk_full_failure_aborts_with_the_disk_full_flag()
+    {
+        var files = Enumerable.Range(0, 12)
+            .Select(index => Write(_root, $"full-{index}.bin", 32))
+            .ToArray();
+        var trash = new TestTrash { FailMoves = true };
+
+        var report = new DeletionService(trash, new JournalStore(_journal), freeSpaceProbe: _ => 1)
+            .Delete([BuildCategory(files.Select(path => (path, _root)).ToArray())], DeleteMode.Trash, null, CancellationToken.None);
+
+        Assert.True(report.Aborted);
+        Assert.True(report.DiskFull);
+        Assert.Equal(1, report.Skipped[SkipReason.DeleteFailed]);
+    }
+
+    [Fact]
     public void A_journal_batch_is_written_for_every_cleanup()
     {
         var file = Write(_root, "a.tmp", 10);

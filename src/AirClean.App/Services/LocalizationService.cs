@@ -92,6 +92,12 @@ public sealed class LocalizationService
             ["L.CleanCancel"] = ("Stop", "停止"),
             ["L.CleaningTitle"] = ("Cleaning…", "正在清理…"),
             ["L.CleanFailedFormat"] = ("Cleanup failed: {0}", "清理失败：{0}"),
+            ["L.AbortFailureRate"] = (
+                "Cleanup stopped early: too many files failed. The rest were left untouched.",
+                "清理提前中止：失败文件过多，其余文件未处理。"),
+            ["L.AbortDiskFull"] = (
+                "There is not enough free space to move files to the Trash. Switch to permanent deletion and try again.",
+                "磁盘或废纸篓空间不足，无法移到废纸篓。请改用永久删除后重试。"),
 
             ["L.CategorySystemTemp"] = ("System temp", "系统临时文件"),
             ["L.CategorySystemTempDesc"] = ("Temporary files, update caches and crash dumps", "临时目录、更新缓存、崩溃转储与旧安装包"),
@@ -192,6 +198,7 @@ public sealed class LocalizationService
             ["L.SkippedNotFound"] = ("no longer exists", "已不存在"),
             ["L.SkippedProtected"] = ("protected path", "受保护路径"),
             ["L.SkippedReparse"] = ("link or reparse point", "链接或重解析点"),
+            ["L.SkippedDeleteFailed"] = ("delete failed", "删除失败"),
             ["L.SkippedTruncated"] = ("Only the first 500 skipped files are listed.", "只列出前 500 个跳过的文件。"),
             ["L.ExportCsv"] = ("Export CSV", "导出 CSV"),
             ["L.Exporting"] = ("Exporting…", "正在导出…"),
