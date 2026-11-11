@@ -1,6 +1,7 @@
 using AirClean.App.Services;
 using AirClean.App.ViewModels;
 using AirClean.Core.Models;
+using AirClean.Platform.Autostart;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -64,6 +65,15 @@ public partial class SettingsWindow : Window
         }
 
         viewModel.Apply();
+
+        if (!AutostartService.TrySet(viewModel.RunAtLogin, out var error))
+        {
+            viewModel.ErrorMessage = _localization.Format(
+                "L.AutostartFailedFormat",
+                error ?? "unknown error");
+            return;
+        }
+
         _theme.Set(viewModel.ThemeValue, persist: false);
         _localization.Apply(viewModel.LanguageValue);
         _persist();

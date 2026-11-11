@@ -196,16 +196,24 @@
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="0,1,0,0"
             Padding="20,12">
-      <Grid ColumnDefinitions="*,Auto">
-        <Button Classes="quiet"
-                Content="{DynamicResource L.Cancel}"
-                Click="OnCancel"
-                HorizontalAlignment="Left" />
-        <Button Grid.Column="1"
-                Classes="primary"
-                Content="{DynamicResource L.Save}"
-                Click="OnSave" />
-      </Grid>
+      <StackPanel Spacing="8">
+        <TextBlock Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding HasError}"
+                   Classes="caption"
+                   FontSize="10.5"
+                   Foreground="{DynamicResource CautionBrush}"
+                   TextWrapping="Wrap" />
+        <Grid ColumnDefinitions="*,Auto">
+          <Button Classes="quiet"
+                  Content="{DynamicResource L.Cancel}"
+                  Click="OnCancel"
+                  HorizontalAlignment="Left" />
+          <Button Grid.Column="1"
+                  Classes="primary"
+                  Content="{DynamicResource L.Save}"
+                  Click="OnSave" />
+        </Grid>
+      </StackPanel>
     </Border>
   </Grid>
 </Window>

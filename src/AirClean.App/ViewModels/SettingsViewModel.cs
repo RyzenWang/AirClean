@@ -28,6 +28,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private decimal? _reminderIntervalDays;
     private bool _runAtLogin;
     private bool _useAdminHelper;
+    private string _errorMessage = string.Empty;
 
     public SettingsViewModel(AppSettings source)
     {
@@ -175,6 +176,20 @@ public sealed partial class SettingsViewModel : ObservableObject
         get => _useAdminHelper;
         set => SetProperty(ref _useAdminHelper, value);
     }
+
+    public string ErrorMessage
+    {
+        get => _errorMessage;
+        set
+        {
+            if (SetProperty(ref _errorMessage, value))
+            {
+                OnPropertyChanged(nameof(HasError));
+            }
+        }
+    }
+
+    public bool HasError => _errorMessage.Length > 0;
 
     public string ThemeValue => ThemeIndex switch
     {

@@ -10,6 +10,7 @@ using AirClean.Core.Security;
 using AirClean.Core.Services;
 using AirClean.Platform;
 using AirClean.Platform.Admin;
+using AirClean.Platform.Autostart;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -22,6 +23,9 @@ public partial class App : Application
 {
     private SettingsService? _settingsService;
     private AppSettings? _settings;
+    private TrayIconService? _tray;
+    private ReminderService? _reminders;
+    private bool _exiting;
 
     /// <summary>Set by <see cref="Program"/> once the single-instance lock is held.</summary>
     internal static SingleInstance? SharedInstance { get; set; }
@@ -52,6 +56,12 @@ public partial class App : Application
             localization.Apply(_settings.Language);
 
             var theme = new ThemeService(_settings, SaveSettings);
+
+            if (_settings.RunAtLogin)
+            {
+                // Repair a stale path after an update or a moved portable folder.
+                AutostartService.TrySet(true, out _);
+            }
 
             var trash = PlatformServices.CreateTrashService();
             var reveal = PlatformServices.CreateRevealService();
@@ -86,12 +96,33 @@ public partial class App : Application
                 window.WindowState = WindowState.Maximized;
             }
 
-            window.Closing += (_, _) => PersistWindow(window);
+            window.Closing += (_, args) =>
+            {
+                if (!_exiting && _settings.CloseToTray)
+                {
+                    args.Cancel = true;
+                    window.Hide();
+                    return;
+                }
+
+                PersistWindow(window);
+            };
+
+            window.PropertyChanged += (_, args) =>
+            {
+                if (args.Property == Window.WindowStateProperty &&
+                    window.WindowState == WindowState.Minimized &&
+                    _settings.MinimizeToTray)
+                {
+                    window.Hide();
+                }
+            };
+
             desktop.MainWindow = window;
 
-            if (SharedInstance is { } instance)
+            void ShowMainWindow()
             {
-                instance.Activated += (_, _) => Dispatcher.UIThread.Post(() =>
+                Dispatcher.UIThread.Post(() =>
                 {
                     if (window.WindowState == WindowState.Minimized)
                     {
@@ -101,6 +132,59 @@ public partial class App : Application
                     window.Show();
                     window.Activate();
                 });
+            }
+
+            void QuickScan()
+            {
+                ShowMainWindow();
+                Dispatcher.UIThread.Post(
+                    () =>
+                    {
+                        if (viewModel.Stage is AppStage.Welcome or AppStage.Results)
+                        {
+                            viewModel.ScanCommand.Execute(null);
+                        }
+                    },
+                    DispatcherPriority.Background);
+            }
+
+            void ExitApplication()
+            {
+                _exiting = true;
+                _tray?.Dispose();
+                _tray = null;
+                desktop.Shutdown();
+            }
+
+            _tray = TrayIconService.TryCreate(localization, ShowMainWindow, QuickScan, ExitApplication);
+
+            if (_tray is not null)
+            {
+                localization.LanguageChanged += (_, _) => _tray?.RefreshLanguage(localization);
+            }
+
+            _reminders = new ReminderService(
+                _settings,
+                localization,
+                message =>
+                {
+                    viewModel.ShowReminder(message);
+                    _tray?.ShowReminder(message);
+                },
+                SaveSettings);
+            _reminders.Start();
+
+            desktop.Exit += (_, _) =>
+            {
+                _reminders?.Dispose();
+                _reminders = null;
+                _tray?.Dispose();
+                _tray = null;
+            };
+
+            if (SharedInstance is { } instance)
+            {
+                instance.Activated += (_, _) => ShowMainWindow();
             }
 
             // Installed builds check the release channel shortly after startup; source and

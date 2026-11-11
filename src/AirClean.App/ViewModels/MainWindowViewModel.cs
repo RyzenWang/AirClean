@@ -194,6 +194,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     internal Action Persist => _persist;
 
+    /// <summary>Shows a reminder in the status bar without opening a dialog.</summary>
+    public void ShowReminder(string message) => SetStatusRaw(message);
+
     public ObservableCollection<RecentCleanupViewModel> RecentCleanups { get; } = [];
 
     public bool HasRecentCleanups => RecentCleanups.Count > 0;

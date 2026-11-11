@@ -58,7 +58,16 @@ public sealed class LocalizationService
             ["L.ReminderEnabled"] = ("Remind me to clean up", "提醒我清理"),
             ["L.ReminderInterval"] = ("Reminder interval (days)", "提醒间隔（天）"),
             ["L.ReminderHint"] = ("A reminder only; nothing is scanned or deleted automatically.", "只提醒，不会自动扫描或删除。"),
+            ["L.ReminderMessageFormat"] = (
+                "It has been {0} days. A quick scan can free up space.",
+                "已经 {0} 天没清理了，快速扫描一下可以释放空间。"),
+            ["L.AutostartFailedFormat"] = (
+                "Could not update the start-at-login entry: {0}",
+                "更新登录自启失败：{0}"),
             ["L.Save"] = ("Save", "保存"),
+            ["L.TrayOpen"] = ("Open AirClean", "打开 AirClean"),
+            ["L.TrayScan"] = ("Scan now", "立即扫描"),
+            ["L.TrayExit"] = ("Exit", "退出"),
             ["L.UseAdminHelper"] = (
                 "Use administrator rights (faster scans and system cleanup)",
                 "使用管理员权限（加速扫描与系统清理）"),
