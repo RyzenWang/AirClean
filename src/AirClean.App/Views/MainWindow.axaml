@@ -977,24 +977,23 @@
           <!-- Working -->
           <StackPanel IsVisible="{Binding IsDeleting}" Spacing="0">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-              <Panel Width="18" Height="18">
+              <Panel x:Name="CleaningSpinner"
+                     Width="18"
+                     Height="18">
+                <Panel.RenderTransform>
+                  <RotateTransform CenterX="9" CenterY="9" />
+                </Panel.RenderTransform>
                 <Ellipse Width="18"
                          Height="18"
                          Stroke="{DynamicResource AccentSoftBrush}"
                          StrokeThickness="2.4" />
-                <Arc Classes="spin"
-                     Width="18"
+                <Arc Width="18"
                      Height="18"
                      StartAngle="-90"
                      SweepAngle="100"
                      Stroke="{DynamicResource AccentBrush}"
                      StrokeThickness="2.4"
-                     StrokeLineCap="Round"
-                     RenderTransformOrigin="0.5,0.5">
-                  <Arc.RenderTransform>
-                    <RotateTransform />
-                  </Arc.RenderTransform>
-                </Arc>
+                     StrokeLineCap="Round" />
               </Panel>
               <TextBlock Text="{DynamicResource L.CleaningTitle}"
                          FontSize="17"

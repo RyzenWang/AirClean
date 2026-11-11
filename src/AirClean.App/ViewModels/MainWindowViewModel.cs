@@ -934,10 +934,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _cleanCts = new CancellationTokenSource();
 
         IsDeleting = true;
-        CleanPercent = 0;
-        CleanPercentText = _localization.Format("L.CleanPercentFormat", 0);
-        CleanCurrentFile = string.Empty;
-        DeleteProgressText = _localization.T("L.Deleting");
+        BeginCleanProgress();
         SetStatus("L.Deleting");
         OnPropertyChanged(nameof(IsDeleting));
         OnPropertyChanged(nameof(CanConfirm));
@@ -995,13 +992,38 @@ public sealed partial class MainWindowViewModel : ObservableObject
             UsePermanent = false;
             OnPropertyChanged(nameof(IsConfirmVisible));
             OnPropertyChanged(nameof(CanClean));
-            CleanPercent = 0;
-            CleanCurrentFile = string.Empty;
-            OnPropertyChanged(nameof(CleanPercent));
-            OnPropertyChanged(nameof(CleanCurrentFile));
-            OnPropertyChanged(nameof(HasCleanCurrentFile));
+            ClearCleanProgress();
             RefreshDisk();
         }
+    }
+
+    /// <summary>Resets every progress field before a new batch starts.</summary>
+    private void BeginCleanProgress()
+    {
+        CleanPercent = 0;
+        CleanPercentText = _localization.Format("L.CleanPercentFormat", 0);
+        CleanCurrentFile = string.Empty;
+        DeleteProgressText = _localization.T("L.Deleting");
+        NotifyCleanProgress();
+    }
+
+    /// <summary>Clears the overlay after a batch, so the next one cannot inherit its numbers.</summary>
+    private void ClearCleanProgress()
+    {
+        CleanPercent = 0;
+        CleanPercentText = string.Empty;
+        CleanCurrentFile = string.Empty;
+        DeleteProgressText = string.Empty;
+        NotifyCleanProgress();
+    }
+
+    private void NotifyCleanProgress()
+    {
+        OnPropertyChanged(nameof(CleanPercent));
+        OnPropertyChanged(nameof(CleanPercentText));
+        OnPropertyChanged(nameof(CleanCurrentFile));
+        OnPropertyChanged(nameof(HasCleanCurrentFile));
+        OnPropertyChanged(nameof(DeleteProgressText));
     }
 
     [RelayCommand]
@@ -1021,6 +1043,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(CanExportSkipReport));
         ResetUndoState();
         CompletionItems.Clear();
+        ClearCleanProgress();
         Stage = AppStage.Welcome;
         SetStatus(null);
     }
@@ -1112,6 +1135,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         IsEmptyTrashConfirmVisible = false;
         IsEmptyingTrash = true;
+        // The completion page has no cleanup progress bar, but never leave the last
+        // batch's numbers waiting if the same overlay is shown again.
+        ClearCleanProgress();
 
         try
         {

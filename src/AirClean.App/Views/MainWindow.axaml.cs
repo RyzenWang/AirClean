@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Threading;
 
 namespace AirClean.App.Views;
 
@@ -14,16 +15,39 @@ public partial class MainWindow : Window
 
     private MainWindowViewModel? _viewModel;
     private bool _ready;
+    private DispatcherTimer? _spinnerTimer;
+    private double _spinnerAngle;
 
     public MainWindow()
     {
         InitializeComponent();
+        _spinnerTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+        _spinnerTimer.Tick += OnSpinnerTick;
     }
 
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
         _ready = true;
+        _spinnerTimer?.Start();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _spinnerTimer?.Stop();
+        base.OnClosed(e);
+    }
+
+    private void OnSpinnerTick(object? sender, EventArgs e)
+    {
+        if (_viewModel?.IsDeleting != true ||
+            this.FindControl<Panel>("CleaningSpinner")?.RenderTransform is not RotateTransform rotate)
+        {
+            return;
+        }
+
+        _spinnerAngle = (_spinnerAngle + 12) % 360;
+        rotate.Angle = _spinnerAngle;
     }
 
     private void OnVolumeChanged(object? sender, SelectionChangedEventArgs e)

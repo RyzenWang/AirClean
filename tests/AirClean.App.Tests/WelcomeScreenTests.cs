@@ -180,6 +180,47 @@ public sealed class FlowTests
     }
 
     [AvaloniaFact]
+    public void Cancelling_cleanup_clears_the_progress_fields()
+    {
+        var root = CreateFixture();
+
+        try
+        {
+            var trash = new FakeTrash { MoveDelayMs = 100 };
+            var viewModel = CreateViewModel(
+                "en",
+                LoadRules(root),
+                volumes: [FixtureVolume(root)],
+                duplicateRoots: [root],
+                trash: trash);
+            var window = Show(viewModel);
+
+            viewModel.ScanCommand.Execute(null);
+            PumpUntil(() => viewModel.IsScanComplete);
+            viewModel.OpenConfirmCommand.Execute(null);
+            Pump();
+            viewModel.ConfirmCleanCommand.Execute(null);
+            PumpUntil(() => viewModel.IsDeleting);
+
+            window.InvalidateVisual();
+            Save(window.CaptureRenderedFrame()!, "cleaning-en.png");
+
+            viewModel.CancelCleanCommand.Execute(null);
+            PumpUntil(() => !viewModel.IsDeleting);
+
+            Assert.Equal(AppStage.Results, viewModel.Stage);
+            Assert.Equal(0, viewModel.CleanPercent);
+            Assert.Empty(viewModel.CleanPercentText);
+            Assert.Empty(viewModel.DeleteProgressText);
+            Assert.Empty(viewModel.CleanCurrentFile);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
     public void A_trash_cleanup_can_be_undone_from_the_completion_page()
     {
         var root = CreateFixture();
@@ -205,6 +246,10 @@ public sealed class FlowTests
 
             Assert.True(viewModel.CanUndo);
             Assert.True(viewModel.IsUndoVisible);
+            Assert.Equal(0, viewModel.CleanPercent);
+            Assert.Empty(viewModel.CleanPercentText);
+            Assert.Empty(viewModel.DeleteProgressText);
+            Assert.Empty(viewModel.CleanCurrentFile);
 
             viewModel.UndoLastCleanCommand.Execute(null);
             PumpUntil(() => viewModel.HasUndoMessage && !viewModel.IsUndoing);
@@ -885,7 +930,17 @@ public sealed class FlowTests
 
         public TrashSample? Probe(string? rootPath = null) => Sample;
 
-        public TrashMoveResult MoveToTrash(string path) => TrashMoveResult.Moved("trash/" + Path.GetFileName(path));
+        public int MoveDelayMs { get; set; }
+
+        public TrashMoveResult MoveToTrash(string path)
+        {
+            if (MoveDelayMs > 0)
+            {
+                Thread.Sleep(MoveDelayMs);
+            }
+
+            return TrashMoveResult.Moved("trash/" + Path.GetFileName(path));
+        }
 
         public bool TryRestore(string? trashPath, string originalPath, out string? error)
         {

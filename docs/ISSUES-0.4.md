@@ -44,7 +44,8 @@
 | AC-408 | ✅ | 6 小时检查 + 启动 15 秒后首检的提醒（默认关闭、只提示）；Windows Run 键 / macOS LaunchAgent / Linux XDG autostart；失败在设置页显示。 |
 | AC-409 | ✅ | README 中英文、设置页截图、DESIGN 2.4、[VERIFICATION-0.4.md](VERIFICATION-0.4.md)。 |
 
-> 实现状态：**9/9 个 issue 完成**；测试 107 → **126**（Core 90 + App 36），构建零警告。
+> 实现状态：**9/9 个 issue 完成**；测试 107 → **127**（Core 90 + App 37），构建零警告。
+> 0.4.1 修复清理转圈动画原点与取消后进度残留，见 [VERIFICATION-0.4.md](VERIFICATION-0.4.md#041-回归)。
 
 ## 2. 详细 Issue
 
