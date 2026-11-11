@@ -26,7 +26,7 @@
             <Grid ColumnDefinitions="*,*" ColumnSpacing="18">
               <StackPanel Spacing="5">
                 <TextBlock Text="{DynamicResource L.Theme}" Classes="caption" FontSize="11" />
-                <ComboBox SelectedIndex="{Binding ThemeIndex}" HorizontalAlignment="Stretch">
+                <ComboBox SelectedIndex="{Binding ThemeIndex, Mode=TwoWay}" HorizontalAlignment="Stretch">
                   <ComboBoxItem Content="{DynamicResource L.ThemeSystem}" />
                   <ComboBoxItem Content="{DynamicResource L.ThemeLight}" />
                   <ComboBoxItem Content="{DynamicResource L.ThemeDark}" />
@@ -34,7 +34,7 @@
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="5">
                 <TextBlock Text="{DynamicResource L.Language}" Classes="caption" FontSize="11" />
-                <ComboBox SelectedIndex="{Binding LanguageIndex}" HorizontalAlignment="Stretch">
+                <ComboBox SelectedIndex="{Binding LanguageIndex, Mode=TwoWay}" HorizontalAlignment="Stretch">
                   <ComboBoxItem Content="English" />
                   <ComboBoxItem Content="简体中文" />
                 </ComboBox>
@@ -49,14 +49,14 @@
 
             <StackPanel Spacing="7">
               <RadioButton GroupName="ScanMode"
-                           IsChecked="{Binding IsQuickScan}"
+                           IsChecked="{Binding IsQuickScan, Mode=TwoWay}"
                            Content="{DynamicResource L.QuickScan}" />
               <TextBlock Text="{DynamicResource L.QuickScanHint}"
                          Classes="caption"
                          FontSize="10.5"
                          Margin="24,0,0,0" />
               <RadioButton GroupName="ScanMode"
-                           IsChecked="{Binding IsFullScan}"
+                           IsChecked="{Binding IsFullScan, Mode=TwoWay}"
                            Content="{DynamicResource L.FullScan}" />
               <TextBlock Text="{DynamicResource L.FullScanHint}"
                          Classes="caption"
@@ -116,7 +116,7 @@
               <Grid ColumnDefinitions="*,*" ColumnSpacing="18" RowDefinitions="Auto,Auto,Auto">
                 <StackPanel Spacing="4">
                   <TextBlock Text="{DynamicResource L.LargeFileThreshold}" Classes="caption" FontSize="10.5" />
-                  <NumericUpDown Value="{Binding LargeFileThresholdMb}"
+                  <NumericUpDown Value="{Binding LargeFileThresholdMb, Mode=TwoWay}"
                                  Minimum="1"
                                  Maximum="10240"
                                  Increment="10"
@@ -124,7 +124,7 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="4">
                   <TextBlock Text="{DynamicResource L.LargeFileLimit}" Classes="caption" FontSize="10.5" />
-                  <NumericUpDown Value="{Binding LargeFileLimit}"
+                  <NumericUpDown Value="{Binding LargeFileLimit, Mode=TwoWay}"
                                  Minimum="10"
                                  Maximum="2000"
                                  Increment="10"
@@ -132,7 +132,7 @@
                 </StackPanel>
                 <StackPanel Grid.Row="1" Spacing="4" Margin="0,8,0,0">
                   <TextBlock Text="{DynamicResource L.DuplicateMinSize}" Classes="caption" FontSize="10.5" />
-                  <NumericUpDown Value="{Binding DuplicateMinSizeMb}"
+                  <NumericUpDown Value="{Binding DuplicateMinSizeMb, Mode=TwoWay}"
                                  Minimum="1"
                                  Maximum="1024"
                                  Increment="1"
@@ -140,7 +140,7 @@
                 </StackPanel>
                 <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4" Margin="0,8,0,0">
                   <TextBlock Text="{DynamicResource L.DuplicateGroupLimit}" Classes="caption" FontSize="10.5" />
-                  <NumericUpDown Value="{Binding DuplicateGroupLimit}"
+                  <NumericUpDown Value="{Binding DuplicateGroupLimit, Mode=TwoWay}"
                                  Minimum="10"
                                  Maximum="2000"
                                  Increment="10"
@@ -148,7 +148,7 @@
                 </StackPanel>
                 <StackPanel Grid.Row="2" Spacing="4" Margin="0,8,0,0">
                   <TextBlock Text="{DynamicResource L.HashBudget}" Classes="caption" FontSize="10.5" />
-                  <NumericUpDown Value="{Binding HashBudgetGb}"
+                  <NumericUpDown Value="{Binding HashBudgetGb, Mode=TwoWay}"
                                  Minimum="1"
                                  Maximum="64"
                                  Increment="1"
@@ -162,19 +162,19 @@
         <Border Classes="card" Padding="18,16" CornerRadius="14">
           <StackPanel Spacing="9">
             <TextBlock Text="{DynamicResource L.SectionBehaviour}" Classes="eyebrow" />
-            <CheckBox IsChecked="{Binding UseAdminHelper}" Content="{DynamicResource L.UseAdminHelper}" />
-            <CheckBox IsChecked="{Binding CheckForUpdatesOnStartup}" Content="{DynamicResource L.CheckUpdates}" />
-            <CheckBox IsChecked="{Binding CloseToTray}" Content="{DynamicResource L.CloseToTray}" />
-            <CheckBox IsChecked="{Binding MinimizeToTray}" Content="{DynamicResource L.MinimizeToTray}" />
-            <CheckBox IsChecked="{Binding RunAtLogin}" Content="{DynamicResource L.RunAtLogin}" />
-            <CheckBox IsChecked="{Binding ReminderEnabled}" Content="{DynamicResource L.ReminderEnabled}" />
+            <CheckBox IsChecked="{Binding UseAdminHelper, Mode=TwoWay}" Content="{DynamicResource L.UseAdminHelper}" />
+            <CheckBox IsChecked="{Binding CheckForUpdatesOnStartup, Mode=TwoWay}" Content="{DynamicResource L.CheckUpdates}" />
+            <CheckBox IsChecked="{Binding CloseToTray, Mode=TwoWay}" Content="{DynamicResource L.CloseToTray}" />
+            <CheckBox IsChecked="{Binding MinimizeToTray, Mode=TwoWay}" Content="{DynamicResource L.MinimizeToTray}" />
+            <CheckBox IsChecked="{Binding RunAtLogin, Mode=TwoWay}" Content="{DynamicResource L.RunAtLogin}" />
+            <CheckBox IsChecked="{Binding ReminderEnabled, Mode=TwoWay}" Content="{DynamicResource L.ReminderEnabled}" />
             <Grid ColumnDefinitions="Auto,140" ColumnSpacing="10" Margin="24,0,0,0">
               <TextBlock Text="{DynamicResource L.ReminderInterval}"
                          Classes="caption"
                          FontSize="10.5"
                          VerticalAlignment="Center" />
               <NumericUpDown Grid.Column="1"
-                             Value="{Binding ReminderIntervalDays}"
+                             Value="{Binding ReminderIntervalDays, Mode=TwoWay}"
                              Minimum="1"
                              Maximum="365"
                              Increment="1"
