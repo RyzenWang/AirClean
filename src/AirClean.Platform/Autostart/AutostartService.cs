@@ -44,6 +44,28 @@ public static class AutostartService
     private static bool TrySetWindows(bool enabled, out string? error)
     {
         error = null;
+        const string key = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+
+        if (!enabled)
+        {
+            // Query first: a missing value is a successful disable, and its error text is
+            // localized. Only a delete that actually finds the value can fail.
+            var query = RunReg($"query \"{key}\" /v AirClean");
+            if (query.ExitCode != 0)
+            {
+                return true;
+            }
+
+            var delete = RunReg($"delete \"{key}\" /v AirClean /f");
+            if (delete.ExitCode != 0)
+            {
+                error = FirstLine(delete.StandardError, delete.StandardOutput);
+                return false;
+            }
+
+            return true;
+        }
+
         var executable = Environment.ProcessPath;
         if (string.IsNullOrEmpty(executable))
         {
@@ -51,10 +73,18 @@ public static class AutostartService
             return false;
         }
 
-        var arguments = enabled
-            ? $"add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" /v AirClean /t REG_SZ /d \"\\\"{executable}\\\"\" /f"
-            : "delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" /v AirClean /f";
+        var add = RunReg($"add \"{key}\" /v AirClean /t REG_SZ /d \"\\\"{executable}\\\"\" /f");
+        if (add.ExitCode != 0)
+        {
+            error = FirstLine(add.StandardError, add.StandardOutput);
+            return false;
+        }
 
+        return true;
+    }
+
+    private static (int ExitCode, string StandardOutput, string StandardError) RunReg(string arguments)
+    {
         var info = new ProcessStartInfo("reg.exe", arguments)
         {
             UseShellExecute = false,
@@ -66,21 +96,20 @@ public static class AutostartService
         using var process = Process.Start(info);
         if (process is null)
         {
-            error = "Could not start reg.exe.";
-            return false;
+            return (-1, string.Empty, "Could not start reg.exe.");
         }
 
+        var stdout = process.StandardOutput.ReadToEnd();
         var stderr = process.StandardError.ReadToEnd();
         process.WaitForExit();
+        return (process.ExitCode, stdout, stderr);
+    }
 
-        // Deleting a missing value is fine; anything else is a real failure.
-        if (process.ExitCode != 0 && !(!enabled && stderr.Contains("unable to find", StringComparison.OrdinalIgnoreCase)))
-        {
-            error = stderr.Trim();
-            return false;
-        }
-
-        return true;
+    private static string FirstLine(string stderr, string stdout)
+    {
+        var text = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
+        var line = text.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        return string.IsNullOrWhiteSpace(line) ? "reg.exe failed." : line.Trim();
     }
 
     private static bool TrySetMac(bool enabled, out string? error)
