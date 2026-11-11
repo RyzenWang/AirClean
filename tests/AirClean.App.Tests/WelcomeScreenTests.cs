@@ -186,7 +186,7 @@ public sealed class FlowTests
 
         try
         {
-            var trash = new FakeTrash { MoveDelayMs = 100 };
+            var trash = new FakeTrash { MoveDelayMs = 800 };
             var viewModel = CreateViewModel(
                 "en",
                 LoadRules(root),
@@ -201,6 +201,13 @@ public sealed class FlowTests
             Pump();
             viewModel.ConfirmCleanCommand.Execute(null);
             PumpUntil(() => viewModel.IsDeleting);
+
+            // Let the timer advance the generated arc geometry before the screenshot.
+            for (var frame = 0; frame < 5; frame++)
+            {
+                Thread.Sleep(40);
+                Pump();
+            }
 
             window.InvalidateVisual();
             Save(window.CaptureRenderedFrame()!, "cleaning-en.png");

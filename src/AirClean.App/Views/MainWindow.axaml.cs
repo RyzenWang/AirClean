@@ -6,21 +6,30 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
+using PathShape = Avalonia.Controls.Shapes.Path;
 
 namespace AirClean.App.Views;
 
 public partial class MainWindow : Window
 {
     private const double RingRadius = 47;
+    private const double SpinnerRadius = 7.8;
 
     private MainWindowViewModel? _viewModel;
     private bool _ready;
     private DispatcherTimer? _spinnerTimer;
+    private PathShape? _spinnerArc;
     private double _spinnerAngle;
 
     public MainWindow()
     {
         InitializeComponent();
+        _spinnerArc = this.FindControl<PathShape>("CleaningSpinnerArc");
+        if (_spinnerArc is not null)
+        {
+            _spinnerArc.Data = BuildSpinnerArc(-90);
+        }
+
         _spinnerTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
         _spinnerTimer.Tick += OnSpinnerTick;
     }
@@ -40,14 +49,41 @@ public partial class MainWindow : Window
 
     private void OnSpinnerTick(object? sender, EventArgs e)
     {
-        if (_viewModel?.IsDeleting != true ||
-            this.FindControl<Panel>("CleaningSpinner")?.RenderTransform is not RotateTransform rotate)
+        if (_viewModel?.IsDeleting != true)
+        {
+            return;
+        }
+
+        _spinnerArc ??= this.FindControl<PathShape>("CleaningSpinnerArc");
+        if (_spinnerArc is null)
         {
             return;
         }
 
         _spinnerAngle = (_spinnerAngle + 12) % 360;
-        rotate.Angle = _spinnerAngle;
+        _spinnerArc.Data = BuildSpinnerArc(-90 + _spinnerAngle);
+    }
+
+    /// <summary>
+    /// Builds the spinner arc inside a fixed 18×18 box. Rotating the geometry itself
+    /// keeps the visual centre at (9,9); rotating the old Arc control moved its origin.
+    /// </summary>
+    private static Geometry BuildSpinnerArc(double startAngle)
+    {
+        const double center = 9;
+        const double sweep = 100;
+        var start = PointOnCircle(center, SpinnerRadius, startAngle);
+        var end = PointOnCircle(center, SpinnerRadius, startAngle + sweep);
+
+        var geometry = new StreamGeometry();
+        using (var context = geometry.Open())
+        {
+            context.BeginFigure(start, isFilled: false);
+            context.ArcTo(end, new Size(SpinnerRadius, SpinnerRadius), 0, sweep > 180, SweepDirection.Clockwise);
+            context.EndFigure(false);
+        }
+
+        return geometry;
     }
 
     private void OnVolumeChanged(object? sender, SelectionChangedEventArgs e)
