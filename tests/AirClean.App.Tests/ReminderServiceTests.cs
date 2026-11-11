@@ -27,7 +27,7 @@ public sealed class ReminderServiceTests
         Assert.Equal(1, saves);
 
         Assert.False(service.Check(now.AddDays(1)));
-        Assert.Equal(1, messages.Count);
+        Assert.Single(messages);
 
         Assert.True(service.Check(now.AddDays(7)));
         Assert.Equal(2, messages.Count);

@@ -32,10 +32,10 @@ It is the second app in the Air series and shares its design language and stack
 with [AirPDF](https://github.com/RyzenWang/AirPDF): the same warm paper
 background, coral accent, quiet information density, and calm desktop presence.
 
-> **Status:** 0.3 preview. Scan, preview, clean, undo, recent cleanups, and the
-> skip report are wired end to end, with per-drive scanning, hand-picked large files,
-> the MFT fast path, and the administrator helper. A benchmark on Windows scanned
-> 22,000 files (7.4 GB total) in about 1.3 s. Screenshots use demo data.
+> **Status:** 0.4 preview. Scan, preview, clean, undo, recent cleanups, the skip
+> report, a settings window, quick/full scans, exclusions, the tray and reminders are
+> wired end to end. A benchmark on Windows scanned 22,000 files (7.4 GB total) in
+> about 1.3 s. Screenshots use demo data.
 
 ---
 
@@ -56,6 +56,10 @@ background, coral accent, quiet information density, and calm desktop presence.
 | Undo this cleanup | Skip report, grouped by reason and exportable as CSV |
 | --- | --- |
 | <img src="docs/screens/completed-undo-en.png" alt="Undo this cleanup" width="420" /> | <img src="docs/screens/completed-skip-report-en.png" alt="Skip report" width="420" /> |
+
+| Settings, light | Settings, dark |
+| --- | --- |
+| <img src="docs/screens/settings-en-light.png" alt="Settings window, light theme" width="420" /> | <img src="docs/screens/settings-en-dark.png" alt="Settings window, dark theme" width="420" /> |
 
 | Dark theme | Simplified Chinese |
 | --- | --- |
@@ -99,12 +103,12 @@ background, coral accent, quiet information density, and calm desktop presence.
 
 ### Preview and pick
 
-- **Large files, one by one.** The 200 largest files of at least 100 MB on the
-  drive are listed with nothing selected. The header total only counts what you
-  tick.
-- **Duplicates.** Files of at least 1 MB are bucketed by exact size, compared by
-  their first 64 KB, then hashed with SHA-256. The oldest copy of each group is
-  kept, and nothing is selected by default.
+- **Large files, one by one.** Lists the largest files above the configured
+  threshold and count (default 200, at least 100 MB), with nothing selected by default.
+  The header total only counts what you tick.
+- **Duplicates.** Files of at least the configured minimum (1 MB by default) are
+  bucketed by exact size, compared by their first 64 KB, then hashed with SHA-256.
+  The oldest copy of each group is kept, and nothing is selected by default.
 - **Select all, or select a folder.** The detail header has **Select all** and
   **Clear** actions for the visible list. In **Folders** view, a folder checkbox
   selects every file directly inside it; empty folders are pruned after cleanup.
@@ -158,6 +162,18 @@ background, coral accent, quiet information density, and calm desktop presence.
 - **Automatic updates for installed builds.** The app checks for a stable
   release, downloads it in the background, and offers **Restart to update**.
   Portable and source builds never self-update.
+
+### Settings and background
+
+- **A real settings window.** Appearance, scan scope, excluded folders, thresholds,
+  updates, tray and reminders are edited on a draft and only applied on **Save**.
+- **Quick or full scan.** Quick covers caches, logs and the Trash; full also looks
+  for large files and duplicates.
+- **Excluded folders.** Anything listed under exclusions is neither scanned nor
+  deleted.
+- **Tray and reminders.** Optionally close or minimize to the tray. Reminders are
+  off by default, only notify, and never scan or delete automatically. Starting at
+  login is optional.
 
 ## Tech stack
 
@@ -346,12 +362,11 @@ JSON journal with paths, sizes and trash locations; 30 days or 200 batches.
 
 ## Limitations
 
-- No startup manager, scheduled reminders, tray icon, or full settings page yet
-  (settings currently cover theme, language, and the administrator toggle).
+- Windows arm64 and linux-arm64 artifacts.
 - Duplicates on the system volume scan the user's content folders only; data
   drives are scanned whole. There is no incremental index, so every run hashes
-  files again, and data drives have a 2 GB hashing cap (the UI says when the cap
-  is hit). Hard links are not deduplicated.
+  files again, and the hashing budget comes from settings (8 GB default). Hard
+  links are not deduplicated.
 - Large-file scanning prefers the NTFS MFT. That path needs administrator access,
   which can be enabled through the administrator toggle (UAC + helper); without it
   AirClean falls back to walking
@@ -369,12 +384,12 @@ JSON journal with paths, sizes and trash locations; 30 days or 200 batches.
 
 ## Roadmap
 
-Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **11 done, 2 in progress, 5 not started**.
+Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **14 done, 2 in progress, 2 not started**.
 
 | Status | Item | Notes |
 | --- | --- | --- |
 | ✅ Done | Volume-aware scanning with streamed results | One scan covers caches, large files, the Trash, and duplicates; categories appear as they finish. |
-| ✅ Done | Hand-picked large files | Top 200 files of at least 100 MB, nothing selected by default. |
+| ✅ Done | Hand-picked large files | Configurable threshold and count (default 200, at least 100 MB), nothing selected. |
 | ✅ Done | Duplicate groups with explicit selection | Size bucket → first 64 KB → SHA-256; one copy kept per group. |
 | ✅ Done | Tri-state selection, folder aggregation, per-item exclusion | Includes indeterminate categories and whole-folder selection. |
 | ✅ Done | Cleanup progress, cancellation, Trash, and a local journal | Cancellable progress, Trash by default, a JSON journal per batch. |
@@ -386,9 +401,9 @@ Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **11 done, 2 
 | 🚧 In progress | Production signing and notarization | Workflow and secrets docs are ready; no real certificates yet, so Windows signing and Apple notarization have not been exercised. |
 | 🚧 In progress | macOS / Linux hardware validation | CI covers builds and headless tests on all three platforms; real-hardware checks for the UI, themes, Trash, and reveal are still missing. |
 | ✅ Done | A real "undo the last cleanup" | The completion page and welcome list restore files; Windows parses the Recycle Bin `$I` metadata, Linux reads `.trashinfo`, macOS restores from the journal on the main volume. |
-| ⬜ Not started | Tray icon and background mode | Keep running after the window closes, tray menu, and a quick-scan entry. |
-| ⬜ Not started | Scheduled reminders | Daily / weekly reminders, off by default, no automatic deletion. |
-| ⬜ Not started | Full settings page | The current flyout only has theme, language, and the administrator toggle; scan scope, exclusions, delete mode, and updates are missing. |
+| ✅ Done | Tray icon and background mode | Tray menu, close/minimize to tray, single-instance activation. |
+| ✅ Done | Scheduled reminders | Checks every six hours; off by default, notification only, never deletes. |
+| ✅ Done | Full settings page | Appearance, scan scope, exclusions, thresholds, updates, tray and reminders. |
 | ⬜ Not started | Windows arm64 artifacts | The release matrix only has `win-x64`. |
 | ⬜ Not started | linux-arm64 artifacts | The release matrix only has `linux-x64`. |
 

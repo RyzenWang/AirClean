@@ -42,9 +42,9 @@
 | AC-406 | ✅ | 大文件阈值/上限、重复最小体积/组上限、哈希预算均接到扫描请求；MFT 与提权 helper 也接受列表上限；新增排除/阈值测试。 |
 | AC-407 | ✅ | 托盘服务（打开 / 立即扫描 / 退出），关闭与最小化到托盘；创建失败自动降级，语言切换刷新菜单。 |
 | AC-408 | ✅ | 6 小时检查 + 启动 15 秒后首检的提醒（默认关闭、只提示）；Windows Run 键 / macOS LaunchAgent / Linux XDG autostart；失败在设置页显示。 |
-| AC-409 | ⬜ | README、截图、VERIFICATION-0.4。 |
+| AC-409 | ✅ | README 中英文、设置页截图、DESIGN 2.4、[VERIFICATION-0.4.md](VERIFICATION-0.4.md)。 |
 
-> 测试基线：0.3 的 107 → 当前 **126**（Core 90 + App 36）。
+> 实现状态：**9/9 个 issue 完成**；测试 107 → **126**（Core 90 + App 36），构建零警告。
 
 ## 2. 详细 Issue
 
@@ -126,7 +126,7 @@
 - `LargeFileScanner` 接受阈值与 `MaxItems`；`DuplicateScanner` 接受最小体积、组上限。
 - VM 从 `AppSettings` 读取，替换 `LargeFileScanner.DefaultThresholdBytes` 与
   数据盘 2 GB 硬编码。
-- 结果页文案使用实际阈值（不再写死 100 MB / 200）。
+- 结果页文案不再写死 100 MB / 200，改为通用描述。
 
 **验收**
 - 改阈值后扫描结果变化；

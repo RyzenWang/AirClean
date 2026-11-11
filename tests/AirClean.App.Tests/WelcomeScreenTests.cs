@@ -472,6 +472,22 @@ public sealed class FlowTests
         Pump();
 
         var viewModel = Assert.IsType<SettingsViewModel>(window.DataContext);
+
+        // The real window opens at 720 and scrolls; the documentation shot uses a taller
+        // window so every section is visible at once.
+        window.Height = 1200;
+        window.InvalidateMeasure();
+        Pump();
+        window.InvalidateVisual();
+        Save(window.CaptureRenderedFrame()!, "settings-en-light.png");
+
+        theme.Set(ThemeService.DarkMode, persist: false);
+        Pump();
+        window.InvalidateVisual();
+        Save(window.CaptureRenderedFrame()!, "settings-en-dark.png");
+        theme.Set(ThemeService.SystemMode, persist: false);
+        Pump();
+
         viewModel.ThemeIndex = 2;
         viewModel.LanguageIndex = 1;
         viewModel.IsFullScan = true;
