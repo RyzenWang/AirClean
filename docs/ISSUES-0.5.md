@@ -32,11 +32,11 @@
 | --- | --- | --- |
 | AC-501 | ✅ | `FileIdentity`（Windows `FILE_ID_INFO`，Unix `st_dev`+`st_ino`）+ `IFileIdentityProvider`；大文件与重复候选记录身份，`DeletionService` 删除前复验，不一致记 `ChangedSinceScan`；provider 不支持时退化为旧行为。 |
 | AC-502 | ✅ | 重复文件按身份折叠硬链接；折叠数经 `CategoryScan`/`ScanResult` 上到结果页（"另有 N 个路径指向同一份数据"）；APFS 克隆与块克隆有独立文件 ID，注释明确不假装识别。 |
-| AC-503 | ✅ | `ReadOnlySuggestion` + `IReadOnlySuggestionProbe` + `SuggestionScanner`（未知体积保留、已知 < 200 MB 丢弃）；Windows 探测休眠/页面文件/组件存储；结果页"值得了解"卡片，不进删除计划。 |
+| AC-503 | ✅ | `ReadOnlySuggestion` + `IReadOnlySuggestionProbe` + `SuggestionScanner`（未知体积保留、已知 < 200 MB 丢弃）；Windows 探测休眠/页面文件/组件存储，macOS 探测完全磁盘访问，Linux 探测 apt 包缓存；结果页"值得了解"卡片，不进删除计划。 |
 | AC-504 | ✅ | `SourceInvariantTests` 扫 `src/**/*.cs`，四类删除/移动调用必须同行 `// SAFE: <理由>`；23 处调用已补注记；[INCIDENTS.md](INCIDENTS.md) 记录事故与拦截测试。 |
 | AC-505 | ✅ | 键盘：↑↓ 在分类行间移动、Space 勾选、Enter 展开、`Ctrl+,` 打开设置、Esc 逐层退出；结果页状态栏显示键位提示；主操作与每行勾选框都有 `AutomationProperties.Name`。文本过滤框（`/`）未做，留待 0.6。 |
-| AC-506 | ⬜ | 高对比度显式入口；macOS TCC 三态探测 + 一条深链；Linux 打包补 `.desktop`。 |
-| AC-507 | ⬜ | 文档、截图、三平台验收与发版。 |
+| AC-506 | ✅ | 高对比度作为第四种显式主题（纯黑/白字/黄色强调，隐藏欢迎页插画）；macOS 完全磁盘访问三态探测 + 设置深链（只读建议卡）；Linux 打包附 `.desktop` 与图标，apt 包缓存进只读建议。 |
+| AC-507 | ✅ | README 中英双语、DESIGN 2.6、[VERIFICATION-0.5.md](VERIFICATION-0.5.md) 0.5.3 段；三平台 CI 绿，发布 0.5.3。 |
 
 > 0.4.3 已先行修完两项"信任漏洞"，不在 0.5 重复：设置读取失败不再静默丢弃排除目录
 > （改为回退 `settings.json.bak` + 暂停清理），扫描期无权限目录会把合计标成下限。

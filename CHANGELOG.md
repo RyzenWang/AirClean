@@ -5,23 +5,42 @@ All notable changes to AirClean are documented here. The format follows
 publishes the matching section below as the GitHub release notes. Versions stay
 `0.x` until the app is out of preview.
 
-## [Unreleased]
+## [0.5.3] - 2026-11-16
+
+This release closes the 0.5 milestone: the remaining accessibility work and the platform
+gaps.
 
 ### Added
 
-- Keyboard coverage. `↑`/`↓` move between the category rows, `Space` toggles the focused
-  row, `Enter` expands it, `Ctrl+,` opens settings, and `Esc` still backs out. The results
-  page shows the shortcuts in the status bar, so they are discoverable without a manual.
-- Screen-reader names on the controls that matter: scan, rescan, language, appearance,
-  settings, the volume picker, the clean button, and every category, folder and file
-  checkbox.
+- A fourth, explicit high-contrast theme: pure black background, white text and borders,
+  a yellow accent, and no decorative artwork on the welcome page. Avalonia has no native
+  high-contrast variant, so it is a deliberate choice in the theme cycle and settings
+  window rather than something sniffed from the OS.
+- Full Disk Access guidance on macOS. Without that permission the scan silently misses
+  other apps' containers; the read-only card now says so and carries the System Settings
+  deep link. It appears only when `~/Library/Containers` exists but cannot be read — a
+  missing folder is not a permission problem.
+- The apt package cache on Linux as a read-only suggestion with its size and
+  `sudo apt clean`. It needs root, so it cannot be a cleanup category, but the space is
+  real and hiding it would be dishonest.
+- The Linux tarball now ships `AirClean.desktop` and the application icon, with install
+  steps in `docs/DISTRIBUTION.md`.
 
 ### Fixed
 
 - Protected user folders are resolved through the known-folder API instead of
   `home + English name`. With OneDrive Backup moving Documents, the app scanned the
   redirected folder as content while no longer protecting it; the guard now follows the
-  same folders the scan roots do. Downloads stays out of the list on purpose.
+  same folders the scan roots do. A folder that does not exist yet keeps its platform's
+  canonical name, and macOS uses `Movies` for the video folder.
+
+### Changed
+
+- Keyboard coverage: `↑`/`↓` move between category rows, `Space` toggles, `Enter`
+  expands, `Ctrl+,` opens settings, `Esc` backs out, and the results page lists the
+  shortcuts in the status bar.
+- Screen-reader names on the main actions and on every category, folder and file
+  checkbox. The `/` text filter is still not built; the 0.5 issue list says so.
 
 ## [0.5.2] - 2026-11-16
 

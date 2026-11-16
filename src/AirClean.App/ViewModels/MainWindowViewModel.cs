@@ -127,7 +127,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _suggestionProbes = suggestionProbes ??
         [
             .. WindowsReadOnlyProbes.CreateForCurrentPlatform(),
-            .. MacOsPermissionProbe.CreateForCurrentPlatform()
+            .. MacOsPermissionProbe.CreateForCurrentPlatform(),
+            .. LinuxPackageCacheProbe.CreateForCurrentPlatform()
         ];
 
         _scanTimer = new DispatcherTimer

@@ -234,6 +234,10 @@ public sealed class LocalizationService
             ["L.SuggestionFullDiskAccessFact"] = (
                 "macOS blocks reading other apps' data, so some folders are missing from the scan. Grant access in System Settings, then scan again.",
                 "macOS 会阻止读取其他应用的数据，部分目录因此没被扫描。在系统设置里授权后重新扫描。"),
+            ["L.SuggestionPackageCacheLabel"] = ("Package cache (apt)", "包缓存（apt）"),
+            ["L.SuggestionPackageCacheFact"] = (
+                "Downloaded packages kept by the package manager. Removing them needs root, so run the command yourself.",
+                "包管理器保留的已下载安装包；清理需要 root，请在终端里自行执行命令。"),
 
             ["L.ConfirmTitleFormat"] = ("Clean {0}?", "清理 {0}？"),
             ["L.ConfirmNoteTrash"] = ("{0} moves to the Trash and can be restored.", "{0} 将移到废纸篓，可以恢复。"),

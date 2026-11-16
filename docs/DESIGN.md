@@ -144,6 +144,21 @@ v0.1 范围：快速扫描 + 5 个安全分类（含废纸篓清空）+ 大文�
   `Directory.Move` 必须同行写 `// SAFE: <具体理由>`，由 `SourceInvariantTests` 在 CI 里检查；
   事故与"现在拦住它的测试"记在 [INCIDENTS.md](INCIDENTS.md)。
 
+### 2.6 可达性与平台补齐（0.5.3）
+
+- **键盘**：分类列表里 ↑↓ 移动焦点、Space 勾选、Enter 展开；`Ctrl+,` 打开设置、
+  `Ctrl+R` 重扫、Esc 逐层退出。结果页状态栏常驻一行键位提示，跟随语言切换。
+- **读屏**：主要操作与每个分类/目录/文件勾选框都有 `AutomationProperties.Name`，
+  名称来自本地化目录，避免界面文案与读屏名称漂移。
+- **高对比度**：第四种显式主题（不是从系统探测来的）。纯黑底、白字白边、黄色强调，
+  装饰性插画隐藏；Avalonia 没有原生高对比度变体，所以用自定义 `ThemeVariant`，
+  未覆盖的资源回退到深色。
+- **平台引导**：macOS 读不到 `~/Library/Containers` 时，建议卡给出"完全磁盘访问"的
+  设置深链；Linux 的 apt 包缓存需要 root，因此只报告体积与 `sudo apt clean`，
+  不作为可勾选分类。
+- **Linux 桌面入口**：tar.gz 附带 `AirClean.desktop` 与 256px 图标，安装步骤见
+  [DISTRIBUTION.md](DISTRIBUTION.md)。
+
 ---
 
 ## 3. 视觉设计
