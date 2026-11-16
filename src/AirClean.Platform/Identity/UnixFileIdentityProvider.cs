@@ -10,6 +10,12 @@ namespace AirClean.Platform.Identity;
 /// the 64-bit glibc/musl and Darwin one; on any other shape the call fails or the values are
 /// rejected and <c>false</c> is returned instead of a guessed identity. This code is compiled
 /// on Windows but only executed on Unix.
+///
+/// Darwin needs two symbols: <c>stat$INODE64</c> is the 64-bit-inode ABI on Intel, while
+/// arm64 only ever shipped the 64-bit layout and exposes it as plain <c>stat</c>. The
+/// provider therefore tries the suffixed symbol first and falls back to the plain one on
+/// arm64 only; an Intel Mac whose libSystem lacks the suffixed symbol reports "no identity"
+/// rather than reading a legacy layout at the wrong offsets.
 /// </summary>
 internal sealed class UnixFileIdentityProvider : IFileIdentityProvider
 {
@@ -84,7 +90,6 @@ internal sealed class UnixFileIdentityProvider : IFileIdentityProvider
         {
             return false;
         }
-
         identity = new FileIdentity(stat.Device, stat.Inode);
         return true;
     }
@@ -115,5 +120,22 @@ internal sealed class UnixFileIdentityProvider : IFileIdentityProvider
     private static extern int LinuxStat(string path, out LinuxStatBuffer buffer);
 
     [DllImport("libc", EntryPoint = "stat$INODE64", SetLastError = true)]
-    private static extern int MacStat(string path, out MacStatBuffer buffer);
+    private static extern int MacStatInode64(string path, out MacStatBuffer buffer);
+
+    [DllImport("libc", EntryPoint = "stat", SetLastError = true)]
+    private static extern int MacStatPlainName(string path, out MacStatBuffer buffer);
+
+    private static int MacStat(string path, out MacStatBuffer buffer)
+    {
+        try
+        {
+            return MacStatInode64(path, out buffer);
+        }
+        catch (EntryPointNotFoundException) when (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        {
+            // arm64 Darwin never shipped the legacy layout, so the plain symbol is the same
+            // function there. On Intel this would be a guess, so it is not attempted.
+            return MacStatPlainName(path, out buffer);
+        }
+    }
 }

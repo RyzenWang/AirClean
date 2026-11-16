@@ -45,6 +45,17 @@
 - 设置读取失败后仍需重启才能恢复清理（有意的，避免把空排除列表静默写回）。
 - 扫描期无权限目录只有计数没有路径，因此没有进 CSV 跳过报告。
 
+## 0.5.1 回归：macOS 身份 provider
+
+0.5.0 首次推送后 **CI 在 macOS 上红**：三个生产 provider 测试全部失败，Linux 与 Windows 通过。
+原因是在 arm64 Darwin 上 `stat$INODE64` 这个符号不存在——arm64 macOS 只提供 64 位 inode 布局，
+导出名就是普通的 `stat`。
+
+- 修复：先试 `stat$INODE64`；只有 `EntryPointNotFoundException` 且进程架构是 arm64 时，
+  才回退到普通 `stat`（Intel 上普通符号可能是旧的 32 位布局，不猜，直接放弃）。
+- 这是一次真实的"只在真机 CI 上才暴露"的问题：本地 Windows 全绿，Linux 绿，macOS 红。
+  0.5.0 的产物在 macOS 上只是退化为 size/mtime 检查，不会误删。
+
 ## 结论
 
 0.5 把两处"看起来精确、实际在骗人"的地方修掉了（删除身份绑定、硬链接折叠），
