@@ -21,6 +21,13 @@ public sealed class UpdateService
     {
         get
         {
+            // In the Store build the Store owns updates; checking GitHub would offer a
+            // Velopack package that no longer exists and cannot be applied anyway.
+            if (AirClean.Platform.PlatformServices.IsStoreManaged)
+            {
+                return false;
+            }
+
             try
             {
                 return Manager.IsInstalled;

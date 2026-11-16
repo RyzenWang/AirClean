@@ -1,5 +1,9 @@
 name: Release
 
+# Two distribution lines:
+#   Windows — a Microsoft Store package (.msix). The Store signs it, so no certificate
+#             lives in this repository and nothing is withheld.
+#   macOS / Linux — portable archives only, unzip and run.
 on:
   push:
     tags:
@@ -14,15 +18,11 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  VPK_VERSION: 1.2.161
 
 jobs:
   windows:
-    name: Windows installer
+    name: Windows (MSIX)
     runs-on: windows-latest
-    env:
-      WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
-      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
 
     steps:
       - name: Checkout
@@ -71,45 +71,28 @@ jobs:
 
           ('Windows: NativeAOT build is {0:N1} MB over {1} files, no IL warnings.' -f $mb, (Get-ChildItem publish/win-x64 -Recurse -File).Count) >> $env:GITHUB_STEP_SUMMARY
 
-      - name: Install Velopack CLI
-        shell: pwsh
-        run: dotnet tool install vpk --version $env:VPK_VERSION --tool-path .vpk
-
-      - name: Prepare Windows certificate
-        if: env.WINDOWS_CERTIFICATE_BASE64 != ''
+      - name: Build the Store package
         shell: pwsh
         run: |
-          $path = Join-Path $env:RUNNER_TEMP "airclean-codesign.pfx"
-          [IO.File]::WriteAllBytes(
-            $path,
-            [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
-          "WINDOWS_CERT_PATH=$path" >> $env:GITHUB_ENV
+          $version = "${{ steps.version.outputs.value }}"
+          New-Item -ItemType Directory -Path releases/win -Force | Out-Null
 
-      - name: Build installer and portable package
+          pwsh -NoProfile -ExecutionPolicy Bypass -File packaging/msix/Build-Msix.ps1 `
+            -PublishDir publish/win-x64 `
+            -Version $version `
+            -Output "releases/win/AirClean-$version-win-x64.msix"
+          if ($LASTEXITCODE -ne 0) { throw "MSIX packaging failed with exit code $LASTEXITCODE." }
+
+          $msix = Get-Item "releases/win/AirClean-$version-win-x64.msix"
+          ('Windows: MSIX is {0:N1} MB.' -f ($msix.Length / 1MB)) >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Package the portable archive
         shell: pwsh
         run: |
-          $args = @(
-            "pack",
-            "--packId", "AirClean",
-            "--packVersion", "${{ steps.version.outputs.value }}",
-            "--packDir", "publish/win-x64",
-            "--mainExe", "AirClean.exe",
-            "--packTitle", "AirClean",
-            "--packAuthors", "AirClean contributors",
-            "--icon", "src/AirClean.App/Assets/airclean.ico",
-            "--runtime", "win-x64",
-            "--channel", "win",
-            "--outputDir", "releases/win"
-          )
-
-          if ($env:WINDOWS_CERT_PATH) {
-            $sign = "/td sha256 /fd sha256 /f `"$env:WINDOWS_CERT_PATH`" /p `"$env:WINDOWS_CERTIFICATE_PASSWORD`" /tr http://timestamp.digicert.com"
-            $args += @("--signParams", $sign)
-          } else {
-            Write-Host "::warning title=Unsigned build::No signing certificate configured; SmartScreen will warn."
-          }
-
-          & "$PWD\.vpk\vpk.exe" @args
+          $version = "${{ steps.version.outputs.value }}"
+          Compress-Archive -Path publish/win-x64/* `
+            -DestinationPath "releases/win/AirClean-$version-win-x64-portable.zip" `
+            -CompressionLevel Optimal
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -118,7 +101,7 @@ jobs:
           path: releases/win/*
 
   macos:
-    name: macOS ${{ matrix.arch }}
+    name: macOS ${{ matrix.arch }} (portable)
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -130,17 +113,6 @@ jobs:
           - os: macos-15-intel
             rid: osx-x64
             arch: x64
-
-    env:
-      MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
-      MACOS_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.MACOS_INSTALLER_CERTIFICATE_BASE64 }}
-      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-      MACOS_APP_SIGN_IDENTITY: ${{ secrets.MACOS_APP_SIGN_IDENTITY }}
-      MACOS_INSTALLER_SIGN_IDENTITY: ${{ secrets.MACOS_INSTALLER_SIGN_IDENTITY }}
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
 
     steps:
       - name: Checkout
@@ -197,72 +169,15 @@ jobs:
 
           echo "macOS ${{ matrix.arch }}: NativeAOT build is ${mb} MB over $(find "publish/${{ matrix.rid }}" -type f | wc -l) files, no IL warnings." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Install Velopack CLI
-        shell: bash
-        run: dotnet tool install vpk --version "$VPK_VERSION" --tool-path .vpk
-
-      - name: Import Apple certificate and notary profile
-        if: env.MACOS_CERTIFICATE_BASE64 != ''
+      - name: Package the portable archive
         shell: bash
         run: |
-          CERT_PATH="$RUNNER_TEMP/airclean-app.p12"
-          INSTALLER_PATH="$RUNNER_TEMP/airclean-installer.p12"
-          KEYCHAIN_PATH="$RUNNER_TEMP/airclean-signing.keychain-db"
-
-          python3 - "$CERT_PATH" "$MACOS_CERTIFICATE_BASE64" <<'PY'
-          import base64, sys
-          open(sys.argv[1], "wb").write(base64.b64decode(sys.argv[2]))
-          PY
-          python3 - "$INSTALLER_PATH" "$MACOS_INSTALLER_CERTIFICATE_BASE64" <<'PY'
-          import base64, sys
-          open(sys.argv[1], "wb").write(base64.b64decode(sys.argv[2]))
-          PY
-
-          security create-keychain -p "$MACOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$MACOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERT_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security import "$INSTALLER_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$MACOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-
-          xcrun notarytool store-credentials "airclean-notary" \
-            --apple-id "$APPLE_ID" \
-            --team-id "$APPLE_TEAM_ID" \
-            --password "$APPLE_APP_PASSWORD" \
-            --keychain "$KEYCHAIN_PATH"
-
-          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
-
-      - name: Build pkg and portable package
-        shell: bash
-        run: |
-          args=(
-            pack
-            --packId "AirClean-osx-${{ matrix.arch }}"
-            --packVersion "${{ steps.version.outputs.value }}"
-            --packDir "publish/${{ matrix.rid }}"
-            --mainExe AirClean
-            --packTitle AirClean
-            --packAuthors "AirClean contributors"
-            --icon src/AirClean.App/Assets/airclean.icns
-            --runtime "${{ matrix.rid }}"
-            --channel "osx-${{ matrix.arch }}"
-            --outputDir "releases/osx-${{ matrix.arch }}"
-          )
-
-          if [[ -n "${MACOS_CERTIFICATE_BASE64:-}" ]]; then
-            args+=(
-              --signAppIdentity "$MACOS_APP_SIGN_IDENTITY"
-              --signInstallIdentity "$MACOS_INSTALLER_SIGN_IDENTITY"
-              --notaryProfile airclean-notary
-              --keychain "$KEYCHAIN_PATH"
-            )
-          else
-            echo "::warning title=Unsigned build::No Apple certificate configured; Gatekeeper will block this package."
-          fi
-
-          ./.vpk/vpk "${args[@]}"
+          version="${{ steps.version.outputs.value }}"
+          mkdir -p "releases/osx-${{ matrix.arch }}"
+          # zip keeps the executable bit on the binary, so the archive is runnable after
+          # unzipping without a chmod.
+          (cd "publish/${{ matrix.rid }}" &&
+            zip -qry "../../releases/osx-${{ matrix.arch }}/AirClean-${version}-osx-${{ matrix.arch }}-portable.zip" .)
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -341,7 +256,7 @@ jobs:
             exit 1
           fi
 
-      - name: Package
+      - name: Package the portable archive
         shell: bash
         run: |
           # Ship the desktop entry and icon next to the binary so a Linux install is not
@@ -365,13 +280,8 @@ jobs:
     needs: [windows, macos, linux]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
-    env:
-      WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
-      MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
 
     steps:
-      # The release body is read from CHANGELOG.md, so this job needs the repository too.
-      # Tags are needed to work out the previous release for the compare link.
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -382,23 +292,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Remove unsigned installers
-        shell: bash
-        run: |
-          if [ -z "${WINDOWS_CERTIFICATE_BASE64:-}" ]; then
-            echo "Windows signing is not configured; withholding AirClean-win-Setup.exe."
-            find artifacts/AirClean-win-x64 -maxdepth 1 -type f -name 'AirClean-win-Setup.exe' -delete
-          fi
-
-          if [ -z "${MACOS_CERTIFICATE_BASE64:-}" ]; then
-            echo "macOS signing is not configured; withholding the macOS Setup.pkg files."
-            find artifacts -maxdepth 2 -type f -name '*-Setup.pkg' -delete
-          fi
-
-          echo "Release payload:"
-          find artifacts -type f -maxdepth 3 | sort
-
-      - name: Extract release notes from CHANGELOG.md
+      - name: Compose the release notes
         id: notes
         shell: bash
         run: |
@@ -421,12 +315,13 @@ jobs:
           rm -f release-notes.raw
 
           if [ -s release-notes.md ]; then
-            # The same "Full changelog" line GitHub used to add, kept as a convenience.
             previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
             if [ -n "$previous" ]; then
               printf '\n\n**Full changelog**: https://github.com/%s/compare/%s...%s\n' \
                 "$GITHUB_REPOSITORY" "$previous" "$GITHUB_REF_NAME" >> release-notes.md
             fi
+
+            printf '\n### Install\n\nWindows: the Microsoft Store, or the `.msix` beside this release.\nmacOS and Linux: unzip the portable archive and run the binary; no installer, no signing.\n' >> release-notes.md
 
             echo "present=true" >> "$GITHUB_OUTPUT"
             echo "Publishing the CHANGELOG.md section for ${version}." >> "$GITHUB_STEP_SUMMARY"
@@ -435,6 +330,9 @@ jobs:
             echo "present=false" >> "$GITHUB_OUTPUT"
             echo "::warning title=No CHANGELOG entry::CHANGELOG.md has no '## [${version}]' section; falling back to generated notes."
           fi
+
+          echo "Release payload:"
+          find artifacts -type f -maxdepth 3 | sort
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -450,29 +348,3 @@ jobs:
           generate_release_notes: ${{ steps.notes.outputs.present != 'true' }}
           draft: false
           prerelease: ${{ contains(github.ref_name, '-preview') }}
-
-      - name: Note withheld installers
-        if: env.WINDOWS_CERTIFICATE_BASE64 == '' || env.MACOS_CERTIFICATE_BASE64 == ''
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          body=$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
-
-          if echo "$body" | grep -q 'Unsigned installers withheld'; then
-            exit 0
-          fi
-
-          withheld=""
-          if [ -z "${WINDOWS_CERTIFICATE_BASE64:-}" ]; then
-            withheld="Windows Setup.exe"
-          fi
-          if [ -z "${MACOS_CERTIFICATE_BASE64:-}" ]; then
-            withheld="${withheld:+$withheld / }macOS Setup.pkg"
-          fi
-
-          note="> **Unsigned installers withheld:** ${withheld}. Portable packages, nupkg files and update manifests are included; the withheld installers return once the matching signing secrets are configured."
-
-          gh release edit "$GITHUB_REF_NAME" \
-            --repo "$GITHUB_REPOSITORY" \
-            --notes "$(printf '%s\n\n%s' "$body" "$note")"

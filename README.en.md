@@ -323,32 +323,26 @@ docs/
 
 ## Install and release
 
+Two distribution lines, and this repository holds no code-signing certificate:
+
+- **Windows**: a Microsoft Store MSIX package
+  (`AirClean-<version>-win-x64.msix`). The Store signs and updates it; a portable zip
+  is there for people who would rather not use the Store.
+- **macOS / Linux**: portable archives, unzip and run. macOS gets arm64 and x64 builds;
+  the Linux tarball carries the desktop entry and icon.
+
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.6.0
+git push origin v0.6.0
 ```
 
-Tagged releases are packaged with [Velopack](https://velopack.io/):
+A tag builds all three platforms, creates the release, and takes its notes from
+[CHANGELOG.md](CHANGELOG.md). The **Release** workflow can also be run manually to build
+and upload artifacts without creating a release.
 
-- Windows x64: `AirClean-win-Setup.exe` installer and a portable zip
-- macOS arm64 / x64: `AirClean-osx-*.pkg` installer and a portable package
-- Linux x64: portable `.tar.gz`
-
-> **The Windows and macOS Setup installers are withheld while unsigned.** The
-> release keeps the portable packages, full nupkg files, and update manifests, and
-> hides only `AirClean-win-Setup.exe` and `AirClean-osx-*-Setup.pkg`. Once the
-> matching signing secrets are configured, they are included automatically.
-
-Installed builds check GitHub for a newer stable release, download it in the
-background, and show **Restart to update**. Portable and source builds do not
-self-update. A tag containing `-preview` is marked as a pre-release and is never
-offered by the in-app updater.
-
-Signing and notarization secrets are documented in
-[docs/DISTRIBUTION.md](docs/DISTRIBUTION.md). Without them the workflow still
-produces unsigned packages, which Windows SmartScreen and macOS Gatekeeper will
-challenge. The **Release** workflow can also be run manually to build and upload
-artifacts without creating a release.
+Store submission, the package identity and the local packaging commands are in
+[docs/DISTRIBUTION.md](docs/DISTRIBUTION.md). Note that portable builds do not
+self-update; the Store build is updated by the Store.
 
 ## Safety model
 
@@ -368,13 +362,13 @@ JSON journal with paths, sizes and trash locations; 30 days or 200 batches.
 - Windows arm64 and linux-arm64 artifacts.
 - Duplicates on the system volume scan the user's content folders only; data
   drives are scanned whole. There is no incremental index, so every run hashes
-  files again, and the hashing budget comes from settings (8 GB default). Hard
-  links are not deduplicated.
+  files again, and the hashing budget comes from settings (8 GB default).
 - Large-file scanning prefers the NTFS MFT. That path needs administrator access,
   which can be enabled through the administrator toggle (UAC + helper); without it
   AirClean falls back to walking
   the whole drive, which can take minutes on a cold mechanical drive (progress
-  and cancellation are available).
+  and cancellation are available). The Store build does not offer administrator
+  acceleration.
 - Windows deletion still uses the legacy shell API, so paths beyond MAX_PATH are
   not supported; undo itself restores by original path.
 - macOS now moves items through `NSFileManager`; external-volume `.Trashes` and
@@ -382,12 +376,12 @@ JSON journal with paths, sizes and trash locations; 30 days or 200 batches.
 - macOS and Linux have not been verified on real hardware, including the Linux
   `pkexec` elevation path. The CI matrix is in place and volume enumeration branches
   per platform.
-- Windows signing and Apple notarization have not been run with real
-  certificates; unsigned packages trigger the usual platform warnings.
+- The MSIX package has not been submitted to the Store yet: review, Store signing
+  and package-identity matching all still need one real pass through Partner Center.
 
 ## Roadmap
 
-Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **20 done, 2 in progress, 2 not started**.
+Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **21 done, 1 in progress, 2 not started**.
 
 | Status | Item | Notes |
 | --- | --- | --- |
@@ -401,7 +395,7 @@ Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **20 done, 2 
 | ✅ Done | Auto-update on installed Windows / macOS builds | Background check/download with a restart prompt. |
 | ✅ Done | MFT-based large-file scanning | Validated on a Windows runner: a 1.4 GB MFT with 1.36 million records took about 9 s. It needs administrator access; the normal walk is the fallback. |
 | ✅ Done | Administrator-only categories | The helper, MFT acceleration, Windows Update cache, apt package cache, and journald cleanup are wired; Linux elevation still needs real-hardware validation. |
-| 🚧 In progress | Production signing and notarization | Workflow and secrets docs are ready; no real certificates yet, so Windows signing and Apple notarization have not been exercised. |
+| ✅ Done | Microsoft Store/MSIX distribution | Windows ships a Store MSIX package (signed and updated by the Store); macOS and Linux ship portable archives only. No code-signing certificate is needed. |
 | 🚧 In progress | macOS / Linux hardware validation | CI covers builds and headless tests on all three platforms; real-hardware checks for the UI, themes, Trash, and reveal are still missing. |
 | ✅ Done | A real "undo the last cleanup" | The completion page and welcome list restore files; Windows parses the Recycle Bin `$I` metadata, Linux reads `.trashinfo`, macOS restores from the journal on the main volume. |
 | ✅ Done | Tray icon and background mode | Tray menu, close/minimize to tray, single-instance activation. |

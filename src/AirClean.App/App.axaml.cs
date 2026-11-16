@@ -74,7 +74,10 @@ public partial class App : Application
 
             var trash = PlatformServices.CreateTrashService();
             var reveal = PlatformServices.CreateRevealService();
-            var adminHelper = new AdminHelperClient();
+
+            // A packaged (Store) build cannot spawn the elevated helper, so administrator
+            // acceleration and the system-wide categories are simply not offered there.
+            var adminHelper = PlatformServices.IsStoreManaged ? null : new AdminHelperClient();
             var exclusions = new ExclusionSet(_settings.Exclusions);
 
             // Hard links share one identity, and a replaced file keeps its path but not its

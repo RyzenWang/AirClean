@@ -5,6 +5,35 @@ All notable changes to AirClean are documented here. The format follows
 publishes the matching section below as the GitHub release notes. Versions stay
 `0.x` until the app is out of preview.
 
+## [0.6.0] - 2026-11-16
+
+Distribution change: two lines, and no code-signing certificate in this repository.
+
+### Added
+
+- A Microsoft Store package. `packaging/msix/Build-Msix.ps1` generates the tile assets
+  from the app icon, writes the manifest with a four-part version, and packs the
+  published AOT build with `makeappx`. The Store signs and updates it, so Windows no
+  longer needs a signed `Setup.exe` or a Velopack feed.
+- Detecting a packaged build at runtime (`GetCurrentPackageFullName`). In the Store
+  build the app skips GitHub update checks and does not create the elevation helper,
+  because MSIX cannot start an elevated child process.
+
+### Changed
+
+- Releases now contain the MSIX plus portable archives only: Windows gets both, macOS
+  and Linux are portable-only. `Setup.exe`, `.pkg`, `.nupkg` and the `releases.*.json`
+  manifests are gone, and with them the "unsigned installers withheld" step.
+- The release notes gain an **Install** section saying where each platform comes from.
+
+### Known limitations
+
+- Portable builds no longer self-update, so macOS loses the in-app update path it had
+  with the `.pkg` installer; updates for portable builds mean downloading a new archive.
+- The Store build does not offer administrator acceleration or the system-wide cleanup
+  categories, and large-file scanning falls back to walking the drive.
+- The MSIX has been built and unpacked locally but not submitted to the Store yet.
+
 ## [0.5.3] - 2026-11-16
 
 This release closes the 0.5 milestone: the remaining accessibility work and the platform

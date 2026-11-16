@@ -275,27 +275,23 @@ docs/
 
 ## 安装与发布
 
+两条分发线，本项目不持有代码签名证书：
+
+- **Windows**：Microsoft Store 的 MSIX 包（`AirClean-<version>-win-x64.msix`）。
+  上架由 Store 签名与更新；不想用 Store 时也有便携 zip。
+- **macOS / Linux**：免安装压缩包，解压即用。macOS 提供 arm64 / x64 两个包，
+  Linux 的 tar.gz 里带桌面入口与图标。
+
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.6.0
+git push origin v0.6.0
 ```
 
-Tag 发布会用 [Velopack](https://velopack.io/) 生成：
+Tag 发布会构建三平台并创建 Release，说明直接取自 [CHANGELOG.md](CHANGELOG.md)。
+也可以手动运行 **Release** 工作流，只构建并上传 artifact，不创建 Release。
 
-- Windows x64：`AirClean-win-Setup.exe` 安装器与便携 zip
-- macOS arm64 / x64：`AirClean-osx-*.pkg` 安装器与便携包
-- Linux x64：便携 `.tar.gz`
-
-> **Windows / macOS 的 Setup 安装器暂不开放下载。** 当前安装器未签名，Release 保留
-> 便携包、完整 nupkg 与更新清单，只隐藏 `AirClean-win-Setup.exe` 和
-> `AirClean-osx-*-Setup.pkg`；配置对应签名 Secrets 后会自动恢复。
-
-安装版会检查 GitHub 上的稳定版本、后台下载并显示“重启以更新”；便携版与源码运行
-不自更新。tag 里带 `-preview` 会标成预发布，不会被应用内更新选中。
-
-签名与公证所需的 Secrets 见 [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md)。
-未配置签名时仍会产出未签名安装包，Windows SmartScreen 与 macOS Gatekeeper
-会要求确认。也可以手动运行 **Release** 工作流，只构建并上传 artifact，不创建 Release。
+Store 提交步骤、包身份约定与本地打包命令见 [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md)。
+注：便携版不自更新，Store 版由 Store 更新。
 
 ## 安全边界
 
@@ -311,19 +307,18 @@ Tag 发布会用 [Velopack](https://velopack.io/) 生成：
 ## 还没做
 
 - Windows arm64 与 linux-arm64 产物
-- 重复文件在系统盘只扫用户内容目录，数据盘扫整盘；没有增量索引，每次全量哈希，
-  硬链接未去重
+- 重复文件在系统盘只扫用户内容目录，数据盘扫整盘；没有增量索引，每次全量哈希
 - 大文件扫描在 NTFS 上会优先读取 MFT；该路径需要管理员权限，可在设置中开启管理员加速
   （通过 UAC 启动 helper），未开启或取消 UAC 时回退整盘遍历，机械盘冷缓存下仍可能要几分钟
-  （有进度和取消）
+  （有进度和取消）。Store 版不提供管理员加速
 - Windows 删除长路径（> MAX_PATH）仍走旧 shell API；撤销已支持按原路径恢复
 - macOS 已接入 `NSFileManager` 移入，外置卷 `.Trashes` 与真机行为尚未验证
 - macOS/Linux 尚未实机验证（包括管理员 `pkexec` 提权路径；CI 矩阵与卷枚举分支已就绪）
-- Windows 与 macOS 的签名 / 公证步骤还没有用真实证书跑过；未签名包会触发系统提示
+- MSIX 尚未真正提交过 Store：审核、Store 签名与包身份匹配都要在 Partner Center 走一次
 
 ## 路线图
 
-状态：✅ 已完成 · 🚧 进行中 · ⬜ 未开始。当前 **20 项已完成、2 项进行中、2 项未开始**。
+状态：✅ 已完成 · 🚧 进行中 · ⬜ 未开始。当前 **21 项已完成、1 项进行中、2 项未开始**。
 
 | 状态 | 项目 | 说明 |
 | --- | --- | --- |
@@ -337,7 +332,7 @@ Tag 发布会用 [Velopack](https://velopack.io/) 生成：
 | ✅ 已完成 | Windows / macOS 安装版自动更新 | 后台检查与下载，状态栏提示重启。 |
 | ✅ 已完成 | 基于 MFT 的秒级大文件扫描 | Windows runner 实测：1.4 GB MFT / 136 万条记录约 9 秒；需要管理员权限，普通权限回退整盘遍历。 |
 | ✅ 已完成 | 管理员权限项 | 提权 helper、MFT 加速、Windows Update、apt 包缓存与 journald 清理均已接入；Linux 提权待实机验证。 |
-| 🚧 进行中 | 正式签名与公证 | 工作流和 Secrets 文档已就绪；缺真实证书，Windows 签名与 Apple 公证尚未实际跑通。 |
+| ✅ 已完成 | Microsoft Store/MSIX 分发 | Windows 走 Store 的 MSIX 包（由 Store 签名与更新），macOS/Linux 只发免安装包；不再需要自备代码签名证书。 |
 | 🚧 进行中 | macOS / Linux 实机验证 | CI 已覆盖三平台构建与 Headless 测试；真机上的窗口、主题、回收站与文件管理器定位还没验收。 |
 | ✅ 已完成 | 真正的“撤销上一次清理” | 完成页与欢迎页可直接恢复；Windows 解析回收站 `$I`、Linux 读 `.trashinfo`、macOS 主卷按 journal 恢复。 |
 | ✅ 已完成 | 托盘图标与后台常驻 | 托盘菜单、关闭 / 最小化到托盘；单实例唤起已有窗口。 |
