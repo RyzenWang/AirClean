@@ -68,6 +68,62 @@ public sealed class DeletionServiceTests : IDisposable
     }
 
     [Fact]
+    public void An_unchanged_identity_still_lets_the_file_be_deleted()
+    {
+        var file = Write(_root, "identified.bin", 64);
+        var identity = new FileIdentity(7, 42, 3);
+        var provider = new FakeIdentityProvider(identity);
+
+        var report = new DeletionService(
+                new TestTrash(),
+                new JournalStore(_journal),
+                identityProvider: provider)
+            .Delete([BuildIdentityCategory(file, _root, identity)], DeleteMode.Permanent, null, CancellationToken.None);
+
+        Assert.Equal(1, report.DeletedCount);
+        Assert.False(File.Exists(file));
+        Assert.Equal(1, provider.Calls);
+    }
+
+    [Fact]
+    public void A_file_swapped_after_the_scan_is_skipped_when_its_identity_differs()
+    {
+        var file = Write(_root, "swapped.bin", 64);
+        var category = BuildIdentityCategory(file, _root, new FileIdentity(7, 42));
+
+        // Size and mtime still match the recorded item; only the identity is different.
+        var provider = new FakeIdentityProvider(new FileIdentity(7, 43));
+
+        var report = new DeletionService(
+                new TestTrash(),
+                new JournalStore(_journal),
+                identityProvider: provider)
+            .Delete([category], DeleteMode.Permanent, null, CancellationToken.None);
+
+        Assert.True(File.Exists(file));
+        Assert.Equal(0, report.DeletedCount);
+        Assert.Equal(1, report.Skipped[SkipReason.ChangedSinceScan]);
+    }
+
+    [Fact]
+    public void An_unsupported_identity_provider_falls_back_to_size_and_mtime()
+    {
+        var file = Write(_root, "unsupported.bin", 64);
+        var category = BuildIdentityCategory(file, _root, new FileIdentity(7, 42));
+        var provider = new FakeIdentityProvider(new FileIdentity(9, 99), supported: false);
+
+        var report = new DeletionService(
+                new TestTrash(),
+                new JournalStore(_journal),
+                identityProvider: provider)
+            .Delete([category], DeleteMode.Permanent, null, CancellationToken.None);
+
+        Assert.Equal(1, report.DeletedCount);
+        Assert.False(File.Exists(file));
+        Assert.False(report.Skipped.ContainsKey(SkipReason.ChangedSinceScan));
+    }
+
+    [Fact]
     public void Trash_category_empties_the_recycle_bin_and_reports_freed_bytes()
     {
         var trash = new TestTrash { Sample = new TrashSample(1_024, 3) };
@@ -262,12 +318,37 @@ public sealed class DeletionServiceTests : IDisposable
         return category;
     }
 
+    private static CategoryScan BuildIdentityCategory(string path, string root, FileIdentity identity)
+    {
+        var info = new FileInfo(path);
+        var category = new CategoryScan
+        {
+            Category = CleanCategory.SystemTemp,
+            Safety = Safety.Safe
+        };
+
+        category.Add(new CleanItem(path, root, info.Length, info.LastWriteTimeUtc, identity));
+        return category;
+    }
+
     private static string Write(string root, string relativePath, int size)
     {
         var path = Path.Combine(root, relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllBytes(path, new byte[size]);
         return path;
+    }
+
+    private sealed class FakeIdentityProvider(FileIdentity identity, bool supported = true) : IFileIdentityProvider
+    {
+        public int Calls { get; private set; }
+
+        public bool TryGet(string path, out FileIdentity value)
+        {
+            Calls++;
+            value = supported ? identity : default;
+            return supported;
+        }
     }
 
     private sealed class FakeAdminCleanup : IAdminCleanup

@@ -11,6 +11,7 @@ using AirClean.Core.Services;
 using AirClean.Platform;
 using AirClean.Platform.Admin;
 using AirClean.Platform.Autostart;
+using AirClean.Platform.Identity;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -75,9 +76,25 @@ public partial class App : Application
             var reveal = PlatformServices.CreateRevealService();
             var adminHelper = new AdminHelperClient();
             var exclusions = new ExclusionSet(_settings.Exclusions);
-            var volumeScan = new VolumeScanService(RuleSet.ForCurrentPlatform(), trash, adminHelper, exclusions);
+
+            // Hard links share one identity, and a replaced file keeps its path but not its
+            // identity. Both checks only work when the platform can answer; the null provider
+            // keeps the previous size/mtime behaviour everywhere else.
+            var identities = FileIdentityProviders.Create();
+
+            var volumeScan = new VolumeScanService(
+                RuleSet.ForCurrentPlatform(),
+                trash,
+                adminHelper,
+                exclusions,
+                identities);
             var journal = new JournalStore();
-            var deletion = new DeletionService(trash, journal, adminHelper, exclusions: exclusions);
+            var deletion = new DeletionService(
+                trash,
+                journal,
+                adminHelper,
+                exclusions: exclusions,
+                identityProvider: identities);
 
             var viewModel = new MainWindowViewModel(
                 _settings,

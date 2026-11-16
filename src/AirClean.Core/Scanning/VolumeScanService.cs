@@ -48,10 +48,12 @@ public sealed class VolumeScanService(
     RuleSet ruleSet,
     ITrashService trash,
     IAdminHelper? adminHelper = null,
-    ExclusionSet? exclusions = null) : IVolumeScanService
+    ExclusionSet? exclusions = null,
+    IFileIdentityProvider? identityProvider = null) : IVolumeScanService
 {
     private readonly Scanner _rules = new(ruleSet, trash, exclusions);
     private readonly IAdminCleanup? _adminCleanup = adminHelper;
+    private readonly IFileIdentityProvider? _identityProvider = identityProvider;
 
     public async Task<ScanResult> ScanAsync(
         VolumeScanRequest request,
@@ -137,7 +139,12 @@ public sealed class VolumeScanService(
             var stageProgress = new Progress<ScanProgress>(value => progress?.Report(
                 new VolumeScanProgress(ScanStage.LargeFiles, value.FilesSeen, value.BytesFound, value.ItemsFound, value.CurrentTarget)));
 
-            var largeFiles = new LargeFileScanner(trash, adminHelper, exclusions, request.LargeFileLimit);
+            var largeFiles = new LargeFileScanner(
+                trash,
+                adminHelper,
+                exclusions,
+                request.LargeFileLimit,
+                _identityProvider);
             var largeResult = await largeFiles.ScanAsync(
                 request.Volume,
                 request.LargeFileThreshold,
@@ -188,7 +195,8 @@ public sealed class VolumeScanService(
             var duplicates = new DuplicateScanner(
                 request.DuplicateGroupLimit,
                 exclusions,
-                request.DuplicateMinSizeBytes);
+                request.DuplicateMinSizeBytes,
+                _identityProvider);
             var duplicateResult = await duplicates.ScanAsync(
                 request.DuplicateRoots,
                 request.DuplicateHashBudget,

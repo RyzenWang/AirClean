@@ -10,6 +10,13 @@ namespace AirClean.Core.Scanning;
 /// the whole file only for the survivors. Everything below <see cref="MinFileSize"/> is
 /// ignored — the payoff is not worth the noise.
 ///
+/// Hard links share one identity, so a second path to already-represented data is folded
+/// into the first and reported as <see cref="CategoryScan.HardlinkDuplicatesCollapsed"/>
+/// instead of inflating the reclaimable bytes. Copy-on-write clones (macOS APFS clones,
+/// Windows block clones) have their own inode/file id and are deliberately treated as
+/// ordinary copies: they cannot be recognised reliably, and this scanner does not pretend
+/// otherwise. Sparse files are likewise counted at their logical size.
+///
 /// Hashing is capped so a scan folded into a normal volume scan stays bounded; when the
 /// cap is hit the result reports <see cref="ScanResult.Limited"/> instead of silently
 /// pretending it looked at everything.
@@ -26,11 +33,13 @@ public sealed class DuplicateScanner
     private readonly int _maxGroups;
     private readonly ExclusionSet _exclusions;
     private readonly long _minFileSize;
+    private readonly IFileIdentityProvider _identityProvider;
 
     public DuplicateScanner(
         int maxGroups = MaxGroups,
         ExclusionSet? exclusions = null,
-        long minFileSize = MinFileSize)
+        long minFileSize = MinFileSize,
+        IFileIdentityProvider? identityProvider = null)
     {
         if (maxGroups <= 0)
         {
@@ -40,6 +49,7 @@ public sealed class DuplicateScanner
         _maxGroups = maxGroups;
         _exclusions = exclusions ?? new ExclusionSet();
         _minFileSize = minFileSize > 0 ? minFileSize : MinFileSize;
+        _identityProvider = identityProvider ?? NullFileIdentityProvider.Instance;
     }
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsLinux()
@@ -68,6 +78,9 @@ public sealed class DuplicateScanner
         var stopwatch = Stopwatch.StartNew();
         var bySize = new Dictionary<long, List<string>>();
         var seen = new HashSet<string>(PathComparer);
+        var identities = new HashSet<FileIdentity>();
+        var identityByPath = new Dictionary<string, FileIdentity>(PathComparer);
+        var hardlinkCollapsed = 0;
         var filesSeen = 0;
         var lastReport = DateTime.MinValue;
         string? current = null;
@@ -142,6 +155,21 @@ public sealed class DuplicateScanner
                         if (length < _minFileSize || !seen.Add(entry.FullName))
                         {
                             continue;
+                        }
+
+                        // A hard link (or a second path to the same file) points at data that
+                        // another path already represents. Deleting it frees nothing, so it must
+                        // not become another "removable" copy; keep the first path and count the
+                        // folded one. Providers that cannot answer leave the old behaviour intact.
+                        if (_identityProvider.TryGet(entry.FullName, out var identity))
+                        {
+                            if (!identities.Add(identity))
+                            {
+                                hardlinkCollapsed++;
+                                continue;
+                            }
+
+                            identityByPath[entry.FullName] = identity;
                         }
 
                         if (!bySize.TryGetValue(length, out var list))
@@ -278,7 +306,8 @@ public sealed class DuplicateScanner
             Safety = Safety.Caution,
             IsExplicitSelection = true,
             MatchedCount = matchedCount,
-            MatchedBytes = matchedBytes
+            MatchedBytes = matchedBytes,
+            HardlinkDuplicatesCollapsed = hardlinkCollapsed
         };
 
         foreach (var group in top)
@@ -286,7 +315,10 @@ public sealed class DuplicateScanner
             foreach (var file in group.Removable)
             {
                 var root = Path.GetPathRoot(file.Path) ?? "/";
-                category.Add(new CleanItem(file.Path, root, file.Size, file.LastWriteUtc));
+                var identity = identityByPath.TryGetValue(file.Path, out var known)
+                    ? known
+                    : (FileIdentity?)null;
+                category.Add(new CleanItem(file.Path, root, file.Size, file.LastWriteUtc, identity));
             }
         }
 

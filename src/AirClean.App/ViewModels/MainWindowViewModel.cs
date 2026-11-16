@@ -73,6 +73,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool _limitedByGroupCap;
     private int _duplicateGroupCount;
     private int _scanSkippedPermission;
+    private int _hardlinkCollapsed;
     private string? _scannedRoot;
     private bool _wasScanCanceled;
     private DeletionReport? _lastReport;
@@ -171,6 +172,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(EmptyTrashButtonText));
             OnPropertyChanged(nameof(LimitedNote));
             OnPropertyChanged(nameof(PartialNote));
+            OnPropertyChanged(nameof(HardlinkNote));
             OnPropertyChanged(nameof(SettingsWarningText));
             OnPropertyChanged(nameof(ExportSkipText));
             RefreshUndoMessage();
@@ -451,6 +453,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ? _localization.Format("L.PartialScanFormat", _scanSkippedPermission)
         : string.Empty;
 
+    /// <summary>True when several paths pointed at the same data and were counted once.</summary>
+    public bool HasHardlinkCollapsed => _hardlinkCollapsed > 0;
+
+    public string HardlinkNote => HasHardlinkCollapsed
+        ? _localization.Format("L.HardlinkCollapsedFormat", _hardlinkCollapsed)
+        : string.Empty;
+
     public string ScanElapsedText { get; private set; } = string.Empty;
 
     public bool HasLimited { get; private set; }
@@ -716,6 +725,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _scanSkippedPermission = 0;
         OnPropertyChanged(nameof(HasPartialScan));
         OnPropertyChanged(nameof(PartialNote));
+        _hardlinkCollapsed = 0;
+        OnPropertyChanged(nameof(HasHardlinkCollapsed));
+        OnPropertyChanged(nameof(HardlinkNote));
         Stage = AppStage.Scanning;
         SetStatus("L.Scanning");
 
@@ -1391,10 +1403,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _limitedByGroupCap = result.LimitedByGroupCap;
         _duplicateGroupCount = result.DuplicateGroupCount;
         _scanSkippedPermission = result.SkippedPermission;
+        _hardlinkCollapsed = result.HardlinkDuplicatesCollapsed;
         OnPropertyChanged(nameof(HasLimited));
         OnPropertyChanged(nameof(LimitedNote));
         OnPropertyChanged(nameof(HasPartialScan));
         OnPropertyChanged(nameof(PartialNote));
+        OnPropertyChanged(nameof(HasHardlinkCollapsed));
+        OnPropertyChanged(nameof(HardlinkNote));
 
         _scannedRoot = volume.Root;
         _scanTimer.Stop();

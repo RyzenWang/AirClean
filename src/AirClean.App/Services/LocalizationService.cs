@@ -100,6 +100,9 @@ public sealed class LocalizationService
             ["L.PartialScanFormat"] = (
                 "{0:N0} folders could not be read, so the totals are a lower bound and the real reclaimable space may be larger.",
                 "另有 {0:N0} 个目录无权限读取，体积是下限，实际可清理空间可能更多。"),
+            ["L.HardlinkCollapsedFormat"] = (
+                "{0:N0} extra path(s) point at data already listed (hard links), so they are counted once.",
+                "另有 {0:N0} 个路径指向已列出的同一份数据（硬链接），已按一份计算。"),
             ["L.SettingsCorruptWarning"] = (
                 "The settings file is damaged, so your excluded folders are unknown. Cleaning is paused: repair or remove that file, then restart AirClean.",
                 "设置文件已损坏，排除目录无法确认，清理已暂停。请修复或删除该文件后重启 AirClean。"),

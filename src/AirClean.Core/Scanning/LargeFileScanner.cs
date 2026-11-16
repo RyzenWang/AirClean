@@ -15,13 +15,15 @@ public sealed class LargeFileScanner(
     ITrashService trash,
     IPrivilegedLargeFileScanner? privileged = null,
     ExclusionSet? exclusions = null,
-    int maxItems = 200)
+    int maxItems = 200,
+    IFileIdentityProvider? identityProvider = null)
 {
     public const long DefaultThresholdBytes = 100L * 1024 * 1024;
     public const int MaxItems = 200;
 
     private readonly ExclusionSet _exclusions = exclusions ?? new ExclusionSet();
     private readonly int _maxItems = maxItems > 0 ? maxItems : MaxItems;
+    private readonly IFileIdentityProvider _identityProvider = identityProvider ?? NullFileIdentityProvider.Instance;
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsLinux()
         ? StringComparer.Ordinal
@@ -67,9 +69,10 @@ public sealed class LargeFileScanner(
             mft is not null)
         {
             stopwatch.Stop();
-            var items = _exclusions.IsEmpty
+            IReadOnlyList<CleanItem> items = _exclusions.IsEmpty
                 ? mft.Items
                 : mft.Items.Where(item => !_exclusions.Contains(item.Path)).ToArray();
+            items = WithIdentities(items);
             var reportedBytes = _exclusions.IsEmpty ? mft.MatchedBytes : items.Sum(item => item.Size);
             var reportedCount = _exclusions.IsEmpty ? mft.MatchedCount : items.Count;
 
@@ -90,9 +93,10 @@ public sealed class LargeFileScanner(
         if (privileged?.TryScan(volume, thresholdBytes, _maxItems, progress, cancellationToken) is { } elevated)
         {
             stopwatch.Stop();
-            var items = _exclusions.IsEmpty
+            IReadOnlyList<CleanItem> items = _exclusions.IsEmpty
                 ? elevated.Items
                 : elevated.Items.Where(item => !_exclusions.Contains(item.Path)).ToArray();
+            items = WithIdentities(items);
             var reportedBytes = _exclusions.IsEmpty ? elevated.MatchedBytes : items.Sum(item => item.Size);
             var reportedCount = _exclusions.IsEmpty ? elevated.MatchedCount : items.Count;
 
@@ -219,15 +223,46 @@ public sealed class LargeFileScanner(
             .Take(_maxItems)
             .ToList();
 
+        // Only the items that are actually offered for cleanup pay for the identity handle;
+        // the full candidate list can be much larger than the displayed top.
+        var identified = WithIdentities(top);
+
         progress?.Report(new ScanProgress(filesSeen, matchedBytes, candidates.Count, current));
         stopwatch.Stop();
 
         return new ScanResult
         {
-            Categories = [CreateLargeCategory(top, matchedBytes, candidates.Count), ScanTrash(volume)],
+            Categories = [CreateLargeCategory(identified, matchedBytes, candidates.Count), ScanTrash(volume)],
             Elapsed = stopwatch.Elapsed,
             SkippedPermission = skipped
         };
+    }
+
+    /// <summary>
+    /// Attaches a stable identity to the items when the platform supports it. A provider that
+    /// returns false simply leaves the item unchanged, so unsupported platforms keep working.
+    /// </summary>
+    private IReadOnlyList<CleanItem> WithIdentities(IReadOnlyList<CleanItem> items)
+    {
+        if (items.Count == 0)
+        {
+            return items;
+        }
+
+        List<CleanItem>? identified = null;
+
+        for (var index = 0; index < items.Count; index++)
+        {
+            var item = items[index];
+
+            if (item.Identity is null && _identityProvider.TryGet(item.Path, out var identity))
+            {
+                identified ??= [.. items];
+                identified[index] = item with { Identity = identity };
+            }
+        }
+
+        return identified ?? items;
     }
 
     private static CategoryScan CreateLargeCategory(

@@ -15,7 +15,8 @@ public sealed class DeletionService(
     JournalStore? journal = null,
     IAdminCleanup? adminCleanup = null,
     Func<string, long?>? freeSpaceProbe = null,
-    ExclusionSet? exclusions = null)
+    ExclusionSet? exclusions = null,
+    IFileIdentityProvider? identityProvider = null)
 {
     private const int MaxJournalEntries = 20_000;
     private const int MaxSkippedSamples = 500;
@@ -25,6 +26,7 @@ public sealed class DeletionService(
     private readonly JournalStore _journal = journal ?? new JournalStore();
     private readonly Func<string, long?> _freeSpace = freeSpaceProbe ?? DefaultFreeSpace;
     private readonly ExclusionSet _exclusions = exclusions ?? new ExclusionSet();
+    private readonly IFileIdentityProvider _identityProvider = identityProvider ?? NullFileIdentityProvider.Instance;
 
     public JournalStore Journal => _journal;
 
@@ -161,6 +163,18 @@ public sealed class DeletionService(
                         }
 
                         if (info.Length != item.Size || info.LastWriteTimeUtc != item.LastWriteUtc)
+                        {
+                            Skip(skipped, skippedSamples, SkipReason.ChangedSinceScan, item.Path);
+                            continue;
+                        }
+
+                        // Size and mtime can be forged or preserved by a same-name replacement.
+                        // When the scanner captured a stable identity, re-read it immediately
+                        // before deleting. An unsupported provider returns false and leaves the
+                        // old check in charge rather than blocking a legitimate cleanup.
+                        if (item.Identity is { } expectedIdentity &&
+                            _identityProvider.TryGet(item.Path, out var currentIdentity) &&
+                            currentIdentity != expectedIdentity)
                         {
                             Skip(skipped, skippedSamples, SkipReason.ChangedSinceScan, item.Path);
                             continue;

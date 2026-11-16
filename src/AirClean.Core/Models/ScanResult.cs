@@ -32,6 +32,12 @@ public sealed class CategoryScan
 
     public bool Limited { get; set; }
 
+    /// <summary>
+    /// Paths that pointed at data already represented by another path (hard links) and were
+    /// folded into it. They are reported once, so they do not inflate the reclaimable total.
+    /// </summary>
+    public int HardlinkDuplicatesCollapsed { get; set; }
+
     public List<CleanItem> Items { get; } = [];
 
     public void Add(CleanItem item)
@@ -69,6 +75,13 @@ public sealed class ScanResult
 
     /// <summary>Populated only by the duplicate scan.</summary>
     public IReadOnlyList<DuplicateGroup>? DuplicateGroups { get; init; }
+
+    /// <summary>
+    /// Additional paths that were folded into an existing duplicate entry because they point
+    /// at the same data (hard links). Deleting them would free nothing, so they are counted
+    /// here instead of in <see cref="TotalBytes"/>.
+    /// </summary>
+    public int HardlinkDuplicatesCollapsed => Categories.Sum(category => category.HardlinkDuplicatesCollapsed);
 
     public long TotalBytes => Categories.Sum(category => category.Bytes);
 

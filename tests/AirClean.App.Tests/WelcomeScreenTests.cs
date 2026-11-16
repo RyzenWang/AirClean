@@ -517,6 +517,22 @@ public sealed class FlowTests
     }
 
     [AvaloniaFact]
+    public void Folded_hard_links_are_reported_without_inflating_the_total()
+    {
+        var viewModel = CreateViewModel("en", null, scanService: new PartialScanService(0, hardlinkCollapsed: 2));
+        var window = Show(viewModel);
+
+        viewModel.ScanCommand.Execute(null);
+        PumpUntil(() => viewModel.IsScanComplete);
+
+        Assert.True(viewModel.HasHardlinkCollapsed);
+        Assert.Contains("2", viewModel.HardlinkNote);
+        Assert.DoesNotContain("+", viewModel.FoundSummary);
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void A_clean_scan_shows_no_partial_note()
     {
         var viewModel = CreateViewModel("en", null, scanService: new PartialScanService(0));
@@ -1113,7 +1129,7 @@ public sealed class FlowTests
         }
     }
 
-    private sealed class PartialScanService(int skippedPermission) : IVolumeScanService
+    private sealed class PartialScanService(int skippedPermission, int hardlinkCollapsed = 0) : IVolumeScanService
     {
         public Task<ScanResult> ScanAsync(
             VolumeScanRequest request,
@@ -1124,7 +1140,8 @@ public sealed class FlowTests
             var category = new CategoryScan
             {
                 Category = CleanCategory.SystemTemp,
-                Safety = Safety.Safe
+                Safety = Safety.Safe,
+                HardlinkDuplicatesCollapsed = hardlinkCollapsed
             };
             category.Add(new CleanItem(
                 Path.Combine(Path.GetTempPath(), "fixture.tmp"),
