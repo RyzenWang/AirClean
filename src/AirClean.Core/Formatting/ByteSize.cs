@@ -36,4 +36,11 @@ public static class ByteSize
         var (number, unit) = Split(bytes);
         return number + " " + unit;
     }
+
+    /// <summary>
+    /// Formats a total that only covers what the scan could measure. The trailing "+"
+    /// says "at least this much", so an unreadable folder never turns into a precise lie.
+    /// </summary>
+    public static string FormatLowerBound(long bytes, bool isLowerBound) =>
+        isLowerBound ? Format(bytes) + "+" : Format(bytes);
 }

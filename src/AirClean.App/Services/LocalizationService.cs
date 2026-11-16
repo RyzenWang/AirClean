@@ -97,6 +97,19 @@ public sealed class LocalizationService
             ["L.ScanCanceledNote"] = (
                 "The scan stopped early; these results only cover the categories that finished.",
                 "扫描提前结束，当前结果只包含已完成的分类。"),
+            ["L.PartialScanFormat"] = (
+                "{0:N0} folders could not be read, so the totals are a lower bound and the real reclaimable space may be larger.",
+                "另有 {0:N0} 个目录无权限读取，体积是下限，实际可清理空间可能更多。"),
+            ["L.SettingsCorruptWarning"] = (
+                "The settings file is damaged, so your excluded folders are unknown. Cleaning is paused: repair or remove that file, then restart AirClean.",
+                "设置文件已损坏，排除目录无法确认，清理已暂停。请修复或删除该文件后重启 AirClean。"),
+            ["L.SettingsUnreadableWarning"] = (
+                "The settings file cannot be read (permissions or another process), so your excluded folders are unknown. Cleaning is paused: restore access to it, then restart AirClean.",
+                "设置文件无法读取（权限不足或文件被占用），排除目录无法确认，清理已暂停。请恢复该文件的读取权限后重启 AirClean。"),
+            ["L.SettingsRecoveredWarning"] = (
+                "The settings file could not be read, so the last backup was loaded. Please confirm your excluded folders in Settings.",
+                "设置文件读取失败，已加载上次的备份。请在设置里确认排除目录仍然正确。"),
+            ["L.OpenSettings"] = ("Open settings", "打开设置"),
             ["L.CategoryCanceled"] = ("Not finished", "未完成"),
             ["L.ScanningLarge"] = ("Looking for large files…", "正在查找大文件…"),
             ["L.ScanningDuplicates"] = ("Comparing duplicates…", "正在比对重复文件…"),

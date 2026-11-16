@@ -105,6 +105,19 @@
                      TextWrapping="Wrap" />
         </Border>
 
+        <Border IsVisible="{Binding HasPartialScan}"
+                Background="{DynamicResource CautionSoftBrush}"
+                BorderBrush="#EBD9BC"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="12,10"
+                Margin="0,14,0,0">
+          <TextBlock Text="{Binding PartialNote}"
+                     FontSize="10.5"
+                     Foreground="{DynamicResource CautionBrush}"
+                     TextWrapping="Wrap" />
+        </Border>
+
         <Border IsVisible="{Binding HasSkipped}"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"

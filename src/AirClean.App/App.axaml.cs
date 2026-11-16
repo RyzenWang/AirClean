@@ -43,10 +43,18 @@ public partial class App : Application
                 CrashLog.Write("Dispatcher.UnhandledException", args.Exception);
 
             _settingsService = new SettingsService();
-            var isFirstRun = !File.Exists(_settingsService.SettingsPath);
-            _settings = _settingsService.Load();
+            var settingsLoad = _settingsService.LoadResult();
+            _settings = settingsLoad.Settings;
 
-            if (isFirstRun && CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("zh", StringComparison.OrdinalIgnoreCase))
+            if (settingsLoad.BlocksCleanup)
+            {
+                // The exclusion list decides what cleanup must not touch. Without it the
+                // view model pauses cleaning and shows the warning banner instead.
+                CrashLog.Write("Settings.Unreadable", new InvalidOperationException(
+                    $"{settingsLoad.Status}: {settingsLoad.Detail ?? "(no detail)"}"));
+            }
+
+            if (settingsLoad.Status == SettingsLoadStatus.FirstRun && CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("zh", StringComparison.OrdinalIgnoreCase))
             {
                 _settings.Language = LocalizationService.ChineseSimplified;
                 _settingsService.Save(_settings);
@@ -82,7 +90,8 @@ public partial class App : Application
                 reveal,
                 adminHelper: adminHelper,
                 reportExporter: new FileReportExporter(),
-                exclusions: exclusions);
+                exclusions: exclusions,
+                settingsStatus: settingsLoad.Status);
 
             var window = new MainWindow
             {

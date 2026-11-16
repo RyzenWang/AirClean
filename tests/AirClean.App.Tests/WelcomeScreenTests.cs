@@ -8,6 +8,7 @@ using AirClean.Core.Models;
 using AirClean.Core.Rules;
 using AirClean.Core.Scanning;
 using AirClean.Core.Security;
+using AirClean.Core.Services;
 using AirClean.Core.Platform;
 using AirClean.Core.Trash;
 using AirClean.Core.Volumes;
@@ -497,6 +498,105 @@ public sealed class FlowTests
     }
 
     [AvaloniaFact]
+    public void Unreadable_folders_turn_the_total_into_a_lower_bound()
+    {
+        var viewModel = CreateViewModel("en", null, scanService: new PartialScanService(3));
+        var window = Show(viewModel);
+
+        viewModel.ScanCommand.Execute(null);
+        PumpUntil(() => viewModel.IsScanComplete);
+
+        Assert.True(viewModel.HasPartialScan);
+        Assert.Contains("3", viewModel.PartialNote);
+        Assert.Contains("lower bound", viewModel.PartialNote);
+        Assert.Contains("+", viewModel.FoundSummary);
+
+        window.InvalidateVisual();
+        Save(window.CaptureRenderedFrame()!, "results-partial-en.png");
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void A_clean_scan_shows_no_partial_note()
+    {
+        var viewModel = CreateViewModel("en", null, scanService: new PartialScanService(0));
+        var window = Show(viewModel);
+
+        viewModel.ScanCommand.Execute(null);
+        PumpUntil(() => viewModel.IsScanComplete);
+
+        Assert.False(viewModel.HasPartialScan);
+        Assert.Equal(string.Empty, viewModel.PartialNote);
+        Assert.DoesNotContain("+", viewModel.FoundSummary);
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Cleaning_is_paused_when_the_settings_file_could_not_be_read()
+    {
+        var viewModel = CreateViewModel(
+            "en",
+            null,
+            scanService: new PartialScanService(0),
+            settingsStatus: SettingsLoadStatus.Corrupt);
+        var window = Show(viewModel);
+
+        Assert.True(viewModel.HasSettingsWarning);
+        Assert.True(viewModel.IsCleanupBlocked);
+        Assert.Contains("damaged", viewModel.SettingsWarningText);
+
+        var banner = window.FindControl<Border>("SettingsWarningBanner");
+        Assert.NotNull(banner);
+        Assert.True(banner!.IsVisible);
+
+        // Even with something selected, the destructive commands stay inert.
+        viewModel.ScanCommand.Execute(null);
+        PumpUntil(() => viewModel.IsScanComplete);
+        viewModel.Categories.First(category => category.FileCount > 0).Details[0].IsSelected = true;
+        Pump();
+
+        Assert.False(viewModel.CanClean);
+
+        viewModel.ConfirmCleanCommand.Execute(null);
+        Pump();
+        Assert.NotEqual(AppStage.Completed, viewModel.Stage);
+
+        window.InvalidateVisual();
+        Save(window.CaptureRenderedFrame()!, "settings-warning-en.png");
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void A_readable_scan_keeps_the_warning_banner_hidden()
+    {
+        var viewModel = CreateViewModel("en", null);
+        var window = Show(viewModel);
+
+        Assert.False(viewModel.HasSettingsWarning);
+        Assert.False(viewModel.IsCleanupBlocked);
+
+        var banner = window.FindControl<Border>("SettingsWarningBanner");
+        Assert.NotNull(banner);
+        Assert.False(banner!.IsVisible);
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void A_recovered_backup_warns_without_blocking_cleaning()
+    {
+        var viewModel = CreateViewModel("en", null, settingsStatus: SettingsLoadStatus.RecoveredFromBackup);
+        var window = Show(viewModel);
+
+        Assert.True(viewModel.HasSettingsWarning);
+        Assert.False(viewModel.IsCleanupBlocked);
+        Assert.Contains("backup", viewModel.SettingsWarningText);
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Refreshing_settings_updates_the_shared_exclusion_set()
     {
         var exclusions = new ExclusionSet();
@@ -807,7 +907,8 @@ public sealed class FlowTests
         IVolumeScanService? scanService = null,
         IReportExporter? reportExporter = null,
         string scanMode = "Full",
-        ExclusionSet? exclusions = null)
+        ExclusionSet? exclusions = null,
+        SettingsLoadStatus settingsStatus = SettingsLoadStatus.Ok)
     {
         var settings = new AppSettings { Language = language, ScanMode = scanMode };
         var localization = new LocalizationService();
@@ -835,7 +936,8 @@ public sealed class FlowTests
             volumes,
             duplicateRoots,
             reportExporter: reportExporter,
-            exclusions: exclusions);
+            exclusions: exclusions,
+            settingsStatus: settingsStatus);
     }
 
     /// <summary>
@@ -1007,6 +1109,36 @@ public sealed class FlowTests
             {
                 Categories = [],
                 Elapsed = TimeSpan.Zero
+            });
+        }
+    }
+
+    private sealed class PartialScanService(int skippedPermission) : IVolumeScanService
+    {
+        public Task<ScanResult> ScanAsync(
+            VolumeScanRequest request,
+            IProgress<VolumeScanProgress>? progress,
+            IProgress<ScanUpdate>? updates,
+            CancellationToken cancellationToken)
+        {
+            var category = new CategoryScan
+            {
+                Category = CleanCategory.SystemTemp,
+                Safety = Safety.Safe
+            };
+            category.Add(new CleanItem(
+                Path.Combine(Path.GetTempPath(), "fixture.tmp"),
+                Path.GetTempPath(),
+                10,
+                DateTime.UtcNow));
+
+            updates?.Report(new ScanUpdate(ScanStage.Caches, category, null));
+
+            return Task.FromResult(new ScanResult
+            {
+                Categories = [category],
+                Elapsed = TimeSpan.FromSeconds(1),
+                SkippedPermission = skippedPermission
             });
         }
     }

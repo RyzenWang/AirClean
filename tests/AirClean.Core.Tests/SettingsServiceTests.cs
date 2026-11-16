@@ -161,6 +161,66 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.True(loaded.RunAtLogin);
     }
 
+    [Fact]
+    public void A_missing_file_is_reported_as_a_first_run()
+    {
+        var result = new SettingsService(_directory).LoadResult();
+
+        Assert.Equal(SettingsLoadStatus.FirstRun, result.Status);
+        Assert.True(result.ExclusionsTrusted);
+        Assert.False(result.BlocksCleanup);
+    }
+
+    [Fact]
+    public void A_broken_settings_file_is_reported_instead_of_dropping_exclusions()
+    {
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(
+            Path.Combine(_directory, "settings.json"),
+            """{"exclusions":["C:\\keep", oops""");
+
+        var result = new SettingsService(_directory).LoadResult();
+
+        Assert.Equal(SettingsLoadStatus.Corrupt, result.Status);
+        Assert.False(result.ExclusionsTrusted);
+        Assert.True(result.BlocksCleanup);
+        Assert.False(string.IsNullOrWhiteSpace(result.Detail));
+    }
+
+    [Fact]
+    public void The_last_good_copy_is_restored_when_the_current_file_is_broken()
+    {
+        var service = new SettingsService(_directory);
+        var settings = new AppSettings { Exclusions = [@"C:\Temp\keep"] };
+
+        Assert.True(service.Save(settings));
+        Assert.True(service.Save(settings));
+        Assert.True(File.Exists(service.BackupPath));
+
+        File.WriteAllText(service.SettingsPath, "{ broken");
+
+        var result = new SettingsService(_directory).LoadResult();
+
+        Assert.Equal(SettingsLoadStatus.RecoveredFromBackup, result.Status);
+        Assert.True(result.ExclusionsTrusted);
+        Assert.Equal([@"C:\Temp\keep"], result.Settings.Exclusions);
+    }
+
+    [Fact]
+    public void A_broken_file_never_overwrites_the_last_good_backup()
+    {
+        var service = new SettingsService(_directory);
+        Assert.True(service.Save(new AppSettings { Exclusions = [@"C:\Temp\old"] }));
+        Assert.True(service.Save(new AppSettings { Exclusions = [@"C:\Temp\keep"] }));
+
+        var backupBefore = File.ReadAllText(service.BackupPath);
+        File.WriteAllText(service.SettingsPath, "{ broken");
+
+        Assert.True(service.Save(new AppSettings { Exclusions = [@"C:\Temp\new"] }));
+
+        Assert.Equal(backupBefore, File.ReadAllText(service.BackupPath));
+    }
+
     public void Dispose()
     {
         try

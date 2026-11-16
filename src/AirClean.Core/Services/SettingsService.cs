@@ -5,8 +5,10 @@ namespace AirClean.Core.Services;
 
 /// <summary>
 /// Small JSON settings store in the platform's per-user application data folder.
-/// Writes atomically through a temporary file, and never lets a broken settings file
-/// stop the application from starting.
+/// Writes atomically through a temporary file and keeps the previous good copy as
+/// <c>settings.json.bak</c>. A broken file never stops the application from starting, but
+/// <see cref="LoadResult"/> reports it so callers can stop destructive work instead of
+/// silently dropping the excluded folders.
 /// </summary>
 public sealed class SettingsService
 {
@@ -24,6 +26,9 @@ public sealed class SettingsService
     public string SettingsDirectory { get; }
 
     public string SettingsPath { get; }
+
+    /// <summary>Last good copy, written before <see cref="SettingsPath"/> is replaced.</summary>
+    public string BackupPath => SettingsPath + ".bak";
 
     public static string GetDefaultDirectory()
     {
@@ -55,25 +60,93 @@ public sealed class SettingsService
             "AirClean");
     }
 
-    public AppSettings Load()
+    public AppSettings Load() => LoadResult().Settings;
+
+    /// <summary>
+    /// Reads the settings file and says whether the read actually worked. A malformed or
+    /// unreadable file falls back to <see cref="BackupPath"/> first; only when that is
+    /// unusable too does the status become <see cref="SettingsLoadStatus.Corrupt"/> or
+    /// <see cref="SettingsLoadStatus.Unreadable"/> with default settings.
+    /// </summary>
+    public SettingsLoadResult LoadResult()
     {
         lock (_gate)
         {
+            if (!File.Exists(SettingsPath))
+            {
+                return new SettingsLoadResult(SettingsLoadStatus.FirstRun, new AppSettings());
+            }
+
             try
             {
-                if (!File.Exists(SettingsPath))
+                return new SettingsLoadResult(SettingsLoadStatus.Ok, ReadSettings(SettingsPath));
+            }
+            catch (Exception error)
+            {
+                var status = error is JsonException or NotSupportedException or ArgumentException
+                    ? SettingsLoadStatus.Corrupt
+                    : SettingsLoadStatus.Unreadable;
+
+                if (TryReadBackup(out var backup))
                 {
-                    return new AppSettings();
+                    return new SettingsLoadResult(
+                        SettingsLoadStatus.RecoveredFromBackup,
+                        backup,
+                        error.Message);
                 }
 
-                var json = File.ReadAllText(SettingsPath);
-                var settings = JsonSerializer.Deserialize(json, SettingsJsonContext.Default.AppSettings);
-                return Normalize(settings ?? new AppSettings());
+                return new SettingsLoadResult(status, new AppSettings(), error.Message);
             }
-            catch
+        }
+    }
+
+    private static AppSettings ReadSettings(string path)
+    {
+        var json = File.ReadAllText(path);
+        var settings = JsonSerializer.Deserialize(json, SettingsJsonContext.Default.AppSettings);
+        return Normalize(settings ?? new AppSettings());
+    }
+
+    private bool TryReadBackup(out AppSettings settings)
+    {
+        settings = new AppSettings();
+
+        try
+        {
+            if (!File.Exists(BackupPath))
             {
-                return new AppSettings();
+                return false;
             }
+
+            settings = ReadSettings(BackupPath);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Keeps the file that is about to be replaced. A file that does not parse is not
+    /// promoted into the backup slot, so repairing a broken file cannot destroy the last
+    /// good copy the user still has.
+    /// </summary>
+    private void KeepBackup()
+    {
+        try
+        {
+            if (!File.Exists(SettingsPath))
+            {
+                return;
+            }
+
+            _ = ReadSettings(SettingsPath);
+            File.Copy(SettingsPath, BackupPath, overwrite: true);
+        }
+        catch
+        {
+            // A missing backup is not a reason to fail the save.
         }
     }
 
@@ -85,6 +158,7 @@ public sealed class SettingsService
             {
                 System.IO.Directory.CreateDirectory(SettingsDirectory);
                 settings.SchemaVersion = AppSettings.CurrentSchemaVersion;
+                KeepBackup();
                 var temporaryPath = SettingsPath + ".tmp";
                 File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings, SettingsJsonContext.Default.AppSettings));
                 File.Move(temporaryPath, SettingsPath, overwrite: true);

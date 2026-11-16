@@ -75,6 +75,32 @@
 - 修复清理遮罩转圈动画偏移：不再旋转 `Arc` 或容器，而是每帧在固定 18×18 坐标里重建圆弧 `Path.Data`，圆心固定为 (9,9)。
 - 新增“清理中取消后进度字段清空”回归测试，测试总数 **127**（Core 90 + App 37）。
 
+## 0.4.3 信任修正
+
+两处都是"看起来精确、实际在骗人"的问题，不涉及新功能。
+
+| 项目 | 结果 | 说明 |
+| --- | --- | --- |
+| `dotnet build AirClean.sln -c Debug` | 通过 | 0 警告 / 0 错误 |
+| `dotnet test AirClean.sln` | 通过 | Core 94 + App 42 = **136**（新增 9 个） |
+| 设置损坏 → 状态上报 | 通过（单测） | `LoadResult()` 返回 `Corrupt`，`ExclusionsTrusted=false` |
+| 设置不可读 → 回退备份 | 通过（单测） | 连续保存两次后破坏主文件，返回 `RecoveredFromBackup` 且排除目录完好 |
+| 坏文件不覆盖好备份 | 通过（单测） | 主文件损坏时 `Save` 不把坏内容提升为 `.bak` |
+| 清理暂停与横幅 | 通过（Headless） | `Corrupt` 时横幅可见、`CanClean=false`、`ConfirmClean` 无效果；`Ok` 时横幅隐藏 |
+| 备份恢复只警告不阻断 | 通过（Headless） | `RecoveredFromBackup` 显示横幅但不暂停清理 |
+| 部分扫描计量 | 通过（Headless） | `SkippedPermission>0` 时合计带 `+` 后缀，结果页与完成页显示"N 个目录无权限读取" |
+
+- **设置 fail-closed**：`SettingsService.LoadResult()` 区分 `Ok / FirstRun / RecoveredFromBackup /
+  Corrupt / Unreadable`；损坏或不可读时先读 `settings.json.bak`，都不可用则暂停清理。
+  `MainWindowViewModel` 在顶部横幅里说明原因并给出"打开设置"入口；`ConfirmClean` 与
+  清空废纸篓在暂停期间是空操作，键盘与自动化也绕不过去。
+- **部分扫描语义**：`ScanResult.SkippedPermission` 此前只采集不展示，现在接到结果页与
+  完成页，并把体积格式化为下限（`ByteSize.FormatLowerBound`）。
+- 已知限制：横幅出现后需修复文件并重启才能恢复清理（未做原地重新加载），
+  这是有意为之——避免"保存一次"把空的排除列表静默写回去。
+- 已知限制：扫描期的无权限目录只有计数、没有路径，因此没有进 CSV 跳过报告；
+  CSV 仍保持"删除期逐条跳过"的既有语义，不塞伪路径。
+
 ## 结论
 
 0.4 的自动化覆盖了设置、扫描范围、排除项、阈值、删除保护、提醒间隔和自启文件内容；

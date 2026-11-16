@@ -9,6 +9,7 @@ using AirClean.Core.Models;
 using AirClean.Core.Platform;
 using AirClean.Core.Scanning;
 using AirClean.Core.Security;
+using AirClean.Core.Services;
 using AirClean.Core.Trash;
 using AirClean.Core.Volumes;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -38,6 +39,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IAdminHelper? _adminHelper;
     private readonly IReportExporter? _reportExporter;
     private readonly ExclusionSet _exclusions;
+    private readonly SettingsLoadStatus _settingsStatus;
     private readonly long _largeFileThreshold;
     private readonly IReadOnlyList<string>? _duplicateRoots;
 
@@ -70,6 +72,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private int _totalMatchedCount;
     private bool _limitedByGroupCap;
     private int _duplicateGroupCount;
+    private int _scanSkippedPermission;
     private string? _scannedRoot;
     private bool _wasScanCanceled;
     private DeletionReport? _lastReport;
@@ -98,7 +101,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IReadOnlyList<string>? duplicateRoots = null,
         IAdminHelper? adminHelper = null,
         IReportExporter? reportExporter = null,
-        ExclusionSet? exclusions = null)
+        ExclusionSet? exclusions = null,
+        SettingsLoadStatus settingsStatus = SettingsLoadStatus.Ok)
     {
         _settings = settings;
         _localization = localization;
@@ -111,6 +115,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _adminHelper = adminHelper;
         _reportExporter = reportExporter;
         _exclusions = exclusions ?? new ExclusionSet(_settings.Exclusions);
+        _settingsStatus = settingsStatus;
         _largeFileThreshold = largeFileThreshold;
         _duplicateRoots = duplicateRoots;
 
@@ -165,6 +170,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(UndoButtonText));
             OnPropertyChanged(nameof(EmptyTrashButtonText));
             OnPropertyChanged(nameof(LimitedNote));
+            OnPropertyChanged(nameof(PartialNote));
+            OnPropertyChanged(nameof(SettingsWarningText));
             OnPropertyChanged(nameof(ExportSkipText));
             RefreshUndoMessage();
 
@@ -390,6 +397,26 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ? _localization.T("L.ScanScopeVolume")
         : _localization.T(IsQuickScan ? "L.ScanScopeQuick" : "L.ScanScopeFull");
 
+    // ---- settings protection ----
+
+    /// <summary>True when settings could not be read cleanly; a banner explains why.</summary>
+    public bool HasSettingsWarning => _settingsStatus is
+        SettingsLoadStatus.Corrupt or SettingsLoadStatus.Unreadable or SettingsLoadStatus.RecoveredFromBackup;
+
+    /// <summary>
+    /// True when the excluded folders are unknown, so deleting anything would be a guess.
+    /// Cleaning and emptying the Trash stay disabled until settings can be read again.
+    /// </summary>
+    public bool IsCleanupBlocked => _settingsStatus is SettingsLoadStatus.Corrupt or SettingsLoadStatus.Unreadable;
+
+    public string SettingsWarningText => _settingsStatus switch
+    {
+        SettingsLoadStatus.Corrupt => _localization.T("L.SettingsCorruptWarning"),
+        SettingsLoadStatus.Unreadable => _localization.T("L.SettingsUnreadableWarning"),
+        SettingsLoadStatus.RecoveredFromBackup => _localization.T("L.SettingsRecoveredWarning"),
+        _ => string.Empty
+    };
+
     // ---- scan ----
 
     public string ScanFoundText { get; private set; } = "0 B";
@@ -409,10 +436,20 @@ public sealed partial class MainWindowViewModel : ObservableObject
         : IsVolumeMode
             ? _localization.Format(
                 "L.FoundVolumeFormat",
-                ByteSize.Format(_totalMatchedBytes),
+                ByteSize.FormatLowerBound(_totalMatchedBytes, HasPartialScan),
                 _totalCount,
                 _totalMatchedCount)
-            : _localization.Format("L.FoundSummaryFormat", ByteSize.Format(_totalBytes), _totalCount);
+            : _localization.Format(
+                "L.FoundSummaryFormat",
+                ByteSize.FormatLowerBound(_totalBytes, HasPartialScan),
+                _totalCount);
+
+    /// <summary>True when folders could not be read, so every total is only a lower bound.</summary>
+    public bool HasPartialScan => _scanSkippedPermission > 0;
+
+    public string PartialNote => HasPartialScan
+        ? _localization.Format("L.PartialScanFormat", _scanSkippedPermission)
+        : string.Empty;
 
     public string ScanElapsedText { get; private set; } = string.Empty;
 
@@ -445,7 +482,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ? _localization.Format("L.CleanSelectedFormat", ByteSize.Format(_selectedBytes))
         : _localization.T("L.CleanSelected");
 
-    public bool CanClean => _selectedBytes > 0 && !IsConfirmVisible && !IsDeleting;
+    public bool CanClean => _selectedBytes > 0 && !IsConfirmVisible && !IsDeleting && !IsCleanupBlocked;
 
     // ---- confirm ----
 
@@ -559,6 +596,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool HasUndoMessage => _undoMessage.Length > 0;
 
     public bool CanEmptyTrash => !IsEmptyingTrash &&
+                                 !IsCleanupBlocked &&
                                  _trash.IsSupported &&
                                  _lastReport is { TrashedBytes: > 0 };
 
@@ -675,6 +713,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         HasLimited = false;
         WasScanCanceled = false;
         IsScanComplete = false;
+        _scanSkippedPermission = 0;
+        OnPropertyChanged(nameof(HasPartialScan));
+        OnPropertyChanged(nameof(PartialNote));
         Stage = AppStage.Scanning;
         SetStatus("L.Scanning");
 
@@ -913,7 +954,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task ConfirmCleanAsync()
     {
-        if (IsDeleting)
+        // Without a trustworthy exclusion list a delete is a guess, so the command is a
+        // no-op even if it is invoked through a key binding or automation.
+        if (IsDeleting || IsCleanupBlocked)
         {
             return;
         }
@@ -1128,7 +1171,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task ConfirmEmptyTrashAsync()
     {
-        if (IsEmptyingTrash)
+        if (IsEmptyingTrash || IsCleanupBlocked)
         {
             return;
         }
@@ -1347,8 +1390,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         HasLimited = result.Limited || Categories.Any(category => category.HasLimited_Internal);
         _limitedByGroupCap = result.LimitedByGroupCap;
         _duplicateGroupCount = result.DuplicateGroupCount;
+        _scanSkippedPermission = result.SkippedPermission;
         OnPropertyChanged(nameof(HasLimited));
         OnPropertyChanged(nameof(LimitedNote));
+        OnPropertyChanged(nameof(HasPartialScan));
+        OnPropertyChanged(nameof(PartialNote));
 
         _scannedRoot = volume.Root;
         _scanTimer.Stop();
