@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=AirClean
+GenericName=Disk Cleaner
+Comment=Scan, preview and clean caches, logs, large files and duplicates
+Exec=AirClean
+Icon=airclean
+Terminal=false
+Categories=Utility;System;FileTools;
+Keywords=disk;clean;cleanup;cache;duplicate;space;
+StartupNotify=true
+StartupWMClass=AirClean

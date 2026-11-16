@@ -230,6 +230,10 @@ public sealed class LocalizationService
             ["L.SuggestionWinSxSFact"] = (
                 "Shared Windows components. Analyse it with the system tool instead of deleting files.",
                 "Windows 组件共享目录；请用系统工具分析，不要直接删文件。"),
+            ["L.SuggestionFullDiskAccessLabel"] = ("Full Disk Access", "完全磁盘访问"),
+            ["L.SuggestionFullDiskAccessFact"] = (
+                "macOS blocks reading other apps' data, so some folders are missing from the scan. Grant access in System Settings, then scan again.",
+                "macOS 会阻止读取其他应用的数据，部分目录因此没被扫描。在系统设置里授权后重新扫描。"),
 
             ["L.ConfirmTitleFormat"] = ("Clean {0}?", "清理 {0}？"),
             ["L.ConfirmNoteTrash"] = ("{0} moves to the Trash and can be restored.", "{0} 将移到废纸篓，可以恢复。"),

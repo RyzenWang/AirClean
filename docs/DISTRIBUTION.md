@@ -127,6 +127,26 @@ git push origin v0.1.0
 | `.github/workflows/ci.yml` | push 到 main / PR | 三平台 build + test |
 | `.github/workflows/release.yml` | `v*` tag，或手动 | 打包、可选签名、创建 Release |
 
+## Linux 桌面入口
+
+Linux 的 tar.gz 里除可执行文件与原生库，还带两样东西：
+
+- `AirClean.desktop`：桌面入口（`Categories=Utility;System;`，`StartupWMClass=AirClean`）；
+- `airclean.png`：256px 图标，和入口里的 `Icon=airclean` 对应。
+
+解压后这样装（不需要 root）：
+
+```bash
+mkdir -p ~/.local/bin ~/.local/share/applications ~/.local/share/icons/hicolor/256x256/apps
+cp AirClean ~/.local/bin/
+cp airclean.png ~/.local/share/icons/hicolor/256x256/apps/
+cp AirClean.desktop ~/.local/share/applications/
+update-desktop-database ~/.local/share/applications 2>/dev/null || true
+```
+
+入口里写的是 `Exec=AirClean`，所以 `~/.local/bin` 需要在 `PATH` 里；如果放在别处，
+改 `.desktop` 的 `Exec=` 为绝对路径即可。
+
 ## 当前限制
 
 - Windows 与 macOS 的签名步骤都**没有被实际执行验证过**（本仓库还没有证书）。

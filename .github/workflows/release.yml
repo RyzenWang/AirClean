@@ -344,8 +344,15 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          tar -czf "AirClean-${{ steps.version.outputs.value }}-linux-x64.tar.gz" \
-            -C publish/linux-x64 .
+          # Ship the desktop entry and icon next to the binary so a Linux install is not
+          # just an executable in a folder. The tar layout stays flat: AirClean,
+          # AirClean.desktop, airclean.png and the native libraries.
+          mkdir -p staging
+          cp -r publish/linux-x64/. staging/
+          cp packaging/linux/AirClean.desktop staging/
+          cp src/AirClean.App/Assets/airclean.png staging/
+          tar -czf "AirClean-${{ steps.version.outputs.value }}-linux-x64.tar.gz" -C staging .
+          rm -rf staging
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4

@@ -124,7 +124,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _settingsStatus = settingsStatus;
         _largeFileThreshold = largeFileThreshold;
         _duplicateRoots = duplicateRoots;
-        _suggestionProbes = suggestionProbes ?? WindowsReadOnlyProbes.CreateForCurrentPlatform();
+        _suggestionProbes = suggestionProbes ??
+        [
+            .. WindowsReadOnlyProbes.CreateForCurrentPlatform(),
+            .. MacOsPermissionProbe.CreateForCurrentPlatform()
+        ];
 
         _scanTimer = new DispatcherTimer
         {
