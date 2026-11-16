@@ -14,6 +14,7 @@
         Background="{DynamicResource AppBackgroundBrush}">
   <Window.KeyBindings>
     <KeyBinding Gesture="Ctrl+R" Command="{Binding ScanCommand}" />
+    <KeyBinding Gesture="Ctrl+OemComma" Command="{Binding OpenSettingsCommand}" />
     <KeyBinding Gesture="Escape" Command="{Binding EscapeCommand}" />
   </Window.KeyBindings>
   <Grid>
@@ -43,7 +44,10 @@
                        VerticalAlignment="Center"
                        LetterSpacing="-0.2" />
             <Border Width="1" Height="19" Background="{DynamicResource BorderBrush}" Margin="4,0" VerticalAlignment="Center" />
-            <Button Classes="soft" Command="{Binding ScanCommand}" ToolTip.Tip="{DynamicResource L.ScanTooltip}">
+            <Button Classes="soft"
+                    Command="{Binding ScanCommand}"
+                    AutomationProperties.Name="{DynamicResource L.Scan}"
+                    ToolTip.Tip="{DynamicResource L.ScanTooltip}">
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <Path Classes="icon small"
                       Data="{StaticResource IconSparkle}"
@@ -54,13 +58,19 @@
           </StackPanel>
 
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
-            <Button Classes="icon" Command="{Binding ToggleLanguageCommand}" ToolTip.Tip="{DynamicResource L.Language}">
+            <Button Classes="icon"
+                    Command="{Binding ToggleLanguageCommand}"
+                    AutomationProperties.Name="{DynamicResource L.Language}"
+                    ToolTip.Tip="{DynamicResource L.Language}">
               <TextBlock Text="{Binding LanguageShortLabel}"
                          FontSize="12.5"
                          FontWeight="SemiBold"
                          VerticalAlignment="Center" />
             </Button>
-            <Button Classes="icon" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="{DynamicResource L.Appearance}">
+            <Button Classes="icon"
+                    Command="{Binding ToggleThemeCommand}"
+                    AutomationProperties.Name="{DynamicResource L.Appearance}"
+                    ToolTip.Tip="{DynamicResource L.Appearance}">
               <Panel>
                 <Path Classes="icon" Data="{StaticResource IconMoon}" IsVisible="{Binding IsLightTheme}" />
                 <Path Classes="icon" Data="{StaticResource IconSun}" IsVisible="{Binding IsDarkTheme}" />
@@ -69,6 +79,7 @@
             <Button x:Name="SettingsButton"
                     Classes="icon"
                     Command="{Binding OpenSettingsCommand}"
+                    AutomationProperties.Name="{DynamicResource L.Settings}"
                     ToolTip.Tip="{DynamicResource L.Settings}">
               <Path Classes="icon" Data="{StaticResource IconSettings}" />
             </Button>
@@ -429,6 +440,7 @@
                     <ComboBox x:Name="VolumeBox"
                               ItemsSource="{Binding Volumes}"
                               SelectedItem="{Binding SelectedVolume, Mode=TwoWay}"
+                              AutomationProperties.Name="{DynamicResource L.ScanTarget}"
                               IsEnabled="{Binding CanSwitchVolume}"
                               SelectionChanged="OnVolumeChanged"
                               HorizontalAlignment="Stretch"
@@ -532,6 +544,7 @@
                 <Button Classes="primary"
                         Command="{Binding OpenConfirmCommand}"
                         IsEnabled="{Binding CanClean}"
+                        AutomationProperties.Name="{DynamicResource L.CleanSelected}"
                         Content="{Binding CleanButtonText}" />
               </StackPanel>
             </Grid>
@@ -569,7 +582,7 @@
                   </Grid>
                 </Border>
 
-                <ItemsControl Grid.Row="1" ItemsSource="{Binding Categories}">
+                <ItemsControl x:Name="CategoryList" Grid.Row="1" ItemsSource="{Binding Categories}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:CategoryViewModel">
                       <StackPanel IsVisible="{Binding IsApplicable}">
@@ -579,6 +592,7 @@
                                       IsThreeState="True"
                                       IsChecked="{Binding SelectionState, Mode=TwoWay}"
                                       IsVisible="{Binding !SupportsItemSelection}"
+                                      AutomationProperties.Name="{Binding Name}"
                                       VerticalAlignment="Center" />
                             <Border Grid.Column="1"
                                     Width="34"
@@ -601,7 +615,8 @@
                             </Border>
                             <Button Grid.Column="2"
                                     Classes="rowtoggle"
-                                    Command="{Binding ToggleExpandCommand}">
+                                    Command="{Binding ToggleExpandCommand}"
+                                    AutomationProperties.Name="{Binding Name}">
                               <StackPanel VerticalAlignment="Center" Spacing="2">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                   <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" />
@@ -742,6 +757,7 @@
                                           ToolTip.Tip="{Binding KeepText}">
                                       <CheckBox Classes="check"
                                                 IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                AutomationProperties.Name="{Binding Title}"
                                                 VerticalAlignment="Center"
                                                 Margin="0,0,10,0" />
                                       <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
@@ -778,6 +794,7 @@
                                           ToolTip.Tip="{Binding FullPath}">
                                       <CheckBox Classes="check"
                                                 IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                AutomationProperties.Name="{Binding Name}"
                                                 VerticalAlignment="Center"
                                                 Margin="0,0,10,0" />
                                       <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
@@ -827,10 +844,12 @@
                                       <CheckBox Classes="check"
                                                 IsThreeState="True"
                                                 IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                AutomationProperties.Name="{Binding Name}"
                                                 VerticalAlignment="Center"
                                                 Margin="0,0,8,0" />
                                       <Button Grid.Column="1"
                                               Classes="folderrow"
+                                              AutomationProperties.Name="{Binding Name}"
                                               Command="{Binding SelectCommand}">
                                         <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8" Height="30">
                                           <Path Data="{StaticResource IconFolder}"
@@ -984,6 +1003,12 @@
                        TextTrimming="CharacterEllipsis" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <TextBlock Text="{Binding KeyboardHintText}"
+                       IsVisible="{Binding ShowKeyboardHint}"
+                       Classes="caption tertiary"
+                       FontSize="10.5"
+                       VerticalAlignment="Center"
+                       Margin="0,0,6,0" />
             <Button Classes="soft"
                     Content="{Binding UpdateText}"
                     Command="{Binding ApplyUpdateCommand}"
@@ -1061,6 +1086,7 @@
 
             <CheckBox IsChecked="{Binding UsePermanent, Mode=TwoWay}"
                       Content="{DynamicResource L.ConfirmPermanentOption}"
+                      AutomationProperties.Name="{DynamicResource L.ConfirmPermanentOption}"
                       FontSize="11.5"
                       Margin="0,12,0,0" />
 

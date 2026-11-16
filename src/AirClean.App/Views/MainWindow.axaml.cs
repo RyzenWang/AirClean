@@ -3,9 +3,11 @@ using AirClean.App.Services;
 using AirClean.App.ViewModels;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using PathShape = Avalonia.Controls.Shapes.Path;
 
 namespace AirClean.App.Views;
@@ -16,6 +18,7 @@ public partial class MainWindow : Window
     private const double SpinnerRadius = 7.8;
 
     private MainWindowViewModel? _viewModel;
+    private ItemsControl? _categoryList;
     private bool _ready;
     private DispatcherTimer? _spinnerTimer;
     private PathShape? _spinnerArc;
@@ -32,6 +35,54 @@ public partial class MainWindow : Window
 
         _spinnerTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
         _spinnerTimer.Tick += OnSpinnerTick;
+
+        // Arrows move between the category rows; Tab alone would make a long list tedious.
+        AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    /// <summary>
+    /// Up and Down walk the focusable controls inside the category list. Only when the focus
+    /// is already in that list, so the combo box, text inputs and page scrolling keep their
+    /// own arrow behaviour.
+    /// </summary>
+    private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Up or Key.Down))
+        {
+            return;
+        }
+
+        _categoryList ??= this.FindControl<ItemsControl>("CategoryList");
+        if (_categoryList is not { IsEffectivelyVisible: true })
+        {
+            return;
+        }
+
+        if (FocusManager?.GetFocusedElement() is not Control focused ||
+            !_categoryList.GetVisualDescendants().Contains(focused))
+        {
+            return;
+        }
+
+        var stops = _categoryList.GetVisualDescendants()
+            .OfType<Control>()
+            .Where(control => control.Focusable && control.IsEffectivelyVisible)
+            .ToList();
+
+        var index = stops.IndexOf(focused);
+        if (index < 0)
+        {
+            return;
+        }
+
+        var next = Math.Clamp(index + (e.Key == Key.Down ? 1 : -1), 0, stops.Count - 1);
+        if (next == index)
+        {
+            return;
+        }
+
+        stops[next].Focus(NavigationMethod.Directional);
+        e.Handled = true;
     }
 
     protected override void OnOpened(EventArgs e)

@@ -113,6 +113,9 @@ public sealed class LocalizationService
                 "The settings file could not be read, so the last backup was loaded. Please confirm your excluded folders in Settings.",
                 "设置文件读取失败，已加载上次的备份。请在设置里确认排除目录仍然正确。"),
             ["L.OpenSettings"] = ("Open settings", "打开设置"),
+            ["L.KeyboardHint"] = (
+                "↑↓ move · Space select · Enter open · Ctrl+, settings · Esc back",
+                "↑↓ 移动 · Space 勾选 · Enter 展开 · Ctrl+, 设置 · Esc 返回"),
             ["L.CategoryCanceled"] = ("Not finished", "未完成"),
             ["L.ScanningLarge"] = ("Looking for large files…", "正在查找大文件…"),
             ["L.ScanningDuplicates"] = ("Comparing duplicates…", "正在比对重复文件…"),

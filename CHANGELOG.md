@@ -5,6 +5,24 @@ All notable changes to AirClean are documented here. The format follows
 publishes the matching section below as the GitHub release notes. Versions stay
 `0.x` until the app is out of preview.
 
+## [Unreleased]
+
+### Added
+
+- Keyboard coverage. `↑`/`↓` move between the category rows, `Space` toggles the focused
+  row, `Enter` expands it, `Ctrl+,` opens settings, and `Esc` still backs out. The results
+  page shows the shortcuts in the status bar, so they are discoverable without a manual.
+- Screen-reader names on the controls that matter: scan, rescan, language, appearance,
+  settings, the volume picker, the clean button, and every category, folder and file
+  checkbox.
+
+### Fixed
+
+- Protected user folders are resolved through the known-folder API instead of
+  `home + English name`. With OneDrive Backup moving Documents, the app scanned the
+  redirected folder as content while no longer protecting it; the guard now follows the
+  same folders the scan roots do. Downloads stays out of the list on purpose.
+
 ## [0.5.2] - 2026-11-16
 
 A release-notes fix. The application binaries are unchanged from 0.5.1.

@@ -387,7 +387,7 @@ JSON journal with paths, sizes and trash locations; 30 days or 200 batches.
 
 ## Roadmap
 
-Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **18 done, 2 in progress, 4 not started**.
+Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **19 done, 2 in progress, 3 not started**.
 
 | Status | Item | Notes |
 | --- | --- | --- |
@@ -411,7 +411,7 @@ Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **18 done, 2 
 | ✅ Done | Hard-link folding | Paths that share one identity are counted once and reported; APFS and block clones have their own file id and are deliberately not pretended away. |
 | ✅ Done | Read-only suggestions (Windows) | Hibernation file, page file and the component store: size, a plain fact and a copyable command, never selectable or deleted. |
 | ✅ Done | `// SAFE:` source gate | Every delete/move call under `src/` must explain itself on the same line; CI enforces it, with an [incident ledger](docs/INCIDENTS.md). |
-| ⬜ Not started | Keyboard coverage and accessible names | Only `Ctrl+R` and `Esc` today. |
+| ✅ Done | Keyboard coverage and accessible names | ↑↓ moves, Space selects, Enter expands, `Ctrl+,` opens settings, Esc goes back; the results page lists the keys, and the main actions and checkboxes carry screen-reader names. |
 | ⬜ Not started | High contrast and platform gaps | High-contrast entry, macOS TCC guidance, Linux `.desktop`. |
 | ⬜ Not started | Windows arm64 artifacts | The release matrix only has `win-x64`. |
 | ⬜ Not started | linux-arm64 artifacts | The release matrix only has `linux-x64`. |

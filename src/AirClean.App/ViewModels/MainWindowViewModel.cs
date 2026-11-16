@@ -181,6 +181,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(PartialNote));
             OnPropertyChanged(nameof(HardlinkNote));
             OnPropertyChanged(nameof(SettingsWarningText));
+            OnPropertyChanged(nameof(KeyboardHintText));
             OnPropertyChanged(nameof(ExportSkipText));
             RefreshUndoMessage();
 
@@ -306,6 +307,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(IsResultsVisible));
             OnPropertyChanged(nameof(IsCompletedVisible));
             OnPropertyChanged(nameof(CanSwitchVolume));
+            OnPropertyChanged(nameof(ShowKeyboardHint));
         }
     }
 
@@ -316,6 +318,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsResultsVisible => Stage == AppStage.Results;
 
     public bool IsCompletedVisible => Stage == AppStage.Completed;
+
+    /// <summary>The shortcuts that work on the results page, shown in the status bar.</summary>
+    public bool ShowKeyboardHint => Stage == AppStage.Results;
+
+    public string KeyboardHintText => _localization.T("L.KeyboardHint");
 
     /// <summary>True when a cancelled scan stopped on the results page with partial data.</summary>
     public bool WasScanCanceled

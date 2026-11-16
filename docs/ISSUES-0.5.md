@@ -34,7 +34,7 @@
 | AC-502 | ✅ | 重复文件按身份折叠硬链接；折叠数经 `CategoryScan`/`ScanResult` 上到结果页（"另有 N 个路径指向同一份数据"）；APFS 克隆与块克隆有独立文件 ID，注释明确不假装识别。 |
 | AC-503 | ✅ | `ReadOnlySuggestion` + `IReadOnlySuggestionProbe` + `SuggestionScanner`（未知体积保留、已知 < 200 MB 丢弃）；Windows 探测休眠/页面文件/组件存储；结果页"值得了解"卡片，不进删除计划。 |
 | AC-504 | ✅ | `SourceInvariantTests` 扫 `src/**/*.cs`，四类删除/移动调用必须同行 `// SAFE: <理由>`；23 处调用已补注记；[INCIDENTS.md](INCIDENTS.md) 记录事故与拦截测试。 |
-| AC-505 | ⬜ | 键盘体系：↑↓/Space/`/`过滤/PgUp·PgDn/`Ctrl+,`，页脚图例；关键控件补 `AutomationProperties.Name`。 |
+| AC-505 | ✅ | 键盘：↑↓ 在分类行间移动、Space 勾选、Enter 展开、`Ctrl+,` 打开设置、Esc 逐层退出；结果页状态栏显示键位提示；主操作与每行勾选框都有 `AutomationProperties.Name`。文本过滤框（`/`）未做，留待 0.6。 |
 | AC-506 | ⬜ | 高对比度显式入口；macOS TCC 三态探测 + 一条深链；Linux 打包补 `.desktop`。 |
 | AC-507 | ⬜ | 文档、截图、三平台验收与发版。 |
 

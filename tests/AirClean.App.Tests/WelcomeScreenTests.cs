@@ -14,7 +14,9 @@ using AirClean.Core.Suggestions;
 using AirClean.Core.Trash;
 using AirClean.Core.Volumes;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.VisualTree;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -1056,6 +1058,123 @@ public sealed class FlowTests
         File.WriteAllBytes(other, new byte[1_200_000]);
 
         return root;
+    }
+
+    [AvaloniaFact]
+    public void Ctrl_comma_opens_the_settings_request()
+    {
+        var viewModel = CreateViewModel("en", null);
+        var window = Show(viewModel);
+
+        var requested = 0;
+        viewModel.SettingsRequested += (_, _) => requested++;
+
+        window.KeyPressQwerty(PhysicalKey.Comma, RawInputModifiers.Control);
+        Pump();
+
+        Assert.Equal(1, requested);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Arrow_keys_walk_the_category_rows()
+    {
+        var root = CreateFixture();
+
+        try
+        {
+            var viewModel = CreateViewModel("en", LoadRules(root), volumes: [FixtureVolume(root)]);
+            var window = Show(viewModel);
+
+            viewModel.ScanCommand.Execute(null);
+            PumpUntil(() => viewModel.IsScanComplete);
+
+            var list = window.GetVisualDescendants()
+                .OfType<ItemsControl>()
+                .FirstOrDefault(control => control.Name == "CategoryList");
+            Assert.NotNull(list);
+
+            var stops = list!.GetVisualDescendants()
+                .OfType<Control>()
+                .Where(control => control.Focusable && control.IsEffectivelyVisible)
+                .ToList();
+            Assert.True(stops.Count >= 2, "Expected at least two focusable category controls.");
+
+            Assert.True(stops[0].Focus());
+            Pump();
+            Assert.Same(stops[0], window.FocusManager?.GetFocusedElement());
+
+            window.KeyPressQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None);
+            Pump();
+
+            Assert.NotSame(stops[0], window.FocusManager?.GetFocusedElement());
+
+            window.Close();
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Category_rows_and_the_clean_button_expose_accessible_names()
+    {
+        var root = CreateFixture();
+
+        try
+        {
+            var viewModel = CreateViewModel("en", LoadRules(root), volumes: [FixtureVolume(root)]);
+            var window = Show(viewModel);
+
+            viewModel.ScanCommand.Execute(null);
+            PumpUntil(() => viewModel.IsScanComplete);
+
+            var boxes = window.GetVisualDescendants()
+                .OfType<CheckBox>()
+                .Where(box => box.IsEffectivelyVisible)
+                .ToList();
+            Assert.NotEmpty(boxes);
+            Assert.All(boxes, box => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(box))));
+
+            var clean = window.GetVisualDescendants()
+                .OfType<Button>()
+                .FirstOrDefault(button => AutomationProperties.GetName(button) is { Length: > 0 } name &&
+                                          name.Contains("Clean", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(clean);
+
+            window.Close();
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public void The_results_page_shows_the_keyboard_hint()
+    {
+        var viewModel = CreateViewModel("en", null);
+        var window = Show(viewModel);
+
+        Assert.False(viewModel.ShowKeyboardHint);
+
+        viewModel.ScanCommand.Execute(null);
+        PumpUntil(() => viewModel.IsScanComplete);
+
+        Assert.True(viewModel.ShowKeyboardHint);
+        Assert.Contains("Ctrl+,", viewModel.KeyboardHintText);
+
+        viewModel.ToggleLanguageCommand.Execute(null);
+        Pump();
+        Assert.Contains("设置", viewModel.KeyboardHintText);
+
+        viewModel.ToggleLanguageCommand.Execute(null);
+        Pump();
+        window.InvalidateVisual();
+        Save(window.CaptureRenderedFrame()!, "results-keyboard-hint-en.png");
+
+        window.Close();
     }
 
     private static MainWindow Show(MainWindowViewModel viewModel, double width = 1240, double height = 860)
