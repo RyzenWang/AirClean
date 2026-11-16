@@ -363,6 +363,10 @@ jobs:
       MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
 
     steps:
+      # The release body is read from CHANGELOG.md, so this job needs the repository too.
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
