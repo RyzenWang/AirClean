@@ -384,6 +384,37 @@ jobs:
           echo "Release payload:"
           find artifacts -type f -maxdepth 3 | sort
 
+      - name: Extract release notes from CHANGELOG.md
+        id: notes
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v version="$version" '
+            $0 ~ "^## \\[" version "\\]" { capturing = 1; next }
+            capturing && $0 ~ "^## \\[" { exit }
+            capturing { print }
+          ' CHANGELOG.md > release-notes.raw
+
+          # Trim the blank lines that surround the section so the body starts and ends clean.
+          awk '
+            { lines[NR] = $0; if ($0 != "") { last = NR } }
+            END {
+              first = 1
+              while (first <= last && lines[first] == "") { first++ }
+              for (i = first; i <= last; i++) { print lines[i] }
+            }
+          ' release-notes.raw > release-notes.md
+          rm -f release-notes.raw
+
+          if [ -s release-notes.md ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "Publishing the CHANGELOG.md section for ${version}." >> "$GITHUB_STEP_SUMMARY"
+          else
+            rm -f release-notes.md
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=No CHANGELOG entry::CHANGELOG.md has no '## [${version}]' section; falling back to generated notes."
+          fi
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
@@ -391,7 +422,11 @@ jobs:
           files: |
             artifacts/**/AirClean-*
             artifacts/**/releases.*.json
-          generate_release_notes: true
+          # Prefer the hand-written entry; only fall back to generated notes when the
+          # tag has no section, because generate_release_notes lists pull requests and
+          # this repository commits straight to main.
+          body_path: ${{ steps.notes.outputs.present == 'true' && 'release-notes.md' || '' }}
+          generate_release_notes: ${{ steps.notes.outputs.present != 'true' }}
           draft: false
           prerelease: ${{ contains(github.ref_name, '-preview') }}
 
