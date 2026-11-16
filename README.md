@@ -376,6 +376,10 @@ Tag 发布会用 [Velopack](https://velopack.io/) 生成：
 2. **删得少一点，说得清楚一点**：跳过项必须解释，可清理体积绝不重复计算。
 3. **不联网**：无账号、无广告、无遥测；只有安装版检查更新时访问 GitHub。
 
+## 版本变更
+
+每个版本改了什么写在 [CHANGELOG.md](CHANGELOG.md)，GitHub 发布页直接引用同一段文字。
+
 ## 许可证
 
 AirClean 使用 [MIT License](LICENSE)。

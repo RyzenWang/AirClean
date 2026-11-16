@@ -19,7 +19,8 @@ A release-notes fix. The application binaries are unchanged from 0.5.1.
   the release body, keeping the "unsigned installers withheld" note that is appended
   afterwards. A tag without a section falls back to generated notes and warns in the run
   summary, so a missing entry is visible rather than silent.
-- Releases 0.3.0 through 0.5.1 were backfilled with their sections.
+- Every earlier release, 0.1.0 through 0.5.1, was backfilled with its section; 0.1.0 has
+  no predecessor, so it carries no compare link.
 
 ## [0.5.1] - 2026-11-16
 

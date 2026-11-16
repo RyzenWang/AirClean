@@ -444,6 +444,11 @@ Issues and pull requests are welcome. Before opening a PR, run
 3. **No network.** No account, no ads, no telemetry; only installed builds check
    GitHub for updates.
 
+## Changelog
+
+Every release is described in [CHANGELOG.md](CHANGELOG.md), and the release page shows
+that same section.
+
 ## License
 
 AirClean is released under the [MIT License](LICENSE).
