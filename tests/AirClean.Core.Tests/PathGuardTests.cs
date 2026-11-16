@@ -35,27 +35,28 @@ public sealed class PathGuardTests
     [Fact]
     public void Every_known_user_folder_is_protected()
     {
-        // Known folders, not "home + English name": the same API the scan roots use, so a
-        // redirected folder (OneDrive) cannot be scanned while falling out of the guard.
-        var folders = new[]
+        // The canonical name must stay protected even where the known folder does not exist
+        // yet (Unix GetFolderPath returns empty for a missing directory), and a known folder
+        // that does resolve must be protected under whatever name it has.
+        foreach (var name in new[] { "Documents", "Desktop", "Pictures", "Videos", "Music" })
+        {
+            Assert.True(PathGuard.IsProtected(Path.Combine(Home, name)), $"{name} is not protected");
+            Assert.True(PathGuard.IsProtected(Path.Combine(Home, name, "nested", "file.bin")));
+        }
+
+        var known = new[]
         {
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
             Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
             Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
             Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)
-        };
+        }.Where(folder => !string.IsNullOrWhiteSpace(folder));
 
-        var checkedAny = false;
-
-        foreach (var folder in folders.Where(folder => !string.IsNullOrWhiteSpace(folder)))
+        foreach (var folder in known)
         {
-            checkedAny = true;
             Assert.True(PathGuard.IsProtected(folder), $"Known folder is not protected: {folder}");
-            Assert.True(PathGuard.IsProtected(Path.Combine(folder, "nested", "file.bin")));
         }
-
-        Assert.True(checkedAny, "No known folder resolved on this platform; the test proved nothing.");
     }
 
     [Fact]
@@ -79,12 +80,14 @@ public sealed class PathGuardTests
         var home = Path.Combine(Path.GetTempPath(), "airclean-home");
         var redirected = Path.Combine(Path.GetTempPath(), "OneDrive", "文档");
 
-        var trees = PathGuard.BuildUserTrees([redirected, null, "  "], home);
+        var trees = PathGuard.BuildUserTrees([(redirected, "Documents"), (null, "Desktop")], home);
 
-        // The folder the OS reports must be protected, and the guard must not invent
-        // "home\Documents" in its place.
+        // A redirected folder is protected under the name the OS reports, the guard must not
+        // also invent "home\Documents", and a folder that did not resolve keeps its
+        // canonical name so it is covered once it exists.
         Assert.Contains(trees, tree => tree == PathGuard.Normalize(redirected));
         Assert.DoesNotContain(trees, tree => tree == PathGuard.Normalize(Path.Combine(home, "Documents")));
+        Assert.Contains(trees, tree => tree == PathGuard.Normalize(Path.Combine(home, "Desktop")));
         Assert.Contains(trees, tree => tree == PathGuard.Normalize(Path.Combine(home, ".ssh")));
     }
 

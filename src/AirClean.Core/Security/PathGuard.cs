@@ -166,20 +166,24 @@ public static class PathGuard
             // redirected (OneDrive "Backup > Documents" moves them without renaming), and
             // the scan roots already follow the redirect. Building this list by hand would
             // mean the app scans a redirected Documents folder but no longer protects it.
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
-            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
-            Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)
+            (Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Documents"),
+            (Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Desktop"),
+            (Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Pictures"),
+            (Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "Videos"),
+            (Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "Music")
         ],
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
     /// <summary>
-    /// Turns a set of resolved known folders into the protected user trees. Internal so a
-    /// test can prove that a redirected folder with a non-English name is protected without
-    /// redirecting the machine it runs on.
+    /// Turns resolved known folders into the protected user trees. A known folder that does
+    /// not resolve (on Unix the API returns empty until the folder exists) falls back to its
+    /// canonical name under the home directory, so a folder created later is still covered.
+    /// Internal so a test can prove a redirected folder with a non-English name is protected
+    /// without redirecting the machine it runs on.
     /// </summary>
-    internal static string[] BuildUserTrees(IReadOnlyList<string?> knownFolders, string? home)
+    internal static string[] BuildUserTrees(
+        IReadOnlyList<(string? Known, string FallbackName)> folders,
+        string? home)
     {
         var trees = new List<string>();
 
@@ -197,9 +201,16 @@ public static class PathGuard
             }
         }
 
-        foreach (var folder in knownFolders)
+        foreach (var (known, fallbackName) in folders)
         {
-            Add(folder);
+            if (!string.IsNullOrWhiteSpace(known))
+            {
+                Add(known);
+            }
+            else if (!string.IsNullOrWhiteSpace(home))
+            {
+                Add(Path.Combine(home, fallbackName));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(home))
