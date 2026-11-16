@@ -71,6 +71,9 @@ public sealed class LocalizationService
             ["L.UseAdminHelper"] = (
                 "Use administrator rights (faster scans and system cleanup)",
                 "使用管理员权限（加速扫描与系统清理）"),
+            ["L.AdminUnavailableInStore"] = (
+                "The Microsoft Store build cannot start an elevated helper, so administrator acceleration and the system-wide cleanups are unavailable. Large-file scans walk the drive instead.",
+                "Microsoft Store 版无法启动提权进程，因此不提供管理员加速与系统级清理；大文件扫描改为遍历目录。"),
             ["L.ThemeSystem"] = ("Follow system", "跟随系统"),
             ["L.ThemeLight"] = ("Light", "浅色"),
             ["L.ThemeDark"] = ("Dark", "深色"),

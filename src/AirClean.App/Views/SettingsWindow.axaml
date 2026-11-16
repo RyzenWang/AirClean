@@ -163,7 +163,14 @@
         <Border Classes="card" Padding="18,16" CornerRadius="14">
           <StackPanel Spacing="9">
             <TextBlock Text="{DynamicResource L.SectionBehaviour}" Classes="eyebrow" />
-            <CheckBox IsChecked="{Binding UseAdminHelper, Mode=TwoWay}" Content="{DynamicResource L.UseAdminHelper}" />
+            <CheckBox IsChecked="{Binding UseAdminHelper, Mode=TwoWay}"
+                      IsVisible="{Binding AdminAccelerationAvailable}"
+                      Content="{DynamicResource L.UseAdminHelper}" />
+            <TextBlock Text="{DynamicResource L.AdminUnavailableInStore}"
+                       IsVisible="{Binding AdminAccelerationUnavailable}"
+                       Classes="caption"
+                       FontSize="10.5"
+                       TextWrapping="Wrap" />
             <CheckBox IsChecked="{Binding CheckForUpdatesOnStartup, Mode=TwoWay}" Content="{DynamicResource L.CheckUpdates}" />
             <CheckBox IsChecked="{Binding CloseToTray, Mode=TwoWay}" Content="{DynamicResource L.CloseToTray}" />
             <CheckBox IsChecked="{Binding MinimizeToTray, Mode=TwoWay}" Content="{DynamicResource L.MinimizeToTray}" />

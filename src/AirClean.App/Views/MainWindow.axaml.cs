@@ -196,7 +196,8 @@ public partial class MainWindow : Window
             viewModel.Settings,
             viewModel.Theme,
             viewModel.Localization,
-            viewModel.Persist);
+            viewModel.Persist,
+            viewModel.IsAdminHelperAvailable);
 
         await window.ShowDialog(this);
         viewModel.RefreshSettings();

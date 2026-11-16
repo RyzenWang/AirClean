@@ -5,6 +5,14 @@ All notable changes to AirClean are documented here. The format follows
 publishes the matching section below as the GitHub release notes. Versions stay
 `0.x` until the app is out of preview.
 
+## [0.6.1] - 2026-11-16
+
+### Fixed
+
+- The Store build no longer shows a dead "use administrator rights" switch. Settings now
+  receives whether the helper can exist at all, hides the toggle when it cannot, and
+  explains why; a packaged app cannot start an elevated child process.
+
 ## [0.6.0] - 2026-11-16
 
 Distribution change: two lines, and no code-signing certificate in this repository.

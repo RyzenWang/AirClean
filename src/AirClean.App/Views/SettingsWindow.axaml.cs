@@ -28,14 +28,15 @@ public partial class SettingsWindow : Window
         AppSettings settings,
         ThemeService theme,
         LocalizationService localization,
-        Action persist)
+        Action persist,
+        bool adminAccelerationAvailable = true)
     {
         _theme = theme;
         _localization = localization;
         _persist = persist;
 
         InitializeComponent();
-        DataContext = new SettingsViewModel(settings);
+        DataContext = new SettingsViewModel(settings, adminAccelerationAvailable);
     }
 
     private async void OnAddFolder(object? sender, RoutedEventArgs e)

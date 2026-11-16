@@ -30,9 +30,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _useAdminHelper;
     private string _errorMessage = string.Empty;
 
-    public SettingsViewModel(AppSettings source)
+    public SettingsViewModel(AppSettings source, bool adminAccelerationAvailable = true)
     {
         _source = source;
+        AdminAccelerationAvailable = adminAccelerationAvailable;
 
         _themeIndex = source.Theme switch
         {
@@ -63,6 +64,14 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     public ObservableCollection<SettingsExclusionViewModel> Exclusions { get; } = [];
+
+    /// <summary>
+    /// False in a packaged (Store) build: MSIX cannot start an elevated child, so the
+    /// administrator toggle would be a switch that does nothing.
+    /// </summary>
+    public bool AdminAccelerationAvailable { get; }
+
+    public bool AdminAccelerationUnavailable => !AdminAccelerationAvailable;
 
     public bool HasExclusions => Exclusions.Count > 0;
 
