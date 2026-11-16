@@ -33,6 +33,62 @@ public sealed class PathGuardTests
     }
 
     [Fact]
+    public void Every_known_user_folder_is_protected()
+    {
+        // Known folders, not "home + English name": the same API the scan roots use, so a
+        // redirected folder (OneDrive) cannot be scanned while falling out of the guard.
+        var folders = new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)
+        };
+
+        var checkedAny = false;
+
+        foreach (var folder in folders.Where(folder => !string.IsNullOrWhiteSpace(folder)))
+        {
+            checkedAny = true;
+            Assert.True(PathGuard.IsProtected(folder), $"Known folder is not protected: {folder}");
+            Assert.True(PathGuard.IsProtected(Path.Combine(folder, "nested", "file.bin")));
+        }
+
+        Assert.True(checkedAny, "No known folder resolved on this platform; the test proved nothing.");
+    }
+
+    [Fact]
+    public void Documents_follow_the_redirected_known_folder()
+    {
+        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        if (string.IsNullOrWhiteSpace(documents))
+        {
+            return;
+        }
+
+        // The guard must agree with the scan root, whatever the folder is called on disk.
+        Assert.Equal(Path.GetFullPath(documents).TrimEnd(Path.DirectorySeparatorChar), PathGuard.Normalize(documents));
+        Assert.True(PathGuard.IsProtected(Path.Combine(documents, "report.docx")));
+        Assert.False(PathGuard.IsSystemProtected(Path.Combine(documents, "report.docx")));
+    }
+
+    [Fact]
+    public void A_redirected_documents_folder_is_protected_whatever_its_name()
+    {
+        var home = Path.Combine(Path.GetTempPath(), "airclean-home");
+        var redirected = Path.Combine(Path.GetTempPath(), "OneDrive", "文档");
+
+        var trees = PathGuard.BuildUserTrees([redirected, null, "  "], home);
+
+        // The folder the OS reports must be protected, and the guard must not invent
+        // "home\Documents" in its place.
+        Assert.Contains(trees, tree => tree == PathGuard.Normalize(redirected));
+        Assert.DoesNotContain(trees, tree => tree == PathGuard.Normalize(Path.Combine(home, "Documents")));
+        Assert.Contains(trees, tree => tree == PathGuard.Normalize(Path.Combine(home, ".ssh")));
+    }
+
+    [Fact]
     public void A_drive_or_filesystem_root_is_never_a_valid_target()
     {
         var root = Path.GetPathRoot(Home)!;

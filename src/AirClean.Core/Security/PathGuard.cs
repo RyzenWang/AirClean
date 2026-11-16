@@ -160,24 +160,61 @@ public static class PathGuard
         return trees.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private static string[] EnumerateUserTrees()
-    {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    private static string[] EnumerateUserTrees() => BuildUserTrees(
+        [
+            // Known folders rather than "home + English name": Windows lets these be
+            // redirected (OneDrive "Backup > Documents" moves them without renaming), and
+            // the scan roots already follow the redirect. Building this list by hand would
+            // mean the app scans a redirected Documents folder but no longer protects it.
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)
+        ],
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
-        return new[]
+    /// <summary>
+    /// Turns a set of resolved known folders into the protected user trees. Internal so a
+    /// test can prove that a redirected folder with a non-English name is protected without
+    /// redirecting the machine it runs on.
+    /// </summary>
+    internal static string[] BuildUserTrees(IReadOnlyList<string?> knownFolders, string? home)
+    {
+        var trees = new List<string>();
+
+        void Add(string? path)
         {
-            Path.Combine(home, "Documents"),
-            Path.Combine(home, "Desktop"),
-            Path.Combine(home, "Pictures"),
-            Path.Combine(home, "Videos"),
-            Path.Combine(home, "Music"),
-            Path.Combine(home, ".ssh"),
-            Path.Combine(home, ".gnupg"),
-            Path.Combine(home, ".config")
+            if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path))
+            {
+                return;
+            }
+
+            var normalized = Normalize(path);
+            if (normalized.Length > 1)
+            {
+                trees.Add(normalized);
+            }
         }
-        .Where(path => !string.IsNullOrWhiteSpace(path) && Normalize(path).Length > 1)
-        .Select(Normalize)
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToArray();
+
+        foreach (var folder in knownFolders)
+        {
+            Add(folder);
+        }
+
+        if (!string.IsNullOrWhiteSpace(home))
+        {
+            Add(Path.Combine(home, ".ssh"));
+            Add(Path.Combine(home, ".gnupg"));
+            Add(Path.Combine(home, ".config"));
+        }
+
+        // Downloads is deliberately absent: it is a scan root and the place users most often
+        // want cleaned, and hand-picked files there already pass the stricter system check.
+        var comparer = Comparison == StringComparison.Ordinal
+            ? StringComparer.Ordinal
+            : StringComparer.OrdinalIgnoreCase;
+
+        return trees.Distinct(comparer).ToArray();
     }
 }
