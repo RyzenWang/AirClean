@@ -38,6 +38,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             "Light" => 1,
             "Dark" => 2,
+            "HighContrast" => 3,
             _ => 0
         };
         _languageIndex = source.Language == "zh-CN" ? 1 : 0;
@@ -195,6 +196,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         1 => "Light",
         2 => "Dark",
+        3 => "HighContrast",
         _ => "System"
     };
 

@@ -30,6 +30,7 @@
                   <ComboBoxItem Content="{DynamicResource L.ThemeSystem}" />
                   <ComboBoxItem Content="{DynamicResource L.ThemeLight}" />
                   <ComboBoxItem Content="{DynamicResource L.ThemeDark}" />
+                  <ComboBoxItem Content="{DynamicResource L.ThemeHighContrast}" />
                 </ComboBox>
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="5">

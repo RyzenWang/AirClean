@@ -17,6 +17,7 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -1173,6 +1174,44 @@ public sealed class FlowTests
         Pump();
         window.InvalidateVisual();
         Save(window.CaptureRenderedFrame()!, "results-keyboard-hint-en.png");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void High_contrast_is_the_fourth_theme_and_uses_its_own_palette()
+    {
+        var viewModel = CreateViewModel("en", null);
+        var window = Show(viewModel);
+
+        Assert.False(viewModel.IsHighContrastTheme);
+
+        viewModel.ToggleThemeCommand.Execute(null);
+        Assert.True(viewModel.IsLightTheme);
+
+        viewModel.ToggleThemeCommand.Execute(null);
+        Assert.True(viewModel.IsDarkTheme);
+
+        viewModel.ToggleThemeCommand.Execute(null);
+        Pump();
+
+        Assert.True(viewModel.IsHighContrastTheme);
+        Assert.False(viewModel.IsLightTheme);
+        Assert.False(viewModel.IsDarkTheme);
+        Assert.Equal(ThemeService.HighContrastMode, viewModel.Settings.Theme);
+
+        var application = Application.Current!;
+        Assert.Equal(ThemeService.HighContrastVariant, application.RequestedThemeVariant);
+
+        Assert.True(application.TryFindResource("AppBackgroundBrush", ThemeService.HighContrastVariant, out var background));
+        var brush = Assert.IsType<SolidColorBrush>(background);
+        Assert.Equal(Colors.Black, brush.Color);
+
+        window.InvalidateVisual();
+        Save(window.CaptureRenderedFrame()!, "welcome-high-contrast-en.png");
+
+        viewModel.ToggleThemeCommand.Execute(null);
+        Assert.False(viewModel.IsHighContrastTheme);
 
         window.Close();
     }

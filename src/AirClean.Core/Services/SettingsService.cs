@@ -190,6 +190,7 @@ public sealed class SettingsService
         {
             "Light" => "Light",
             "Dark" => "Dark",
+            "HighContrast" => "HighContrast",
             _ => "System"
         };
 

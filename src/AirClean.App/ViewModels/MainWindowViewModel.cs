@@ -195,6 +195,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(IsLightTheme));
             OnPropertyChanged(nameof(IsDarkTheme));
+            OnPropertyChanged(nameof(IsHighContrastTheme));
         };
     }
 
@@ -355,9 +356,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    public bool IsLightTheme => !_theme.IsDark;
+    public bool IsLightTheme => !_theme.IsDark && !IsHighContrastTheme;
 
-    public bool IsDarkTheme => _theme.IsDark;
+    public bool IsDarkTheme => _theme.IsDark && !IsHighContrastTheme;
+
+    public bool IsHighContrastTheme =>
+        string.Equals(_theme.Mode, ThemeService.HighContrastMode, StringComparison.Ordinal);
 
     public string VersionText => "AirClean " + AppVersion;
 

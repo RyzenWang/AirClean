@@ -74,6 +74,7 @@ public sealed class LocalizationService
             ["L.ThemeSystem"] = ("Follow system", "跟随系统"),
             ["L.ThemeLight"] = ("Light", "浅色"),
             ["L.ThemeDark"] = ("Dark", "深色"),
+            ["L.ThemeHighContrast"] = ("High contrast", "高对比度"),
             ["L.ChineseSimplified"] = ("简体中文", "简体中文"),
             ["L.MoreSettingsLater"] = ("More settings in a later version", "更多设置将在后续版本提供"),
             ["L.Ready"] = ("Ready", "就绪"),

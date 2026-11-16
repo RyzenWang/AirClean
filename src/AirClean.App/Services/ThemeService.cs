@@ -15,6 +15,13 @@ public sealed class ThemeService
     public const string SystemMode = "System";
     public const string LightMode = "Light";
     public const string DarkMode = "Dark";
+    public const string HighContrastMode = "HighContrast";
+
+    /// <summary>
+    /// Avalonia has no native high-contrast variant, so this is a custom one that falls back
+    /// to dark for anything the high-contrast dictionary does not override.
+    /// </summary>
+    public static readonly ThemeVariant HighContrastVariant = new(HighContrastMode, ThemeVariant.Dark);
 
     private readonly AppSettings _settings;
     private readonly Action _persist;
@@ -62,12 +69,13 @@ public sealed class ThemeService
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Cycles System → Light → Dark → System.</summary>
+    /// <summary>Cycles System → Light → Dark → High contrast → System.</summary>
     public void Cycle() => Set(
         Mode switch
         {
             SystemMode => LightMode,
             LightMode => DarkMode,
+            DarkMode => HighContrastMode,
             _ => SystemMode
         },
         persist: true);
@@ -76,6 +84,7 @@ public sealed class ThemeService
     {
         LightMode => LightMode,
         DarkMode => DarkMode,
+        HighContrastMode => HighContrastMode,
         _ => SystemMode
     };
 
@@ -83,6 +92,7 @@ public sealed class ThemeService
     {
         DarkMode => true,
         LightMode => false,
+        HighContrastMode => true,
         _ => SystemIsDark()
     };
 
@@ -111,6 +121,7 @@ public sealed class ThemeService
         {
             LightMode => ThemeVariant.Light,
             DarkMode => ThemeVariant.Dark,
+            HighContrastMode => HighContrastVariant,
             _ => ThemeVariant.Default
         };
     }

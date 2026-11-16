@@ -162,6 +162,16 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void The_high_contrast_theme_survives_a_round_trip()
+    {
+        var service = new SettingsService(_directory);
+
+        Assert.True(service.Save(new AppSettings { Theme = "HighContrast" }));
+
+        Assert.Equal("HighContrast", new SettingsService(_directory).Load().Theme);
+    }
+
+    [Fact]
     public void A_missing_file_is_reported_as_a_first_run()
     {
         var result = new SettingsService(_directory).LoadResult();

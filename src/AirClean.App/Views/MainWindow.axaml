@@ -74,6 +74,7 @@
               <Panel>
                 <Path Classes="icon" Data="{StaticResource IconMoon}" IsVisible="{Binding IsLightTheme}" />
                 <Path Classes="icon" Data="{StaticResource IconSun}" IsVisible="{Binding IsDarkTheme}" />
+                <Path Classes="icon" Data="{StaticResource IconContrast}" IsVisible="{Binding IsHighContrastTheme}" />
               </Panel>
             </Button>
             <Button x:Name="SettingsButton"
@@ -232,10 +233,11 @@
                          Margin="1,14,0,0" />
             </StackPanel>
 
-            <!-- Paper stack artwork -->
+            <!-- Paper stack artwork: decorative, so it steps out of the way in high contrast. -->
             <Viewbox Grid.Column="1"
                      Stretch="Uniform"
                      MaxWidth="370"
+                     IsVisible="{Binding !IsHighContrastTheme}"
                      HorizontalAlignment="Center"
                      VerticalAlignment="Center">
               <Canvas Width="370" Height="414">
