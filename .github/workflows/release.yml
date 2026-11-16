@@ -364,8 +364,11 @@ jobs:
 
     steps:
       # The release body is read from CHANGELOG.md, so this job needs the repository too.
+      # Tags are needed to work out the previous release for the compare link.
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -411,6 +414,13 @@ jobs:
           rm -f release-notes.raw
 
           if [ -s release-notes.md ]; then
+            # The same "Full changelog" line GitHub used to add, kept as a convenience.
+            previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+            if [ -n "$previous" ]; then
+              printf '\n\n**Full changelog**: https://github.com/%s/compare/%s...%s\n' \
+                "$GITHUB_REPOSITORY" "$previous" "$GITHUB_REF_NAME" >> release-notes.md
+            fi
+
             echo "present=true" >> "$GITHUB_OUTPUT"
             echo "Publishing the CHANGELOG.md section for ${version}." >> "$GITHUB_STEP_SUMMARY"
           else
