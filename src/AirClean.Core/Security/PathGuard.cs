@@ -169,7 +169,9 @@ public static class PathGuard
             (Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Documents"),
             (Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Desktop"),
             (Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Pictures"),
-            (Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "Videos"),
+            // macOS calls the video folder "Movies"; the known folder resolves there when it
+            // exists, and the fallback has to use the same name.
+            (Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), OperatingSystem.IsMacOS() ? "Movies" : "Videos"),
             (Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "Music")
         ],
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));

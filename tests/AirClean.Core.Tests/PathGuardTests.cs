@@ -35,27 +35,24 @@ public sealed class PathGuardTests
     [Fact]
     public void Every_known_user_folder_is_protected()
     {
-        // The canonical name must stay protected even where the known folder does not exist
-        // yet (Unix GetFolderPath returns empty for a missing directory), and a known folder
-        // that does resolve must be protected under whatever name it has.
-        foreach (var name in new[] { "Documents", "Desktop", "Pictures", "Videos", "Music" })
+        // Mirrors the guard: a resolved known folder is protected under its real name, and a
+        // folder that does not exist yet keeps its platform's canonical name. macOS calls the
+        // video folder "Movies", so the expectation has to follow the platform too.
+        var pairs = new (string? Known, string Fallback, string Name)[]
         {
-            Assert.True(PathGuard.IsProtected(Path.Combine(Home, name)), $"{name} is not protected");
-            Assert.True(PathGuard.IsProtected(Path.Combine(Home, name, "nested", "file.bin")));
-        }
+            (Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Documents", "Documents"),
+            (Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Desktop", "Desktop"),
+            (Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Pictures", "Pictures"),
+            (Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), OperatingSystem.IsMacOS() ? "Movies" : "Videos", "Videos"),
+            (Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "Music", "Music")
+        };
 
-        var known = new[]
+        foreach (var (known, fallback, name) in pairs)
         {
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
-            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
-            Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)
-        }.Where(folder => !string.IsNullOrWhiteSpace(folder));
+            var path = string.IsNullOrWhiteSpace(known) ? Path.Combine(Home, fallback) : known;
 
-        foreach (var folder in known)
-        {
-            Assert.True(PathGuard.IsProtected(folder), $"Known folder is not protected: {folder}");
+            Assert.True(PathGuard.IsProtected(path), $"{name} is not protected ({path})");
+            Assert.True(PathGuard.IsProtected(Path.Combine(path, "nested", "file.bin")), $"{name} children are not protected");
         }
     }
 
