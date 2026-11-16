@@ -32,13 +32,14 @@ It is the second app in the Air series and shares its design language and stack
 with [AirPDF](https://github.com/RyzenWang/AirPDF): the same warm paper
 background, coral accent, quiet information density, and calm desktop presence.
 
-> **Status:** 0.5 preview. Scan, preview, clean, undo, recent cleanups, the skip
-> report, a settings window, quick/full scans, exclusions, the tray and reminders are
-> wired end to end. Since 0.4.3 a damaged settings file no longer drops the exclusion
-> list silently; 0.5 verifies file identity before deleting, counts hard links once,
-> and adds a read-only suggestion card (Windows) plus the `// SAFE:` source gate.
-> A benchmark on Windows scanned 22,000 files (7.4 GB total) in
-> about 1.3 s. Screenshots use demo data.
+> **Status:** 0.6 preview. Windows ships a Microsoft Store MSIX package; macOS and Linux
+> ship portable archives. Scan, preview, clean, undo, recent cleanups, the skip report, a
+> settings window, quick/full scans, exclusions, the tray and reminders are wired end to
+> end. Since 0.4.3 a damaged settings file no longer drops the exclusion list silently;
+> 0.5 verifies file identity before deleting, counts hard links once, and adds read-only
+> suggestion cards plus the `// SAFE:` source gate.
+> A benchmark on Windows scanned 22,000 files (7.4 GB total) in about 1.3 s. Screenshots
+> use demo data.
 
 ---
 
