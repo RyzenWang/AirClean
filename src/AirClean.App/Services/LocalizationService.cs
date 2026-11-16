@@ -211,6 +211,21 @@ public sealed class LocalizationService
             ["L.LimitedGroupsNoteFormat"] = (
                 "Only the first {0} duplicate groups are listed; {1} more were found.",
                 "只列出前 {0} 组重复文件；另有 {1} 组未列出。"),
+            ["L.WorthKnowing"] = ("WORTH KNOWING", "值得了解"),
+            ["L.SuggestionSizeUnknown"] = ("size unknown", "大小未知"),
+            ["L.CopyCommand"] = ("Copy command", "复制命令"),
+            ["L.SuggestionHibernateLabel"] = ("Hibernation file", "休眠文件"),
+            ["L.SuggestionHibernateFact"] = (
+                "Managed by Windows. Turning it off also disables Fast Startup.",
+                "由系统管理；关闭它也会同时关闭快速启动。"),
+            ["L.SuggestionPagefileLabel"] = ("Virtual memory file", "虚拟内存文件"),
+            ["L.SuggestionPagefileFact"] = (
+                "Managed by Windows. Resizing or deleting it can make the system unstable.",
+                "由系统管理；改动或删除它可能让系统不稳定。"),
+            ["L.SuggestionWinSxSLabel"] = ("Component store (WinSxS)", "组件存储（WinSxS）"),
+            ["L.SuggestionWinSxSFact"] = (
+                "Shared Windows components. Analyse it with the system tool instead of deleting files.",
+                "Windows 组件共享目录；请用系统工具分析，不要直接删文件。"),
 
             ["L.ConfirmTitleFormat"] = ("Clean {0}?", "清理 {0}？"),
             ["L.ConfirmNoteTrash"] = ("{0} moves to the Trash and can be restored.", "{0} 将移到废纸篓，可以恢复。"),

@@ -57,11 +57,11 @@ internal static class RecycleBin
 
             if (Directory.Exists(candidate.TrashPath))
             {
-                Directory.Move(Extended(candidate.TrashPath), Extended(originalPath));
+                Directory.Move(Extended(candidate.TrashPath), Extended(originalPath)); // SAFE: moves the selected recycle-bin entry back to its recorded original path
             }
             else
             {
-                File.Move(Extended(candidate.TrashPath), Extended(originalPath));
+                File.Move(Extended(candidate.TrashPath), Extended(originalPath)); // SAFE: moves the selected recycle-bin file back to its recorded original path
             }
 
             // A stale $I entry only wastes space; failing to remove it must not undo the
@@ -71,7 +71,7 @@ internal static class RecycleBin
                 try
                 {
                     File.SetAttributes(infoFile, FileAttributes.Normal);
-                    File.Delete(infoFile);
+                    File.Delete(infoFile); // SAFE: stale $I metadata for the recycle-bin entry just restored
                 }
                 catch
                 {

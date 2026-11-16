@@ -10,6 +10,7 @@ using AirClean.Core.Scanning;
 using AirClean.Core.Security;
 using AirClean.Core.Services;
 using AirClean.Core.Platform;
+using AirClean.Core.Suggestions;
 using AirClean.Core.Trash;
 using AirClean.Core.Volumes;
 using Avalonia;
@@ -874,6 +875,164 @@ public sealed class FlowTests
         }
     }
 
+    [AvaloniaFact]
+    public void Read_only_suggestions_are_visible_but_never_enter_the_clean_selection()
+    {
+        var root = CreateFixture();
+
+        try
+        {
+            var probes = new IReadOnlySuggestionProbe[]
+            {
+                new FakeSuggestionProbe(
+                    new ReadOnlySuggestion(
+                        "L.SuggestionHibernateLabel",
+                        750_000_000,
+                        "L.SuggestionHibernateFact",
+                        "powercfg /h off"),
+                    new ReadOnlySuggestion(
+                        "L.SuggestionWinSxSLabel",
+                        null,
+                        "L.SuggestionWinSxSFact",
+                        "DISM /Online /Cleanup-Image /AnalyzeComponentStore"))
+            };
+
+            var viewModel = CreateViewModel(
+                "en",
+                LoadRules(root),
+                volumes: [FixtureVolume(root)],
+                duplicateRoots: [root],
+                suggestionProbes: probes);
+            var window = Show(viewModel);
+
+            viewModel.ScanCommand.Execute(null);
+            PumpUntil(() => viewModel.IsScanComplete);
+            Pump(8);
+
+            Assert.Equal(AppStage.Results, viewModel.Stage);
+            Assert.True(viewModel.HasSuggestions);
+            Assert.Equal(2, viewModel.Suggestions.Count);
+
+            var known = viewModel.Suggestions[0];
+            Assert.Equal("Hibernation file", known.Label);
+            Assert.Equal("750 MB", known.SizeText);
+            Assert.Contains("Managed by Windows", known.Fact);
+            Assert.True(known.HasCommand);
+            Assert.Equal("powercfg /h off", known.Command);
+
+            var unknown = viewModel.Suggestions[1];
+            Assert.Equal("Component store (WinSxS)", unknown.Label);
+            Assert.Equal("size unknown", unknown.SizeText);
+            Assert.True(unknown.HasCommand);
+            Assert.Equal("DISM /Online /Cleanup-Image /AnalyzeComponentStore", unknown.Command);
+
+            var card = window.FindControl<Border>("SuggestionCard");
+            Assert.NotNull(card);
+            Assert.True(card!.IsVisible);
+
+            // Copying is routed through the window's clipboard writer, so it is testable headless.
+            string? copied = null;
+            viewModel.AttachSuggestionClipboard(text =>
+            {
+                copied = text;
+                return Task.CompletedTask;
+            });
+            known.CopyCommand.Execute(null);
+            Assert.Equal("powercfg /h off", copied);
+
+            // Cleaning is still driven only by the category checkboxes.
+            foreach (var category in viewModel.Categories)
+            {
+                category.SelectionState = false;
+            }
+
+            Pump();
+            Assert.False(viewModel.CanClean);
+            Assert.True(viewModel.HasSuggestions);
+
+            var selected = viewModel.Categories.First(category => category.FileCount > 0);
+            selected.SelectionState = true;
+            Pump();
+            Assert.True(viewModel.CanClean);
+
+            // The confirmation sheet only sees categories; the 750 MB suggestion is not in it.
+            viewModel.OpenConfirmCommand.Execute(null);
+            Pump();
+            Assert.True(viewModel.IsConfirmVisible);
+            Assert.All(viewModel.ConfirmItems, item => Assert.Contains(item, viewModel.Categories));
+            Assert.DoesNotContain("750", viewModel.ConfirmTitle);
+            viewModel.CancelConfirmCommand.Execute(null);
+            Pump();
+            Assert.False(viewModel.IsConfirmVisible);
+
+            // A suggestion has no selection surface to get into a deletion plan.
+            Assert.Null(typeof(SuggestionRowViewModel).GetProperty("IsSelected"));
+
+            window.InvalidateVisual();
+            Save(window.CaptureRenderedFrame()!, "results-suggestions.png");
+            window.Close();
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Suggestion_texts_follow_the_language_switch()
+    {
+        var root = CreateFixture();
+
+        try
+        {
+            var probes = new IReadOnlySuggestionProbe[]
+            {
+                new FakeSuggestionProbe(
+                    new ReadOnlySuggestion(
+                        "L.SuggestionPagefileLabel",
+                        500_000_000,
+                        "L.SuggestionPagefileFact"),
+                    new ReadOnlySuggestion(
+                        "L.SuggestionWinSxSLabel",
+                        null,
+                        "L.SuggestionWinSxSFact",
+                        "DISM /Online /Cleanup-Image /AnalyzeComponentStore"))
+            };
+
+            var viewModel = CreateViewModel(
+                "en",
+                LoadRules(root),
+                volumes: [FixtureVolume(root)],
+                duplicateRoots: [root],
+                suggestionProbes: probes);
+            var window = Show(viewModel);
+
+            viewModel.ScanCommand.Execute(null);
+            PumpUntil(() => viewModel.IsScanComplete);
+            Pump(8);
+
+            var pageFile = Assert.Single(viewModel.Suggestions, row => row.Label == "Virtual memory file");
+            Assert.Contains("Managed by Windows", pageFile.Fact);
+            Assert.Equal("500 MB", pageFile.SizeText);
+            Assert.False(pageFile.HasCommand);
+
+            viewModel.ToggleLanguageCommand.Execute(null);
+            Pump();
+
+            Assert.Equal("虚拟内存文件", pageFile.Label);
+            Assert.Contains("由系统管理", pageFile.Fact);
+            Assert.Equal("大小未知", viewModel.Suggestions[1].SizeText);
+
+            window.InvalidateVisual();
+            Save(window.CaptureRenderedFrame()!, "results-suggestions-zh.png");
+            window.Close();
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     private static string CreateDuplicateFixture()
     {
         var root = Path.Combine(Path.GetTempPath(), "airclean-dups-ui", Guid.NewGuid().ToString("N"));
@@ -924,7 +1083,8 @@ public sealed class FlowTests
         IReportExporter? reportExporter = null,
         string scanMode = "Full",
         ExclusionSet? exclusions = null,
-        SettingsLoadStatus settingsStatus = SettingsLoadStatus.Ok)
+        SettingsLoadStatus settingsStatus = SettingsLoadStatus.Ok,
+        IReadOnlyList<IReadOnlySuggestionProbe>? suggestionProbes = null)
     {
         var settings = new AppSettings { Language = language, ScanMode = scanMode };
         var localization = new LocalizationService();
@@ -953,7 +1113,8 @@ public sealed class FlowTests
             duplicateRoots,
             reportExporter: reportExporter,
             exclusions: exclusions,
-            settingsStatus: settingsStatus);
+            settingsStatus: settingsStatus,
+            suggestionProbes: suggestionProbes);
     }
 
     /// <summary>
@@ -1039,6 +1200,11 @@ public sealed class FlowTests
         var directory = Path.Combine(Path.GetTempPath(), "airclean-shots");
         Directory.CreateDirectory(directory);
         frame.Save(Path.Combine(directory, fileName));
+    }
+
+    private sealed class FakeSuggestionProbe(params ReadOnlySuggestion[] suggestions) : IReadOnlySuggestionProbe
+    {
+        public IEnumerable<ReadOnlySuggestion> Probe() => suggestions;
     }
 
     private sealed class FakeTrash : ITrashService

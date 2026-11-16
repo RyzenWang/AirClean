@@ -10,6 +10,7 @@ using AirClean.Core.Platform;
 using AirClean.Core.Scanning;
 using AirClean.Core.Security;
 using AirClean.Core.Services;
+using AirClean.Core.Suggestions;
 using AirClean.Core.Trash;
 using AirClean.Core.Volumes;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -42,6 +43,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly SettingsLoadStatus _settingsStatus;
     private readonly long _largeFileThreshold;
     private readonly IReadOnlyList<string>? _duplicateRoots;
+    private readonly IReadOnlyList<IReadOnlySuggestionProbe> _suggestionProbes;
+
+    private Func<string, Task>? _suggestionClipboard;
 
     private readonly UpdateService _updates = new();
     private UpdateInfo? _pendingUpdate;
@@ -103,7 +107,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IAdminHelper? adminHelper = null,
         IReportExporter? reportExporter = null,
         ExclusionSet? exclusions = null,
-        SettingsLoadStatus settingsStatus = SettingsLoadStatus.Ok)
+        SettingsLoadStatus settingsStatus = SettingsLoadStatus.Ok,
+        IReadOnlyList<IReadOnlySuggestionProbe>? suggestionProbes = null)
     {
         _settings = settings;
         _localization = localization;
@@ -119,6 +124,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _settingsStatus = settingsStatus;
         _largeFileThreshold = largeFileThreshold;
         _duplicateRoots = duplicateRoots;
+        _suggestionProbes = suggestionProbes ?? WindowsReadOnlyProbes.CreateForCurrentPlatform();
 
         _scanTimer = new DispatcherTimer
         {
@@ -156,6 +162,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             RecomputeSelection();
             RefreshCompletionTexts();
             RefreshRecentCleanups();
+            RefreshSuggestionTexts();
             OnPropertyChanged(nameof(StatusText));
             OnPropertyChanged(nameof(SelectionSummary));
             OnPropertyChanged(nameof(FoundSummary));
@@ -191,6 +198,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public ObservableCollection<CategoryViewModel> Categories { get; } = [];
+
+    /// <summary>
+    /// Large read-only items AirClean will never delete. They live outside
+    /// <see cref="Categories"/> on purpose: no checkbox, no selection, no deletion plan.
+    /// </summary>
+    public ObservableCollection<SuggestionRowViewModel> Suggestions { get; } = [];
+
+    public bool HasSuggestions => Suggestions.Count > 0;
+
+    /// <summary>Lets the window supply the clipboard without the view model touching UI types.</summary>
+    internal void AttachSuggestionClipboard(Func<string, Task>? writer) => _suggestionClipboard = writer;
 
     /// <summary>Raised when the gear button asks the window to open settings.</summary>
     public event EventHandler? SettingsRequested;
@@ -1411,6 +1429,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HasHardlinkCollapsed));
         OnPropertyChanged(nameof(HardlinkNote));
 
+        LoadSuggestions();
+
         _scannedRoot = volume.Root;
         _scanTimer.Stop();
         _scanClock.Stop();
@@ -1447,6 +1467,38 @@ public sealed partial class MainWindowViewModel : ObservableObject
         foreach (var category in Categories)
         {
             category.RefreshLocalization();
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds the suggestion rows from the probes. Called once per finished scan, so
+    /// the same read-only facts never pile up across rescans.
+    /// </summary>
+    private void LoadSuggestions()
+    {
+        Suggestions.Clear();
+
+        foreach (var suggestion in new SuggestionScanner(_suggestionProbes).Scan())
+        {
+            Suggestions.Add(new SuggestionRowViewModel(suggestion, _localization, CopySuggestionText));
+        }
+
+        OnPropertyChanged(nameof(HasSuggestions));
+    }
+
+    private void RefreshSuggestionTexts()
+    {
+        foreach (var suggestion in Suggestions)
+        {
+            suggestion.RefreshLocalization();
+        }
+    }
+
+    private void CopySuggestionText(string text)
+    {
+        if (_suggestionClipboard is { } writer && !string.IsNullOrWhiteSpace(text))
+        {
+            _ = writer(text);
         }
     }
 

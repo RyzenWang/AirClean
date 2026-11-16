@@ -90,11 +90,11 @@ internal sealed class UnixTrashService : ITrashService
 
             if (Directory.Exists(source))
             {
-                Directory.Move(source, destination);
+                Directory.Move(source, destination); // SAFE: moves the user-selected item into this user's trash folder
             }
             else
             {
-                File.Move(source, destination);
+                File.Move(source, destination); // SAFE: moves the user-selected file into this user's trash folder
             }
 
             if (!_isMac)
@@ -138,11 +138,11 @@ internal sealed class UnixTrashService : ITrashService
 
             if (Directory.Exists(source))
             {
-                Directory.Move(source, originalPath);
+                Directory.Move(source, originalPath); // SAFE: restores the selected trash entry to its recorded original path
             }
             else
             {
-                File.Move(source, originalPath);
+                File.Move(source, originalPath); // SAFE: restores the selected trash file to its recorded original path
             }
 
             if (!_isMac)
@@ -252,7 +252,7 @@ internal sealed class UnixTrashService : ITrashService
             var direct = Path.Combine(InfoDirectory, Path.GetFileName(trashPath) + ".trashinfo");
             if (File.Exists(direct))
             {
-                File.Delete(direct);
+                File.Delete(direct); // SAFE: .trashinfo metadata for the entry just restored from this trash folder
                 return;
             }
 
@@ -266,7 +266,7 @@ internal sealed class UnixTrashService : ITrashService
                 var info = ReadTrashInfo(infoFile);
                 if (info is not null && string.Equals(info.Value.Path, originalPath, StringComparison.Ordinal))
                 {
-                    File.Delete(infoFile);
+                    File.Delete(infoFile); // SAFE: .trashinfo metadata matching the original path just restored
                     return;
                 }
             }
@@ -291,11 +291,11 @@ internal sealed class UnixTrashService : ITrashService
                     {
                         if (Directory.Exists(entry))
                         {
-                            Directory.Delete(entry, recursive: true);
+                            Directory.Delete(entry, recursive: true); // SAFE: entry inside this user's trash folder being emptied
                         }
                         else
                         {
-                            File.Delete(entry);
+                            File.Delete(entry); // SAFE: file inside this user's trash folder being emptied
                         }
                     }
                     catch
@@ -311,7 +311,7 @@ internal sealed class UnixTrashService : ITrashService
                 {
                     try
                     {
-                        File.Delete(info);
+                        File.Delete(info); // SAFE: .trashinfo metadata inside the trash folder being emptied
                     }
                     catch
                     {

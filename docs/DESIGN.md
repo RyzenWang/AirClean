@@ -128,6 +128,22 @@ v0.1 范围：快速扫描 + 5 个安全分类（含废纸篓清空）+ 大文�
   tooltip，不自动扫描、不自动删除。登录自启可选，按平台写 Run 键 / LaunchAgent /
   XDG autostart。
 
+### 2.5 正确性与信任边界（0.5）
+
+- **文件身份**：`FileIdentity` = Windows 的卷序列号 + `FILE_ID_INFO` 128 位文件 ID，
+  或 Unix 的 `st_dev` + `st_ino`。大文件与重复文件候选在扫描时记录身份，删除前再读一次；
+  不一致（同名同大小同 mtime 的替换）按"扫描后已变化"跳过。
+  平台答不出来时**退化为 size/mtime**，不阻断正常清理。
+- **硬链接与克隆**：同一身份只算一份，折叠了几个路径如实写在结果页。
+  APFS 克隆与 Windows 块克隆有自己独立的文件 ID，无法用身份区分，因此按普通副本处理并
+  在代码注释里写明——不假装识别。
+- **只读建议行**：`ReadOnlySuggestion` 只有"标签 + 体积（可空）+ 事实 + 可复制命令"，
+  **没有勾选、不进 `DeletionPlan`、不参与确认弹层**。未知体积保留（未知不等于零），
+  已知且 < 200 MB 才丢弃；探测失败静默丢这一行，不影响整张卡片。
+- **源码门禁**：`src/` 下每个 `File.Delete` / `Directory.Delete` / `File.Move` /
+  `Directory.Move` 必须同行写 `// SAFE: <具体理由>`，由 `SourceInvariantTests` 在 CI 里检查；
+  事故与"现在拦住它的测试"记在 [INCIDENTS.md](INCIDENTS.md)。
+
 ---
 
 ## 3. 视觉设计

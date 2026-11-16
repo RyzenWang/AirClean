@@ -30,10 +30,10 @@
 
 | Issue | 状态 | 说明 |
 | --- | --- | --- |
-| AC-501 | 🚧 | `FileIdentity` + `IFileIdentityProvider`（Windows `FILE_ID_INFO`，Unix `st_dev`+`st_ino`）；`DeletionService` 删除前复验，不一致记 `ChangedSinceScan`。 |
-| AC-502 | 🚧 | 重复文件按文件身份折叠硬链接；结果里说明"另有 N 个路径指向同一份数据"。APFS 克隆无法用 inode 区分，明确不假装识别。 |
-| AC-503 | ⬜ | 只读建议行原语：`ReadOnlyProbe` → `{ Label, Bytes?, Fact, SuggestedAction? }`；低于 200 MB 且已测全不显示，部分/未知必须显示。 |
-| AC-504 | ⬜ | `SourceInvariantTests`：扫描 `src/**/*.cs`，删除类调用必须同行 `// SAFE: <理由>`；`docs/INCIDENTS.md` 记录事故→回归测试。 |
+| AC-501 | ✅ | `FileIdentity`（Windows `FILE_ID_INFO`，Unix `st_dev`+`st_ino`）+ `IFileIdentityProvider`；大文件与重复候选记录身份，`DeletionService` 删除前复验，不一致记 `ChangedSinceScan`；provider 不支持时退化为旧行为。 |
+| AC-502 | ✅ | 重复文件按身份折叠硬链接；折叠数经 `CategoryScan`/`ScanResult` 上到结果页（"另有 N 个路径指向同一份数据"）；APFS 克隆与块克隆有独立文件 ID，注释明确不假装识别。 |
+| AC-503 | ✅ | `ReadOnlySuggestion` + `IReadOnlySuggestionProbe` + `SuggestionScanner`（未知体积保留、已知 < 200 MB 丢弃）；Windows 探测休眠/页面文件/组件存储；结果页"值得了解"卡片，不进删除计划。 |
+| AC-504 | ✅ | `SourceInvariantTests` 扫 `src/**/*.cs`，四类删除/移动调用必须同行 `// SAFE: <理由>`；23 处调用已补注记；[INCIDENTS.md](INCIDENTS.md) 记录事故与拦截测试。 |
 | AC-505 | ⬜ | 键盘体系：↑↓/Space/`/`过滤/PgUp·PgDn/`Ctrl+,`，页脚图例；关键控件补 `AutomationProperties.Name`。 |
 | AC-506 | ⬜ | 高对比度显式入口；macOS TCC 三态探测 + 一条深链；Linux 打包补 `.desktop`。 |
 | AC-507 | ⬜ | 文档、截图、三平台验收与发版。 |

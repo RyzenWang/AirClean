@@ -32,9 +32,12 @@ It is the second app in the Air series and shares its design language and stack
 with [AirPDF](https://github.com/RyzenWang/AirPDF): the same warm paper
 background, coral accent, quiet information density, and calm desktop presence.
 
-> **Status:** 0.4 preview. Scan, preview, clean, undo, recent cleanups, the skip
+> **Status:** 0.5 preview. Scan, preview, clean, undo, recent cleanups, the skip
 > report, a settings window, quick/full scans, exclusions, the tray and reminders are
-> wired end to end. A benchmark on Windows scanned 22,000 files (7.4 GB total) in
+> wired end to end. Since 0.4.3 a damaged settings file no longer drops the exclusion
+> list silently; 0.5 verifies file identity before deleting, counts hard links once,
+> and adds a read-only suggestion card (Windows) plus the `// SAFE:` source gate.
+> A benchmark on Windows scanned 22,000 files (7.4 GB total) in
 > about 1.3 s. Screenshots use demo data.
 
 ---
@@ -384,7 +387,7 @@ JSON journal with paths, sizes and trash locations; 30 days or 200 batches.
 
 ## Roadmap
 
-Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **14 done, 2 in progress, 2 not started**.
+Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **18 done, 2 in progress, 4 not started**.
 
 | Status | Item | Notes |
 | --- | --- | --- |
@@ -404,6 +407,12 @@ Status: ✅ Done · 🚧 In progress · ⬜ Not started. Currently **14 done, 2 
 | ✅ Done | Tray icon and background mode | Tray menu, close/minimize to tray, single-instance activation. |
 | ✅ Done | Scheduled reminders | Checks every six hours; off by default, notification only, never deletes. |
 | ✅ Done | Full settings page | Appearance, scan scope, exclusions, thresholds, updates, tray and reminders. |
+| ✅ Done | File identity before deleting | Scanners record a stable identity (Windows `FILE_ID_INFO`, Unix `st_dev`+`st_ino`) and the delete step re-reads it; a replaced item is skipped as "changed since scan". |
+| ✅ Done | Hard-link folding | Paths that share one identity are counted once and reported; APFS and block clones have their own file id and are deliberately not pretended away. |
+| ✅ Done | Read-only suggestions (Windows) | Hibernation file, page file and the component store: size, a plain fact and a copyable command, never selectable or deleted. |
+| ✅ Done | `// SAFE:` source gate | Every delete/move call under `src/` must explain itself on the same line; CI enforces it, with an [incident ledger](docs/INCIDENTS.md). |
+| ⬜ Not started | Keyboard coverage and accessible names | Only `Ctrl+R` and `Esc` today. |
+| ⬜ Not started | High contrast and platform gaps | High-contrast entry, macOS TCC guidance, Linux `.desktop`. |
 | ⬜ Not started | Windows arm64 artifacts | The release matrix only has `win-x64`. |
 | ⬜ Not started | linux-arm64 artifacts | The release matrix only has `linux-x64`. |
 

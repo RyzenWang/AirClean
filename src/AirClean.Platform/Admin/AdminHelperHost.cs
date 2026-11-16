@@ -492,7 +492,7 @@ public static class AdminHelperHost
             {
                 if (!Directory.EnumerateFileSystemEntries(directory).Any())
                 {
-                    Directory.Delete(directory);
+                    Directory.Delete(directory); // SAFE: only a directory this admin cleanup just emptied
                 }
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

@@ -172,7 +172,7 @@ public static class AutostartService
         {
             if (File.Exists(path))
             {
-                File.Delete(path);
+                File.Delete(path); // SAFE: removes only this app's own autostart .desktop entry
             }
 
             return true;

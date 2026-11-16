@@ -366,7 +366,7 @@ public sealed class DeletionService(
                         break;
                     }
 
-                    Directory.Delete(current);
+                    Directory.Delete(current); // SAFE: only an empty directory left under the scanned root by this cleanup
                 }
                 catch
                 {

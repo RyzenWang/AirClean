@@ -56,7 +56,7 @@ internal static class CrashLog
                     var rotated = System.IO.Path.Combine(
                         System.IO.Path.GetDirectoryName(file) ?? string.Empty,
                         System.IO.Path.GetFileNameWithoutExtension(file) + ".1" + System.IO.Path.GetExtension(file));
-                    File.Move(file, rotated, overwrite: true);
+                    File.Move(file, rotated, overwrite: true); // SAFE: rotates this app's own crash log before appending
                 }
 
                 var version = typeof(CrashLog).Assembly.GetName().Version?.ToString() ?? "unknown";

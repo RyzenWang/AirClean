@@ -288,7 +288,7 @@ public sealed class JournalStore
 
             var json = JsonSerializer.Serialize(dto, JournalJsonContext.Default.JournalBatchDto);
             File.WriteAllText(temporary, json);
-            File.Move(temporary, file, overwrite: true);
+            File.Move(temporary, file, overwrite: true); // SAFE: renames this journal writer's own temp file over its target
             return true;
         }
         catch
@@ -297,7 +297,7 @@ public sealed class JournalStore
             {
                 if (File.Exists(temporary))
                 {
-                    File.Delete(temporary);
+                    File.Delete(temporary); // SAFE: removes the temp file this journal writer just failed to publish
                 }
             }
             catch
@@ -403,7 +403,7 @@ public sealed class JournalStore
             {
                 if (!Directory.EnumerateFileSystemEntries(directory).Any())
                 {
-                    Directory.Delete(directory);
+                    Directory.Delete(directory); // SAFE: only an empty month folder inside this journal store
                 }
             }
         }
@@ -417,7 +417,7 @@ public sealed class JournalStore
     {
         try
         {
-            File.Delete(file);
+            File.Delete(file); // SAFE: journal batch file selected by this store's own prune
         }
         catch
         {

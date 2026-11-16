@@ -161,7 +161,7 @@ public sealed class SettingsService
                 KeepBackup();
                 var temporaryPath = SettingsPath + ".tmp";
                 File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings, SettingsJsonContext.Default.AppSettings));
-                File.Move(temporaryPath, SettingsPath, overwrite: true);
+                File.Move(temporaryPath, SettingsPath, overwrite: true); // SAFE: replaces the settings file with the temp file this save just wrote
                 return true;
             }
             catch

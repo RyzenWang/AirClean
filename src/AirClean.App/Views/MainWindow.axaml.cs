@@ -117,7 +117,20 @@ public partial class MainWindow : Window
         {
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             _viewModel.SettingsRequested += OnSettingsRequested;
+            _viewModel.AttachSuggestionClipboard(WriteSuggestionToClipboardAsync);
             RingArc.Data = BuildRingArc(_viewModel.DiskUsedRatio);
+        }
+    }
+
+    /// <summary>
+    /// The suggestion rows own the copy command but not the clipboard: the window hands
+    /// the view model a plain delegate so the row stays testable off-screen.
+    /// </summary>
+    private async Task WriteSuggestionToClipboardAsync(string text)
+    {
+        if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+        {
+            await clipboard.SetTextAsync(text);
         }
     }
 

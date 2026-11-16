@@ -108,7 +108,7 @@ internal sealed class SingleInstance : IDisposable
                 return;
             }
 
-            File.Delete(_signalPath);
+            File.Delete(_signalPath); // SAFE: activation signal file created by another AirClean instance
             Activated?.Invoke(this, EventArgs.Empty);
         }
         catch
@@ -166,7 +166,7 @@ internal sealed class SingleInstance : IDisposable
 
         try
         {
-            File.Delete(path);
+            File.Delete(path); // SAFE: lock or signal file owned by this SingleInstance in the per-user temp folder
         }
         catch
         {
