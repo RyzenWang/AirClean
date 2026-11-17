@@ -3,6 +3,7 @@ using AirClean.App.ViewModels;
 using AirClean.Core.Models;
 using AirClean.Platform.Autostart;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 
@@ -39,6 +40,31 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         DataContext = new SettingsViewModel(settings, adminAccelerationAvailable, updateChecksRelevant);
     }
+
+    /// <summary>The system title bar is hidden, so this strip is the drag handle.</summary>
+    private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed &&
+            FindButton(e.Source as Control) is null)
+        {
+            BeginMoveDrag(e);
+        }
+    }
+
+    private static Button? FindButton(Control? control)
+    {
+        for (var current = control; current is not null; current = current.Parent as Control)
+        {
+            if (current is Button button)
+            {
+                return button;
+            }
+        }
+
+        return null;
+    }
+
+    private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 
     private async void OnAddFolder(object? sender, RoutedEventArgs e)
     {

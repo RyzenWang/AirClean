@@ -161,8 +161,11 @@ background, coral accent, quiet information density, and calm desktop presence.
 
 ### Look and updates
 
-- **Two languages, three themes.** Switch between English and Simplified Chinese
-  live, and choose light, dark, or follow-system.
+- **Two languages, four themes.** Switch between English and Simplified Chinese
+  live, and choose light, dark, follow-system, or high contrast.
+- **A frameless window.** The system title bar is hidden and the toolbar doubles as the
+  title bar: drag anywhere in it, double-click to maximize, and minimize / maximize /
+  close sit at the top right. The settings window is built the same way.
 - **Automatic updates for installed builds.** The app checks for a stable
   release, downloads it in the background, and offers **Restart to update**.
   Portable and source builds never self-update.

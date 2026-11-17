@@ -11,6 +11,9 @@
         MinWidth="920"
         MinHeight="620"
         WindowStartupLocation="CenterScreen"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
         Background="{DynamicResource AppBackgroundBrush}">
   <Window.KeyBindings>
     <KeyBinding Gesture="Ctrl+R" Command="{Binding ScanCommand}" />
@@ -19,13 +22,16 @@
   </Window.KeyBindings>
   <Grid>
     <Grid RowDefinitions="Auto,Auto,*,Auto">
-      <!-- Top bar -->
+      <!-- Top bar. It doubles as the title bar: the system one is hidden, so this strip
+           handles dragging, double-click maximize and the window buttons. -->
       <Border Grid.Row="0"
+              x:Name="TitleBar"
+              PointerPressed="OnTitleBarPointerPressed"
               Background="{DynamicResource ToolbarBackgroundBrush}"
               BorderBrush="{DynamicResource BorderBrush}"
               BorderThickness="0,0,0,1"
               Padding="14,9">
-        <Grid ColumnDefinitions="Auto,*,Auto">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
           <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
             <Border Width="31" Height="31" CornerRadius="8" Background="{DynamicResource AccentBrush}">
               <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -83,6 +89,41 @@
                     AutomationProperties.Name="{DynamicResource L.Settings}"
                     ToolTip.Tip="{DynamicResource L.Settings}">
               <Path Classes="icon" Data="{StaticResource IconSettings}" />
+            </Button>
+          </StackPanel>
+
+          <StackPanel Grid.Column="3"
+                      Orientation="Horizontal"
+                      Spacing="2"
+                      VerticalAlignment="Center"
+                      Margin="8,0,-6,0">
+            <Button Classes="caption"
+                    Click="OnMinimizeClick"
+                    AutomationProperties.Name="{DynamicResource L.MinimizeWindow}"
+                    ToolTip.Tip="{DynamicResource L.MinimizeWindow}">
+              <Path Classes="icon small" Data="{StaticResource IconMinus}" Stroke="{DynamicResource TextSecondaryBrush}" />
+            </Button>
+            <Button Classes="caption"
+                    Click="OnMaximizeRestoreClick"
+                    AutomationProperties.Name="{DynamicResource L.MaximizeWindow}"
+                    ToolTip.Tip="{DynamicResource L.MaximizeWindow}">
+              <Panel>
+                <Path x:Name="MaximizeGlyph"
+                      Classes="icon small"
+                      Data="{StaticResource IconMaximize}"
+                      Stroke="{DynamicResource TextSecondaryBrush}" />
+                <Path x:Name="RestoreGlyph"
+                      Classes="icon small"
+                      Data="{StaticResource IconRestore}"
+                      Stroke="{DynamicResource TextSecondaryBrush}"
+                      IsVisible="False" />
+              </Panel>
+            </Button>
+            <Button Classes="caption close"
+                    Click="OnCloseClick"
+                    AutomationProperties.Name="{DynamicResource L.CloseWindow}"
+                    ToolTip.Tip="{DynamicResource L.CloseWindow}">
+              <Path Classes="icon small" Data="{StaticResource IconClose}" Stroke="{DynamicResource TextSecondaryBrush}" />
             </Button>
           </StackPanel>
         </Grid>

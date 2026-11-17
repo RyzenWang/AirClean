@@ -1216,6 +1216,57 @@ public sealed class FlowTests
         window.Close();
     }
 
+    [AvaloniaFact]
+    public void The_window_has_custom_chrome_and_its_own_window_buttons()
+    {
+        var viewModel = CreateViewModel("en", null);
+        var window = Show(viewModel);
+
+        // The system title bar is extended away, so the app must own the window buttons.
+        Assert.True(window.ExtendClientAreaToDecorationsHint);
+        Assert.Equal(Avalonia.Platform.ExtendClientAreaChromeHints.NoChrome, window.ExtendClientAreaChromeHints);
+        Assert.NotNull(window.FindControl<Border>("TitleBar"));
+
+        var names = window.GetVisualDescendants()
+            .OfType<Button>()
+            .Select(AutomationProperties.GetName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToList();
+
+        Assert.Contains("Minimize", names);
+        Assert.Contains("Maximize", names);
+        Assert.Contains("Close", names);
+
+        window.InvalidateVisual();
+        Save(window.CaptureRenderedFrame()!, "welcome-custom-chrome-en.png");
+
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void The_maximize_button_swaps_its_glyph()
+    {
+        var viewModel = CreateViewModel("en", null);
+        var window = Show(viewModel);
+
+        var maximize = window.GetVisualDescendants()
+            .OfType<Button>()
+            .First(button => AutomationProperties.GetName(button) == "Maximize");
+
+        maximize.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        Pump();
+
+        var maximized = window.WindowState == WindowState.Maximized;
+        var restoreGlyph = window.FindControl<Avalonia.Controls.Shapes.Path>("RestoreGlyph");
+        var maximizeGlyph = window.FindControl<Avalonia.Controls.Shapes.Path>("MaximizeGlyph");
+        Assert.NotNull(restoreGlyph);
+        Assert.NotNull(maximizeGlyph);
+        Assert.Equal(maximized, restoreGlyph!.IsVisible);
+        Assert.Equal(!maximized, maximizeGlyph!.IsVisible);
+
+        window.Close();
+    }
+
     private static MainWindow Show(MainWindowViewModel viewModel, double width = 1240, double height = 860)
     {
         var window = new MainWindow

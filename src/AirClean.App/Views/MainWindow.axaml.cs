@@ -98,6 +98,75 @@ public partial class MainWindow : Window
         base.OnClosed(e);
     }
 
+    /// <summary>
+    /// The window has no system title bar, so this strip plays that role. Pressing a button
+    /// inside it must not start a window drag, and a double click toggles maximize the way a
+    /// native title bar does.
+    /// </summary>
+    private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        if (e.ClickCount == 2)
+        {
+            ToggleMaximize();
+            e.Handled = true;
+            return;
+        }
+
+        // Buttons inside the strip keep their own click behaviour.
+        if (FindButton(e.Source as Control) is not null)
+        {
+            return;
+        }
+
+        BeginMoveDrag(e);
+    }
+
+    private static Button? FindButton(Control? control)
+    {
+        for (var current = control; current is not null; current = current.Parent as Control)
+        {
+            if (current is Button button)
+            {
+                return button;
+            }
+        }
+
+        return null;
+    }
+
+    private void OnMinimizeClick(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void OnMaximizeRestoreClick(object? sender, RoutedEventArgs e) => ToggleMaximize();
+
+    private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
+
+    private void ToggleMaximize() =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    /// <summary>Swaps the maximize glyph for the restore glyph while maximized.</summary>
+    private void UpdateWindowGlyphs()
+    {
+        var maximized = WindowState == WindowState.Maximized;
+
+        this.FindControl<PathShape>("MaximizeGlyph")?.SetCurrentValue(IsVisibleProperty, !maximized);
+        this.FindControl<PathShape>("RestoreGlyph")?.SetCurrentValue(IsVisibleProperty, maximized);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == WindowStateProperty)
+        {
+            UpdateWindowGlyphs();
+        }
+    }
+
     private void OnSpinnerTick(object? sender, EventArgs e)
     {
         if (_viewModel?.IsDeleting != true)

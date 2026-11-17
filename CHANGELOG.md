@@ -5,6 +5,21 @@ All notable changes to AirClean are documented here. The format follows
 publishes the matching section below as the GitHub release notes. Versions stay
 `0.x` until the app is out of preview.
 
+## [0.7.0] - 2026-11-17
+
+### Added
+
+- A frameless window. The system title bar is extended away and the app draws its own
+  chrome: the toolbar doubles as the title bar, dragging anywhere in it moves the window,
+  double-clicking maximises or restores, and minimise / maximise / close sit at the top
+  right with screen-reader names. The settings window gets the same treatment, with a
+  slim strip carrying its title and a close button.
+
+### Known limitations
+
+- Window-button snap layouts (the Windows 11 hover menu on the maximise button) are not
+  wired up; the window still snaps through dragging and `Win` + arrow keys.
+
 ## [0.6.2] - 2026-11-17
 
 ### Fixed

@@ -9,17 +9,38 @@
         MinWidth="620"
         MinHeight="540"
         WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
         Background="{DynamicResource AppBackgroundBrush}">
-  <Grid RowDefinitions="*,Auto">
-    <ScrollViewer Grid.Row="0"
+  <Grid RowDefinitions="Auto,*,Auto">
+    <!-- Same chrome as the main window: the strip drags, the button closes. -->
+    <Border Grid.Row="0"
+            x:Name="TitleBar"
+            PointerPressed="OnTitleBarPointerPressed"
+            Background="{DynamicResource ToolbarBackgroundBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="20,7">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{DynamicResource L.SettingsTitle}"
+                   FontSize="12.5"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+        <Button Grid.Column="1"
+                Classes="caption close"
+                Click="OnCloseClick"
+                AutomationProperties.Name="{DynamicResource L.CloseWindow}"
+                ToolTip.Tip="{DynamicResource L.CloseWindow}">
+          <Path Classes="icon small" Data="{StaticResource IconClose}" Stroke="{DynamicResource TextSecondaryBrush}" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Row="1"
                   HorizontalScrollBarVisibility="Disabled"
                   VerticalScrollBarVisibility="Auto">
-      <StackPanel Margin="28,24,28,18" Spacing="16">
-        <TextBlock Text="{DynamicResource L.SettingsTitle}"
-                   FontSize="26"
-                   FontWeight="SemiBold"
-                   LetterSpacing="-0.5" />
-
+      <StackPanel Margin="28,20,28,18" Spacing="16">
         <Border Classes="card" Padding="18,16" CornerRadius="14">
           <StackPanel Spacing="12">
             <TextBlock Text="{DynamicResource L.SectionAppearance}" Classes="eyebrow" />
@@ -201,7 +222,7 @@
       </StackPanel>
     </ScrollViewer>
 
-    <Border Grid.Row="1"
+    <Border Grid.Row="2"
             Background="{DynamicResource ToolbarBackgroundBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="0,1,0,0"

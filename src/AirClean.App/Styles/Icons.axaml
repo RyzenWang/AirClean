@@ -19,4 +19,6 @@
   <StreamGeometry x:Key="IconWarning">M10.3 4.1 1.9 18.6a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 4.1a2 2 0 0 0-3.4 0Z M12 9.5v4.2M12 17.3h.01</StreamGeometry>
   <StreamGeometry x:Key="IconEye">M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z</StreamGeometry>
   <StreamGeometry x:Key="IconContrast">M12 3a9 9 0 0 1 0 18 9 9 0 0 1 0-18Z M12 3v18</StreamGeometry>
+  <StreamGeometry x:Key="IconMaximize">M6 6h12v12H6Z</StreamGeometry>
+  <StreamGeometry x:Key="IconRestore">M9 9V6h9v9h-3 M6 9h9v9H6Z</StreamGeometry>
 </ResourceDictionary>
