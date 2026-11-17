@@ -30,10 +30,11 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _useAdminHelper;
     private string _errorMessage = string.Empty;
 
-    public SettingsViewModel(AppSettings source, bool adminAccelerationAvailable = true)
+    public SettingsViewModel(AppSettings source, bool adminAccelerationAvailable = true, bool updateChecksRelevant = true)
     {
         _source = source;
         AdminAccelerationAvailable = adminAccelerationAvailable;
+        ShowUpdateCheck = updateChecksRelevant;
 
         _themeIndex = source.Theme switch
         {
@@ -72,6 +73,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     public bool AdminAccelerationAvailable { get; }
 
     public bool AdminAccelerationUnavailable => !AdminAccelerationAvailable;
+
+    /// <summary>False in a Store build, where updates arrive through the Store.</summary>
+    public bool ShowUpdateCheck { get; }
 
     public bool HasExclusions => Exclusions.Count > 0;
 

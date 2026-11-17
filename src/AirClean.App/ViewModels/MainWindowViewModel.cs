@@ -344,6 +344,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool IsAdminHelperAvailable => _adminHelper?.IsAvailable == true;
 
+    /// <summary>
+    /// False in a Store build: the Store delivers updates, so an in-app check would be a
+    /// switch that does nothing.
+    /// </summary>
+    public bool ShowUpdateCheckSetting => !AirClean.Platform.PlatformServices.IsStoreManaged;
+
     public bool UseAdminHelper
     {
         get => _adminHelper?.Enabled == true;

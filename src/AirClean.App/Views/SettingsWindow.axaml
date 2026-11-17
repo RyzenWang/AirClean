@@ -171,7 +171,9 @@
                        Classes="caption"
                        FontSize="10.5"
                        TextWrapping="Wrap" />
-            <CheckBox IsChecked="{Binding CheckForUpdatesOnStartup, Mode=TwoWay}" Content="{DynamicResource L.CheckUpdates}" />
+            <CheckBox IsChecked="{Binding CheckForUpdatesOnStartup, Mode=TwoWay}"
+                      IsVisible="{Binding ShowUpdateCheck}"
+                      Content="{DynamicResource L.CheckUpdates}" />
             <CheckBox IsChecked="{Binding CloseToTray, Mode=TwoWay}" Content="{DynamicResource L.CloseToTray}" />
             <CheckBox IsChecked="{Binding MinimizeToTray, Mode=TwoWay}" Content="{DynamicResource L.MinimizeToTray}" />
             <CheckBox IsChecked="{Binding RunAtLogin, Mode=TwoWay}" Content="{DynamicResource L.RunAtLogin}" />

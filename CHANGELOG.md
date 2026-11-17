@@ -5,6 +5,13 @@ All notable changes to AirClean are documented here. The format follows
 publishes the matching section below as the GitHub release notes. Versions stay
 `0.x` until the app is out of preview.
 
+## [0.6.2] - 2026-11-17
+
+### Fixed
+
+- The Store build also hides "check for updates on startup". The Store owns updates, so
+  the switch did nothing; only the administrator toggle was hidden in 0.6.1.
+
 ## [0.6.1] - 2026-11-16
 
 ### Fixed
