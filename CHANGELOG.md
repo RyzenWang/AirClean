@@ -5,6 +5,14 @@ All notable changes to AirClean are documented here. The format follows
 publishes the matching section below as the GitHub release notes. Versions stay
 `0.x` until the app is out of preview.
 
+## [0.7.2] - 2026-11-17
+
+### Changed
+
+- The scan action moved back beside the app mark, with the language, appearance and
+  settings buttons alone on the toolbar below. The title bar keeps its own strip and the
+  window buttons, so nothing overlaps the drag area.
+
 ## [0.7.1] - 2026-11-17
 
 ### Changed

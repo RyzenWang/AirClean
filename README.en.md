@@ -163,9 +163,9 @@ background, coral accent, quiet information density, and calm desktop presence.
 
 - **Two languages, four themes.** Switch between English and Simplified Chinese
   live, and choose light, dark, follow-system, or high contrast.
-- **A frameless window.** The system title bar is hidden: the first row is the title bar
-  (mark and name, with minimize / maximize / close, draggable, double-click to maximize)
-  and the second row is the toolbar (Scan plus language, appearance and settings). The
+- **A frameless window.** The system title bar is hidden. The first row is the title bar:
+  the mark and the scan button, with minimize / maximize / close on the right, draggable,
+  double-click to maximize. The second row holds language, appearance and settings. The
   settings window follows the same pattern.
 - **Automatic updates for installed builds.** The app checks for a stable
   release, downloads it in the background, and offers **Restart to update**.

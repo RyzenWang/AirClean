@@ -23,18 +23,19 @@
   <Grid>
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
       <!-- Title bar. The system one is hidden, so this strip drags the window, toggles
-           maximize on double click, and carries the window buttons. -->
+           maximize on double click, and carries the window buttons. The scan action sits
+           next to the brand, the way it always has. -->
       <Border Grid.Row="0"
               x:Name="TitleBar"
               PointerPressed="OnTitleBarPointerPressed"
               Background="{DynamicResource ToolbarBackgroundBrush}"
               BorderBrush="{DynamicResource BorderBrush}"
               BorderThickness="0,0,0,1"
-              Padding="14,5,8,5">
+              Padding="14,7,8,7">
         <Grid ColumnDefinitions="Auto,*,Auto">
-          <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
-            <Border Width="24" Height="24" CornerRadius="6" Background="{DynamicResource AccentBrush}">
-              <Viewbox Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <Border Width="28" Height="28" CornerRadius="7" Background="{DynamicResource AccentBrush}">
+              <Viewbox Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Canvas Width="24" Height="24">
                   <Ellipse Canvas.Left="3.3" Canvas.Top="8.7" Width="11.8" Height="11.8"
                            Stroke="White" StrokeThickness="1.9" />
@@ -45,10 +46,22 @@
               </Viewbox>
             </Border>
             <TextBlock Text="AirClean"
-                       FontSize="13.5"
-                       FontWeight="SemiBold"
+                       FontSize="15"
+                       FontWeight="Bold"
                        VerticalAlignment="Center"
                        LetterSpacing="-0.2" />
+            <Border Width="1" Height="19" Background="{DynamicResource BorderBrush}" Margin="2,0" VerticalAlignment="Center" />
+            <Button Classes="soft"
+                    Command="{Binding ScanCommand}"
+                    AutomationProperties.Name="{DynamicResource L.Scan}"
+                    ToolTip.Tip="{DynamicResource L.ScanTooltip}">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <Path Classes="icon small"
+                      Data="{StaticResource IconSparkle}"
+                      Stroke="{DynamicResource AccentTextBrush}" />
+                <TextBlock Text="{DynamicResource L.Scan}" FontWeight="SemiBold" />
+              </StackPanel>
+            </Button>
           </StackPanel>
 
           <StackPanel Grid.Column="2"
@@ -90,28 +103,14 @@
         </Grid>
       </Border>
 
-      <!-- Toolbar: the actions, with language, appearance and settings on the right. -->
+      <!-- Toolbar: language, appearance and settings. -->
       <Border Grid.Row="1"
               Background="{DynamicResource ToolbarBackgroundBrush}"
               BorderBrush="{DynamicResource BorderBrush}"
               BorderThickness="0,0,0,1"
-              Padding="14,7">
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-            <Button Classes="soft"
-                    Command="{Binding ScanCommand}"
-                    AutomationProperties.Name="{DynamicResource L.Scan}"
-                    ToolTip.Tip="{DynamicResource L.ScanTooltip}">
-              <StackPanel Orientation="Horizontal" Spacing="7">
-                <Path Classes="icon small"
-                      Data="{StaticResource IconSparkle}"
-                      Stroke="{DynamicResource AccentTextBrush}" />
-                <TextBlock Text="{DynamicResource L.Scan}" FontWeight="SemiBold" />
-              </StackPanel>
-            </Button>
-          </StackPanel>
-
-          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+              Padding="14,4">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
             <Button Classes="icon"
                     Command="{Binding ToggleLanguageCommand}"
                     AutomationProperties.Name="{DynamicResource L.Language}"
