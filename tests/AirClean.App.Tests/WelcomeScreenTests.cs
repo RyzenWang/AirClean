@@ -1237,6 +1237,14 @@ public sealed class FlowTests
         Assert.Contains("Maximize", names);
         Assert.Contains("Close", names);
 
+        // The minimize glyph is a filled bar, not a zero-height path: a straight line has no
+        // bounds to stretch into, which is why it disappeared the first time.
+        var minimize = window.GetVisualDescendants()
+            .OfType<Button>()
+            .First(button => AutomationProperties.GetName(button) == "Minimize");
+        var bar = minimize.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Rectangle>().Single();
+        Assert.True(bar.Width > 0 && bar.Height > 0);
+
         window.InvalidateVisual();
         Save(window.CaptureRenderedFrame()!, "welcome-custom-chrome-en.png");
 

@@ -163,9 +163,10 @@ background, coral accent, quiet information density, and calm desktop presence.
 
 - **Two languages, four themes.** Switch between English and Simplified Chinese
   live, and choose light, dark, follow-system, or high contrast.
-- **A frameless window.** The system title bar is hidden and the toolbar doubles as the
-  title bar: drag anywhere in it, double-click to maximize, and minimize / maximize /
-  close sit at the top right. The settings window is built the same way.
+- **A frameless window.** The system title bar is hidden: the first row is the title bar
+  (mark and name, with minimize / maximize / close, draggable, double-click to maximize)
+  and the second row is the toolbar (Scan plus language, appearance and settings). The
+  settings window follows the same pattern.
 - **Automatic updates for installed builds.** The app checks for a stable
   release, downloads it in the background, and offers **Restart to update**.
   Portable and source builds never self-update.

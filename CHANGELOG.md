@@ -5,6 +5,19 @@ All notable changes to AirClean are documented here. The format follows
 publishes the matching section below as the GitHub release notes. Versions stay
 `0.x` until the app is out of preview.
 
+## [0.7.1] - 2026-11-17
+
+### Changed
+
+- The title bar is its own strip: the app mark and name sit on it with the window buttons,
+  and the toolbar below carries Scan plus language, appearance and settings. One crowded
+  row became two readable ones, and the drag area no longer runs through the toolbar.
+
+### Fixed
+
+- The minimize button showed nothing. Its glyph was a straight line, and a zero-height
+  path has no bounds for `Stretch="Uniform"` to scale into; it is a filled bar now.
+
 ## [0.7.0] - 2026-11-17
 
 ### Added

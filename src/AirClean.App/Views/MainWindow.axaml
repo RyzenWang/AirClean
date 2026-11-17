@@ -21,20 +21,20 @@
     <KeyBinding Gesture="Escape" Command="{Binding EscapeCommand}" />
   </Window.KeyBindings>
   <Grid>
-    <Grid RowDefinitions="Auto,Auto,*,Auto">
-      <!-- Top bar. It doubles as the title bar: the system one is hidden, so this strip
-           handles dragging, double-click maximize and the window buttons. -->
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+      <!-- Title bar. The system one is hidden, so this strip drags the window, toggles
+           maximize on double click, and carries the window buttons. -->
       <Border Grid.Row="0"
               x:Name="TitleBar"
               PointerPressed="OnTitleBarPointerPressed"
               Background="{DynamicResource ToolbarBackgroundBrush}"
               BorderBrush="{DynamicResource BorderBrush}"
               BorderThickness="0,0,0,1"
-              Padding="14,9">
-        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-            <Border Width="31" Height="31" CornerRadius="8" Background="{DynamicResource AccentBrush}">
-              <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+              Padding="14,5,8,5">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+            <Border Width="24" Height="24" CornerRadius="6" Background="{DynamicResource AccentBrush}">
+              <Viewbox Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Canvas Width="24" Height="24">
                   <Ellipse Canvas.Left="3.3" Canvas.Top="8.7" Width="11.8" Height="11.8"
                            Stroke="White" StrokeThickness="1.9" />
@@ -45,11 +45,59 @@
               </Viewbox>
             </Border>
             <TextBlock Text="AirClean"
-                       FontSize="15.5"
-                       FontWeight="Bold"
+                       FontSize="13.5"
+                       FontWeight="SemiBold"
                        VerticalAlignment="Center"
                        LetterSpacing="-0.2" />
-            <Border Width="1" Height="19" Background="{DynamicResource BorderBrush}" Margin="4,0" VerticalAlignment="Center" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="2"
+                      Orientation="Horizontal"
+                      Spacing="2"
+                      VerticalAlignment="Center"
+                      Margin="0,0,-4,0">
+            <Button Classes="caption"
+                    Click="OnMinimizeClick"
+                    AutomationProperties.Name="{DynamicResource L.MinimizeWindow}"
+                    ToolTip.Tip="{DynamicResource L.MinimizeWindow}">
+              <Rectangle Width="11" Height="1.2" RadiusX="0.6" RadiusY="0.6"
+                         Fill="{DynamicResource TextSecondaryBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Button>
+            <Button Classes="caption"
+                    Click="OnMaximizeRestoreClick"
+                    AutomationProperties.Name="{DynamicResource L.MaximizeWindow}"
+                    ToolTip.Tip="{DynamicResource L.MaximizeWindow}">
+              <Panel>
+                <Path x:Name="MaximizeGlyph"
+                      Classes="icon small"
+                      Data="{StaticResource IconMaximize}"
+                      Stroke="{DynamicResource TextSecondaryBrush}" />
+                <Path x:Name="RestoreGlyph"
+                      Classes="icon small"
+                      Data="{StaticResource IconRestore}"
+                      Stroke="{DynamicResource TextSecondaryBrush}"
+                      IsVisible="False" />
+              </Panel>
+            </Button>
+            <Button Classes="caption close"
+                    Click="OnCloseClick"
+                    AutomationProperties.Name="{DynamicResource L.CloseWindow}"
+                    ToolTip.Tip="{DynamicResource L.CloseWindow}">
+              <Path Classes="icon small" Data="{StaticResource IconClose}" Stroke="{DynamicResource TextSecondaryBrush}" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Toolbar: the actions, with language, appearance and settings on the right. -->
+      <Border Grid.Row="1"
+              Background="{DynamicResource ToolbarBackgroundBrush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="0,0,0,1"
+              Padding="14,7">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
             <Button Classes="soft"
                     Command="{Binding ScanCommand}"
                     AutomationProperties.Name="{DynamicResource L.Scan}"
@@ -91,47 +139,12 @@
               <Path Classes="icon" Data="{StaticResource IconSettings}" />
             </Button>
           </StackPanel>
-
-          <StackPanel Grid.Column="3"
-                      Orientation="Horizontal"
-                      Spacing="2"
-                      VerticalAlignment="Center"
-                      Margin="8,0,-6,0">
-            <Button Classes="caption"
-                    Click="OnMinimizeClick"
-                    AutomationProperties.Name="{DynamicResource L.MinimizeWindow}"
-                    ToolTip.Tip="{DynamicResource L.MinimizeWindow}">
-              <Path Classes="icon small" Data="{StaticResource IconMinus}" Stroke="{DynamicResource TextSecondaryBrush}" />
-            </Button>
-            <Button Classes="caption"
-                    Click="OnMaximizeRestoreClick"
-                    AutomationProperties.Name="{DynamicResource L.MaximizeWindow}"
-                    ToolTip.Tip="{DynamicResource L.MaximizeWindow}">
-              <Panel>
-                <Path x:Name="MaximizeGlyph"
-                      Classes="icon small"
-                      Data="{StaticResource IconMaximize}"
-                      Stroke="{DynamicResource TextSecondaryBrush}" />
-                <Path x:Name="RestoreGlyph"
-                      Classes="icon small"
-                      Data="{StaticResource IconRestore}"
-                      Stroke="{DynamicResource TextSecondaryBrush}"
-                      IsVisible="False" />
-              </Panel>
-            </Button>
-            <Button Classes="caption close"
-                    Click="OnCloseClick"
-                    AutomationProperties.Name="{DynamicResource L.CloseWindow}"
-                    ToolTip.Tip="{DynamicResource L.CloseWindow}">
-              <Path Classes="icon small" Data="{StaticResource IconClose}" Stroke="{DynamicResource TextSecondaryBrush}" />
-            </Button>
-          </StackPanel>
         </Grid>
       </Border>
 
       <!-- Settings could not be read: say so instead of silently treating the exclusion
            list as empty and cleaning folders the user protected. -->
-      <Border Grid.Row="1"
+      <Border Grid.Row="2"
               x:Name="SettingsWarningBanner"
               IsVisible="{Binding HasSettingsWarning}"
               Background="{DynamicResource CautionSoftBrush}"
@@ -157,7 +170,7 @@
         </Grid>
       </Border>
 
-      <Panel Grid.Row="2">
+      <Panel Grid.Row="3">
         <!-- Welcome -->
         <ScrollViewer IsVisible="{Binding IsWelcomeVisible}"
                       HorizontalScrollBarVisibility="Disabled"
@@ -1030,7 +1043,7 @@
       </Panel>
 
       <!-- Status bar -->
-      <Border Grid.Row="3"
+      <Border Grid.Row="4"
               Height="30"
               Background="{DynamicResource StatusBackgroundBrush}"
               BorderBrush="{DynamicResource BorderBrush}"
